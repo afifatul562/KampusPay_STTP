@@ -2,16 +2,14 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-
-// --- IMPORT SEMUA CONTROLLER ANDA DI SINI ---
-use App\Http\Controllers\Api\AuthController;
+// Import Controller
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\MahasiswaController;
 use App\Http\Controllers\Admin\TarifController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PaymentController; // <-- Pastikan ini diimport
 use App\Http\Controllers\Kasir\DashboardController as KasirDashboardController;
 use App\Http\Controllers\Kasir\VerifikasiController as KasirVerifikasiController;
 
@@ -19,46 +17,50 @@ use App\Http\Controllers\Kasir\VerifikasiController as KasirVerifikasiController
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
-| File ini adalah satu-satunya sumber kebenaran untuk semua endpoint API.
 */
 
-// =====================================================================
-// RUTE PUBLIK (TIDAK PERLU LOGIN)
-// =====================================================================
-Route::post('/login', [AuthController::class, 'login']);
+// Rute Publik (jika ada)
+// Route::post('/login', [AuthController::class, 'login']);
 
-// =====================================================================
-// RUTE YANG DILINDUNGI (HARUS LOGIN DENGAN TOKEN)
-// =====================================================================
 Route::middleware('auth:sanctum')->group(function () {
-
-    // Rute umum setelah login
-    Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', fn(Request $request) => $request->user());
+    // Route::post('/logout', [AuthController::class, 'logout']);
 
     // --- RUTE KHUSUS UNTUK ADMIN ---
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
+        // Dashboard
         Route::get('dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats');
         Route::get('dashboard/recent-payments', [DashboardController::class, 'recentPayments'])->name('dashboard.recentPayments');
         Route::get('dashboard/recent-registrations', [DashboardController::class, 'recentRegistrations'])->name('dashboard.recentRegistrations');
 
-        Route::apiResource('mahasiswa', MahasiswaController::class);
+        // Mahasiswa (CRUD via API)
+        Route::apiResource('mahasiswa', MahasiswaController::class)->only(['index', 'show', 'destroy']); // Hanya index, show, destroy
+
+        // User & Kasir
         Route::post('users/kasir/register', [UserController::class, 'registerKasir'])->name('users.kasir.register');
         Route::get('users', [UserController::class, 'index'])->name('users.index');
 
-        Route::apiResource('tarif', TarifController::class);
+        // Tarif (CRUD via API)
+        Route::apiResource('tarif', TarifController::class); // index, show, store, update, destroy
 
+        // Report
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
         Route::post('reports/generate', [ReportController::class, 'store'])->name('reports.store');
+        Route::post('reports/preview', [ReportController::class, 'preview'])->name('reports.preview'); // Preview Data
+        Route::delete('reports/{report}', [ReportController::class, 'destroy'])->name('reports.destroy');
 
-        Route::apiResource('payments', PaymentController::class)->except(['update']);
-        Route::post('payments/tagihan', [PaymentController::class, 'createTagihan'])->name('payments.tagihan.create');
-        Route::get('tagihan', function() {
-            return \App\Models\Tagihan::with('mahasiswa.user', 'tarif', 'pembayaran')
-                ->latest()
-                ->get();
-        })->name('tagihan.index');
+        // Pembayaran (Hanya lihat data pembayaran yg sudah ada)
+        Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
+        Route::get('payments/{id}', [PaymentController::class, 'show'])->name('payments.show');
 
+        // TAGIHAN (CRUD via API, dihandle oleh PaymentController)
+        Route::get('tagihan', [PaymentController::class, 'indexTagihan'])->name('tagihan.index');        // GET /api/admin/tagihan
+        Route::get('tagihan/{id}', [PaymentController::class, 'showTagihan'])->name('tagihan.show');          // GET /api/admin/tagihan/{id}
+        Route::post('payments/tagihan', [PaymentController::class, 'createTagihan'])->name('payments.tagihan.create'); // POST /api/admin/payments/tagihan (URL create tetap sama)
+        Route::put('tagihan/{id}', [PaymentController::class, 'updateTagihan'])->name('tagihan.update');        // PUT /api/admin/tagihan/{id}
+        Route::delete('tagihan/{id}', [PaymentController::class, 'destroyTagihan'])->name('tagihan.destroy');    // DELETE /api/admin/tagihan/{id}
+
+        // Settings
         Route::get('settings/system', [SettingController::class, 'getSystemSettings'])->name('settings.system.show');
         Route::post('settings/system', [SettingController::class, 'updateSystemSettings'])->name('settings.system.update');
         Route::get('system-info', [SettingController::class, 'getSystemInfo'])->name('system-info');
@@ -75,6 +77,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // --- RUTE KHUSUS UNTUK MAHASISWA ---
     Route::middleware('role:mahasiswa')->prefix('mahasiswa')->name('mahasiswa.')->group(function () {
-        // Contoh: Route::get('/tagihan', [MahasiswaApiController::class, 'index']);
+        // Contoh: Route::get('/tagihan-saya', [MahasiswaApiController::class, 'tagihanSaya']);
     });
 });

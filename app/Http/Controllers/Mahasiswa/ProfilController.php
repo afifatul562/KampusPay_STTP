@@ -11,9 +11,11 @@ use App\Models\User;
 
 class ProfilController extends Controller
 {
+    /**
+     * Menampilkan halaman profil utama mahasiswa.
+     */
     public function index()
     {
-        // 1. Ambil user dan semua relasi yang dibutuhkan
         $user = User::with('mahasiswaDetail.tagihan')->find(Auth::id());
 
         if (!$user->mahasiswaDetail) {
@@ -22,13 +24,13 @@ class ProfilController extends Controller
 
         $allTagihan = $user->mahasiswaDetail->tagihan;
 
-        // 2. Hitung data untuk Ringkasan Keuangan
+        // Hitung data untuk Ringkasan Keuangan
         $totalTunggakan = $allTagihan->where('status', 'Belum Lunas')->sum('jumlah_tagihan');
         $jumlahTunggakan = $allTagihan->where('status', 'Belum Lunas')->count();
         $totalTerbayar = $allTagihan->where('status', 'Lunas')->sum('jumlah_tagihan');
         $pembayaranSelesai = $allTagihan->where('status', 'Lunas')->count();
 
-        // 3. Kirim semua data ke view
+        // Kirim semua data ke view
         return view('mahasiswa.profil', [
             'user' => $user,
             'detail' => $user->mahasiswaDetail,
@@ -40,22 +42,31 @@ class ProfilController extends Controller
     }
 
     /**
-     * Memperbarui password user yang sedang login.
+     * Menampilkan halaman form untuk mengubah password.
+     */
+    public function editPassword()
+    {
+        return view('mahasiswa.ubah-password');
+    }
+
+    /**
+     * Memproses permintaan untuk mengubah password.
      */
     public function updatePassword(Request $request)
     {
         // 1. Validasi input dari form
-        $validated = $request->validateWithBag('updatePassword', [
+        $validated = $request->validate([
             'current_password' => ['required', 'current_password'],
             'password' => ['required', Password::defaults(), 'confirmed'],
         ]);
 
-        // 2. Jika validasi berhasil, update password di database
+        // 2. Update password user yang sedang login
         $request->user()->update([
             'password' => Hash::make($validated['password']),
         ]);
 
-        // 3. Arahkan kembali ke halaman profil dengan pesan sukses
+        // 3. Arahkan kembali dengan pesan sukses
         return back()->with('status', 'password-updated');
     }
 }
+

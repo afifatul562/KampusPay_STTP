@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
+use App\Models\Tagihan;
 
 class Pembayaran extends Model
 {
@@ -16,12 +18,20 @@ class Pembayaran extends Model
         'konfirmasi_id',
         'diverifikasi_oleh',
         'tanggal_bayar',
-        'metode_pembayaran'
+        'metode_pembayaran',
+        'alasan_ditolak'
     ];
 
     public function tagihan()
     {
         return $this->belongsTo(Tagihan::class, 'tagihan_id');
+    }
+
+    public function userKasir()
+    {
+        // Asumsi kolom 'diverifikasi_oleh' di tabel 'pembayaran'
+        // berisi 'id' dari tabel 'users' (kasir).
+        return $this->belongsTo(User::class, 'diverifikasi_oleh', 'id');
     }
 
     public function konfirmasi()
@@ -33,4 +43,8 @@ class Pembayaran extends Model
     {
         return $this->belongsTo(User::class, 'diverifikasi_oleh');
     }
+
+    protected $casts = [
+        'tanggal_bayar' => 'datetime',
+    ];
 }

@@ -17,14 +17,24 @@ class DashboardController extends Controller
      */
     public function stats()
     {
-        $totalMahasiswa = \App\Models\MahasiswaDetail::count();
-        $totalTagihan = Tagihan::count();
-        $totalLunas = Tagihan::where('status', 'Lunas')->count();
+        // Kueri 1: Mengambil data statistik dari tabel Tagihan dalam satu kali jalan
+        $tagihanStats = Tagihan::selectRaw("
+                COUNT(*) as total_tagihan,
+                SUM(CASE WHEN status = 'Lunas' THEN 1 ELSE 0 END) as total_lunas,
+                SUM(CASE WHEN status = 'Lunas' THEN jumlah_tagihan ELSE 0 END) as total_pembayaran
+            ")
+            ->first();
+
+        // Kueri 2: Tetap terpisah karena beda tabel
+        $totalMahasiswa = \App\Models\MahasiswaDetail::count(); // Perbaikan kecil: lihat poin 3
+
+        // Hitung sisanya di PHP (lebih cepat)
+        $totalLunas = $tagihanStats->total_lunas ?? 0;
+        $totalTagihan = $tagihanStats->total_tagihan ?? 0;
+        $totalPembayaran = $tagihanStats->total_pembayaran ?? 0;
+
         $pendingPayment = $totalTagihan - $totalLunas;
-
         $tingkatPembayaran = $totalTagihan > 0 ? ($totalLunas / $totalTagihan) * 100 : 0;
-
-        $totalPembayaran = Tagihan::where('status', 'Lunas')->sum('jumlah_tagihan');
 
         return response()->json([
             'total_mahasiswa' => $totalMahasiswa,

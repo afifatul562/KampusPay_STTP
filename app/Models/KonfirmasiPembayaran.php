@@ -14,7 +14,8 @@ class KonfirmasiPembayaran extends Model
     protected $fillable = [
         'tagihan_id',
         'file_bukti_pembayaran',
-        'status_verifikasi'
+        'status_verifikasi',
+        'alasan_ditolak'
     ];
 
     public function tagihan()

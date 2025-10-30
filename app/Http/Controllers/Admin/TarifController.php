@@ -12,7 +12,10 @@ class TarifController extends Controller
     public function index()
     {
         $tarifs = TarifMaster::orderBy('created_at', 'desc')->get();
-        return response()->json($tarifs);
+        return response()->json([
+            'success' => true,
+            'data' => $tarifs
+        ]);
     }
 
     public function store(Request $request)
@@ -24,16 +27,6 @@ class TarifController extends Controller
                 'program_studi'   => 'nullable|string|max:255',
                 'angkatan'        => 'nullable|string|max:10'
             ]);
-
-            // ▼▼▼ DI SINI KEAJAIBANNYA TERJADI ▼▼▼
-            // Jika input kosong (dari dropdown "Berlaku untuk Semua"), ubah jadi teks.
-            if (empty($validatedData['program_studi'])) {
-                $validatedData['program_studi'] = 'Semua Jurusan';
-            }
-            if (empty($validatedData['angkatan'])) {
-                $validatedData['angkatan'] = 'Semua Angkatan';
-            }
-            // ▲▲▲ SELESAI PERUBAHAN ▲▲▲
 
             $tarif = TarifMaster::create($validatedData);
 
@@ -67,14 +60,6 @@ class TarifController extends Controller
                 'program_studi'   => 'nullable|string|max:255',
                 'angkatan'        => 'nullable|string|max:10'
             ]);
-
-            // Terapkan logika yang sama untuk update
-            if (empty($validatedData['program_studi'])) {
-                $validatedData['program_studi'] = 'Semua Jurusan';
-            }
-            if (empty($validatedData['angkatan'])) {
-                $validatedData['angkatan'] = 'Semua Angkatan';
-            }
 
             $tarif = TarifMaster::findOrFail($id);
             $tarif->update($validatedData);

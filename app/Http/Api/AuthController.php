@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api; // <-- PASTIKAN BARIS INI PERSIS SEPERTI INI
+namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -25,7 +25,6 @@ class AuthController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        // Hapus token lama jika ada, untuk keamanan
         $user->tokens()->delete();
 
         // Buat token baru

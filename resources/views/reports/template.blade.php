@@ -3,8 +3,45 @@
 <head>
     <title>Laporan {{ $jenis_laporan_title }}</title>
     <style>
-        body { font-family: DejaVu Sans, sans-serif; font-size: 10px; }
-        h1 { text-align: center; }
+        /* ===== CSS UNTUK KOP SURAT FIXED ===== */
+        @page {
+            margin: 0cm 0cm; /* Hapus margin default */
+        }
+
+        body {
+            /* Beri ruang di atas untuk kop surat */
+            margin-top: 4.5cm;
+
+            /* Atur margin halaman standar */
+            margin-left: 2cm;
+            margin-right: 2cm;
+            margin-bottom: 2cm;
+
+            /* Font dari file asli Anda */
+            font-family: DejaVu Sans, sans-serif;
+            font-size: 10px;
+        }
+
+        header {
+            position: fixed;
+            top: 1cm; /* Jarak kop surat dari atas */
+            left: 2cm; /* Samakan dengan margin-left body */
+            right: 2cm; /* Samakan dengan margin-right body */
+            height: 3cm; /* Perkiraan tinggi kop surat */
+            border-bottom: 2px solid black;
+        }
+
+        .header-table { width: 100%; }
+        .header-table td { vertical-align: middle; padding-bottom: 10px; }
+        .logo { width: 60px; height: auto; }
+        .institute-details { text-align: center; }
+        .institute-details .yayasan { font-size: 12px; }
+        .institute-details .nama-kampus { font-size: 16px; font-weight: bold; margin: 2px 0; }
+        .institute-details .alamat { font-size: 9px; }
+        /* ===== AKHIR CSS KOP SURAT ===== */
+
+
+        h1 { text-align: center; margin-bottom: 5px; } /* Kurangi margin-bottom */
         .header-info { margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #000; padding: 6px; text-align: left; }
@@ -12,6 +49,23 @@
     </style>
 </head>
 <body>
+
+    <header>
+        <table class="header-table">
+            <tr>
+                <td style="width: 80px;">
+                    <img src="{{ public_path('images/logo_kampus.png') }}" alt="Logo" class="logo">
+                </td>
+                <td class="institute-details">
+                    <div class="yayasan">Yayasan Pendidikan Tinggi Payakumbuh</div>
+                    <div class="nama-kampus">SEKOLAH TINGGI TEKNOLOGI PAYAKUMBUH</div>
+                    <div class="alamat">
+                        Jln. Khatib Sulaiman Sawah Padang, Telp. 0752-796063, Fax. 0752-90063, Website www.sttpyk.ac.id, Email: info@sttpyk.ac.id
+                    </div>
+                </td>
+                <td style="width: 80px;">&nbsp;</td> </tr>
+        </table>
+    </header>
     <h1>Laporan {{ $jenis_laporan_title }}</h1>
     <div class="header-info">
         <p><strong>Periode:</strong> {{ $periode_formatted }}</p>

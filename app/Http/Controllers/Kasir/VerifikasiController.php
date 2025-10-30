@@ -66,19 +66,34 @@ class VerifikasiController extends Controller
      */
     public function reject(KonfirmasiPembayaran $konfirmasi, Request $request)
     {
-        // Validasi untuk alasan penolakan jika ada
-        // $request->validate(['alasan' => 'nullable|string|max:255']);
+        // 1. Validasi: Pastikan alasan_ditolak dikirim dan valid
+        //    (Ini sesuai dengan 'alasan_ditolak' yang dikirim JavaScript)
+        //    (Dan 'min:10' sesuai dengan validasi di SweetAlert)
+        $validated = $request->validate([
+            'alasan_ditolak' => 'required|string|min:10|max:500',
+        ]);
 
+        // 2. Cek status (logika Anda sudah benar)
         if ($konfirmasi->status_verifikasi !== 'Menunggu Verifikasi') {
             return response()->json(['success' => false, 'message' => 'Status pembayaran ini sudah diubah.'], 409);
         }
 
-        // Cukup update status konfirmasi menjadi 'Ditolak'
-        $konfirmasi->update([
-            'status_verifikasi' => 'Ditolak',
-            // 'alasan_penolakan' => $request->alasan, // Kolom opsional jika kamu mau menambahkannya
-        ]);
+        try {
+            // 3. Update status DAN simpan alasan penolakan
+            $konfirmasi->update([
+                'status_verifikasi' => 'Ditolak',
+                // Pastikan nama kolom di database Anda adalah 'alasan_ditolak'
+                'alasan_ditolak' => $validated['alasan_ditolak'],
+            ]);
 
-        return response()->json(['success' => true, 'message' => 'Pembayaran telah ditolak.']);
+            $konfirmasi->tagihan()->update(['status' => 'Ditolak']);
+
+            return response()->json(['success' => true, 'message' => 'Pembayaran telah ditolak.']);
+
+        } catch (\Exception $e) {
+            Log::error('Gagal menolak pembayaran: ' . $e->getMessage());
+            // Kirim pesan error jika gagal (misal: MassAssignmentException)
+            return response()->json(['success' => false, 'message' => 'Gagal menyimpan alasan: ' . $e->getMessage()], 500);
+        }
     }
 }

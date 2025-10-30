@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
-class AuthenticatedSessionController extends Controller
+class ConfirmablePasswordController extends Controller
 {
     /**
      * Display the login view.
@@ -31,14 +31,12 @@ class AuthenticatedSessionController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        // ▼▼▼ INI BAGIAN YANG DIPERBAIKI ▼▼▼
         // Buat token jika yang login adalah Admin ATAU Kasir
         if ($user->isAdmin() || $user->isKasir()) {
             $user->tokens()->delete();
             $token = $user->createToken('api-token')->plainTextToken;
             $request->session()->put('api_token', $token);
         }
-        // ▲▲▲ SELESAI ▲▲▲
 
         // Redirect ke dashboard "pintar"
         return redirect()->intended(route('dashboard'));

@@ -33,7 +33,6 @@ class AuthenticatedSessionController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        // ▼▼▼ INI BAGIAN PENTING YANG DITAMBAHKAN ▼▼▼
         // Jika user yang login adalah admin, buatkan token API
         // dan simpan di session agar bisa diakses oleh Blade.
         if ($user->isAdmin() || $user->isKasir()) {
@@ -41,7 +40,6 @@ class AuthenticatedSessionController extends Controller
             $token = $user->createToken('api-token')->plainTextToken;
             $request->session()->put('api_token', $token);
         }
-        // ▲▲▲ SELESAI ▲▲▲
 
         // Redirect ke halaman dashboard yang sesuai dengan rolenya
         if ($user->isAdmin()) {

@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Pembayaran;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Barryvdh\DomPDF\Facade\Pdf; // <-- Import facade PDF
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class KwitansiController extends Controller
 {

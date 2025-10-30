@@ -11,15 +11,17 @@ use Illuminate\Validation\Rules\Password;
 class PengaturanController extends Controller
 {
     /**
-     * Menampilkan halaman pengaturan untuk kasir.
+     * Menampilkan halaman form untuk mengubah password.
+     * Nama method diubah agar sesuai dengan route baru.
      */
-    public function index()
+    public function showPasswordForm()
     {
-        return view('kasir.pengaturan');
+        return view('kasir.ubah-password');
     }
 
     /**
      * Memproses permintaan untuk mengubah password.
+     * Nama method diubah agar sesuai dengan route baru.
      */
     public function updatePassword(Request $request)
     {
@@ -38,3 +40,4 @@ class PengaturanController extends Controller
         return back()->with('status', 'password-updated');
     }
 }
+

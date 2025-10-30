@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Log;
 class DashboardController extends Controller
 {
     /**
-     * Mencari mahasiswa berdasarkan NPM dan mengambil tagihan yang belum lunas.
+     * Mencari mahasiswa berdasarkan NPM dan mengambil tagihan yang BISA DIBAYAR.
      */
     public function searchMahasiswa(Request $request)
     {
@@ -26,7 +26,10 @@ class DashboardController extends Controller
         $mahasiswa = MahasiswaDetail::with([
             'user',
             'tagihan' => function ($query) {
-                $query->where('status', 'Belum Lunas');
+                // DIUBAH: Ambil semua tagihan yang BUKAN 'Lunas'.
+                // Ini akan mencakup: 'Belum Lunas', 'Menunggu Pembayaran Tunai',
+                // 'Ditolak', dan 'Menunggu Verifikasi Transfer' (Kasus Dinda)
+                $query->where('status', '!=', 'Lunas');
             },
             'tagihan.tarif'
         ])->where('npm', $request->npm)->first();
@@ -40,29 +43,43 @@ class DashboardController extends Controller
 
     /**
      * Memproses pembayaran untuk satu atau lebih tagihan.
+     * Termasuk logika "Otomatis Hilang" (Override).
      */
     public function processPayment(Request $request)
     {
-        // ▼▼▼ PERBAIKAN ADA DI SINI ▼▼▼
         $validated = $request->validate([
-            'tagihan_ids'       => 'required|array|min:1',
-            'tagihan_ids.*'     => ['required', 'integer', Rule::exists('tagihan', 'tagihan_id')->where('status', 'Belum Lunas')],
-            'metode_pembayaran' => 'required|string|in:Tunai,Transfer Bank Nagari', // Diubah
+            'tagihan_ids'   => 'required|array|min:1',
+            // DIUBAH: Izinkan bayar semua tagihan yg statusnya BUKAN 'Lunas'
+            'tagihan_ids.*' => ['required', 'integer', Rule::exists('tagihan', 'tagihan_id')->whereNot('status', 'Lunas')],
+            'metode_pembayaran' => 'required|string|in:Tunai,Transfer Bank Nagari,Transfer', // Ditambah 'Transfer'
         ]);
-        // ▲▲▲ SELESAI ▲▲▲
 
         try {
             DB::transaction(function () use ($validated) {
                 foreach ($validated['tagihan_ids'] as $tagihanId) {
                     $tagihan = Tagihan::find($tagihanId);
 
+                    // --- DITAMBAHKAN: LOGIKA "OTOMATIS HILANG" (REVISI KASUS DINDA) ---
+                    // Sebelum bayar tunai, kita cari dan batalkan semua
+                    // konfirmasi transfer yang 'Menunggu Verifikasi' untuk tagihan ini.
+                    KonfirmasiPembayaran::where('tagihan_id', $tagihan->tagihan_id)
+                        ->where('status_verifikasi', 'Menunggu Verifikasi')
+                        ->update([
+                            'status_verifikasi' => 'Dibatalkan (Oleh Kasir Tunai)'
+                        ]);
+                    // --- SELESAI LOGIKA "OTOMATIS HILANG" ---
+
+                    // 1. Buat record pembayaran tunai baru
                     Pembayaran::create([
                         'tagihan_id'        => $tagihan->tagihan_id,
                         'diverifikasi_oleh' => Auth::id(),
                         'tanggal_bayar'     => now(),
-                        'metode_pembayaran' => $validated['metode_pembayaran'],
+                        'metode_pembayaran' => $validated['metode_pembayaran'], // Ini akan 'Tunai'
+                        'status_pembayaran' => 'LUNAS', // Langsung Lunas
+                        'jumlah_bayar'      => $tagihan->jumlah_tagihan,
                     ]);
 
+                    // 2. Update status tagihan utamanya
                     $tagihan->status = 'Lunas';
                     $tagihan->save();
                 }
@@ -89,21 +106,25 @@ class DashboardController extends Controller
         $kasirId = Auth::id();
         $today = Carbon::today();
 
-        // Ambil semua pembayaran yang diverifikasi oleh kasir ini pada hari ini
         $paymentsToday = Pembayaran::with('tagihan')
             ->where('diverifikasi_oleh', $kasirId)
             ->whereDate('created_at', $today)
             ->get();
 
-        // Hitung jumlah transaksi
         $transaksiCount = $paymentsToday->count();
 
-        // Hitung total penerimaan dari semua tagihan terkait
         $totalPenerimaan = $paymentsToday->sum(function($pembayaran) {
             return $pembayaran->tagihan->jumlah_tagihan ?? 0;
         });
 
-        $pendingVerifikasiCount = KonfirmasiPembayaran::where('status_verifikasi', 'Menunggu Verifikasi')->count();
+        // DIUBAH: Query ini dibuat lebih aman.
+        // Hanya hitung 'pending' jika tagihan utamanya juga 'pending'.
+        // Ini mencegah 'pending verifikasi' yang sudah lunas (via tunai) terhitung.
+        $pendingVerifikasiCount = KonfirmasiPembayaran::where('status_verifikasi', 'Menunggu Verifikasi')
+            ->whereHas('tagihan', function($q) {
+                $q->where('status', 'Menunggu Verifikasi Transfer');
+            })
+            ->count();
 
         return response()->json([
             'success' => true,

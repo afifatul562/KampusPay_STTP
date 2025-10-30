@@ -4,104 +4,71 @@
 @section('page-title', 'Profil Mahasiswa')
 
 @section('content')
-    {{-- 1. Panggil menu navigasi di sini --}}
-    @include('layouts.partials.mahasiswa-nav')
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-    {{-- 2. Tampilkan notifikasi jika ada --}}
-    @if (session('status') === 'password-updated')
-        <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6" role="alert">
-            <p class="font-bold">Berhasil</p>
-            <p>Password Anda telah berhasil diperbarui.</p>
-        </div>
-    @endif
-
-    {{-- 3. Baru tampilkan sisa kontennya --}}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {{-- Kartu Informasi Pribadi --}}
-        <div class="bg-white p-6 rounded-lg shadow-md">
-            <h3 class="text-xl font-semibold mb-4">Informasi Pribadi</h3>
-            <div class="grid grid-cols-3 gap-4 text-sm">
-                <span class="text-gray-500 col-span-1">Nama Lengkap</span>
-                <span class="font-semibold col-span-2">{{ $user->nama_lengkap ?? 'N/A' }}</span>
-
-                <span class="text-gray-500 col-span-1">NPM</span>
-                <span class="font-semibold col-span-2">{{ $detail->npm ?? 'N/A' }}</span>
-
-                <span class="text-gray-500 col-span-1">Program Studi</span>
-                <span class="font-semibold col-span-2">{{ $detail->program_studi ?? 'N/A' }}</span>
-
-                <span class="text-gray-500 col-span-1">Angkatan</span>
-                <span class="font-semibold col-span-2">{{ $detail->angkatan ?? 'N/A' }}</span>
-
-                <span class="text-gray-500 col-span-1">Semester Aktif</span>
-                <span class="font-semibold col-span-2">{{ $detail->semester_aktif ?? 'N/A' }}</span>
-
-                <span class="text-gray-500 col-span-1">Email</span>
-                <span class="font-semibold col-span-2">{{ $user->email ?? 'N/A' }}</span>
+        {{-- Kolom Kiri: Informasi Pribadi --}}
+        <div class="lg:col-span-1 bg-white p-6 rounded-2xl shadow-lg text-center">
+            {{-- Foto Profil & Nama --}}
+            <div class="mb-4">
+                <div class="w-24 h-24 rounded-full mx-auto bg-gray-200 flex items-center justify-center mb-2">
+                    {{-- Placeholder untuk inisial nama --}}
+                    <span class="text-3xl font-bold text-gray-500">{{ strtoupper(substr($user->nama_lengkap, 0, 1)) }}</span>
+                    {{-- Anda bisa menggantinya dengan <img src="..." > jika ada foto profil --}}
+                </div>
+                <h2 class="text-xl font-bold text-gray-900">{{ $user->nama_lengkap ?? 'N/A' }}</h2>
+                <p class="text-sm text-gray-500">{{ $detail->npm ?? 'N/A' }}</p>
             </div>
-        </div>
 
-        {{-- Kartu Ringkasan Keuangan --}}
-        <div class="bg-white p-6 rounded-lg shadow-md">
-            <h3 class="text-xl font-semibold mb-4">Ringkasan Keuangan</h3>
-            <div class="space-y-3">
-                <div class="flex justify-between items-center">
-                    <span class="text-gray-500">Total Terbayar</span>
-                    <span class="font-bold text-lg text-green-600">Rp {{ number_format($totalTerbayar, 0, ',', '.') }}</span>
+            {{-- Detail Akademik --}}
+            <div class="text-left space-y-3 text-sm border-t pt-4">
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Program Studi</span>
+                    <span class="font-semibold text-gray-800 text-right">{{ $detail->program_studi ?? 'N/A' }}</span>
                 </div>
-                <div class="flex justify-between items-center">
-                    <span class="text-gray-500">Total Tunggakan</span>
-                    <span class="font-bold text-lg text-red-600">Rp {{ number_format($totalTunggakan, 0, ',', '.') }}</span>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Angkatan</span>
+                    <span class="font-semibold text-gray-800">{{ $detail->angkatan ?? 'N/A' }}</span>
                 </div>
-                <hr class="my-2">
-                <div class="flex justify-between items-center">
-                    <span class="text-gray-500">Pembayaran Selesai</span>
-                    <span class="font-semibold">{{ $pembayaranSelesai }}</span>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Semester Aktif</span>
+                    <span class="font-semibold text-gray-800">{{ $detail->semester_aktif ?? 'N/A' }}</span>
                 </div>
-                <div class="flex justify-between items-center">
-                    <span class="text-gray-500">Pembayaran Tertunda</span>
-                    <span class="font-semibold">{{ $jumlahTunggakan }}</span>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Email</span>
+                    <span class="font-semibold text-gray-800">{{ $user->email ?? 'N/A' }}</span>
                 </div>
             </div>
         </div>
 
-        {{-- Kartu Ubah Password --}}
-        <div class="bg-white p-6 rounded-lg shadow-md lg:col-span-2">
-            <h3 class="text-xl font-semibold mb-4">Ubah Password</h3>
-            <form action="{{ route('mahasiswa.profil.updatePassword') }}" method="POST" class="max-w-md">
-                @csrf
+        {{-- Kolom Kanan: Ringkasan Keuangan --}}
+        <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-lg">
+            <h3 class="text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+                Ringkasan Keuangan
+            </h3>
+            <div class="space-y-4">
+                {{-- Total Terbayar --}}
+                <div class="bg-green-50 p-4 rounded-lg flex justify-between items-center">
+                    <span class="font-medium text-green-800">Total Terbayar</span>
+                    <span class="font-bold text-lg text-green-800">Rp {{ number_format($totalTerbayar, 0, ',', '.') }}</span>
+                </div>
+                {{-- Total Tunggakan --}}
+                <div class="bg-red-50 p-4 rounded-lg flex justify-between items-center">
+                    <span class="font-medium text-red-800">Total Tunggakan</span>
+                    <span class="font-bold text-lg text-red-800">Rp {{ number_format($totalTunggakan, 0, ',', '.') }}</span>
+                </div>
 
-                @if ($errors->updatePassword->any())
-                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-                        <ul>
-                            @foreach ($errors->updatePassword->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
+                <div class="border-t pt-4 space-y-3 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Pembayaran Selesai</span>
+                        <span class="font-semibold text-gray-800">{{ $pembayaranSelesai }} Transaksi</span>
                     </div>
-                @endif
-
-                <div class="space-y-4">
-                    <div>
-                        <label for="current_password" class="block text-sm font-medium text-gray-700">Password Saat Ini</label>
-                        <input type="password" name="current_password" id="current_password" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                    </div>
-                    <div>
-                        <label for="password" class="block text-sm font-medium text-gray-700">Password Baru</label>
-                        <input type="password" name="password" id="password" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                    </div>
-                    <div>
-                        <label for="password_confirmation" class="block text-sm font-medium text-gray-700">Konfirmasi Password Baru</label>
-                        <input type="password" name="password_confirmation" id="password_confirmation" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Pembayaran Tertunda</span>
+                        <span class="font-semibold text-gray-800">{{ $jumlahTunggakan }} Tagihan</span>
                     </div>
                 </div>
-                <div class="mt-6">
-                    <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
-                        Simpan Password
-                    </button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 @endsection
-

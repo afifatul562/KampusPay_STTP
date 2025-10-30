@@ -19,12 +19,10 @@ class LaporanController extends Controller
     {
         $mahasiswaId = Auth::user()->mahasiswaDetail->mahasiswa_id;
 
-        // ▼▼▼ INI BAGIAN YANG DIPERBAIKI ▼▼▼
         // Ambil data tunggakan untuk ditampilkan di kartu Laporan Data Tunggakan
         $tunggakan = \App\Models\Tagihan::where('mahasiswa_id', $mahasiswaId)
             ->where('status', 'Belum Lunas')
             ->get();
-        // ▲▲▲ SELESAI ▲▲▲
 
         // Ambil jenis tarif untuk dropdown filter
         $jenisTarif = TarifMaster::select('nama_pembayaran')->distinct()->orderBy('nama_pembayaran')->get();

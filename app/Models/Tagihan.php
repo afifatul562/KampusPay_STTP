@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\KonfirmasiPembayaran;
 
 class Tagihan extends Model
 {
@@ -30,9 +31,13 @@ class Tagihan extends Model
         return $this->belongsTo(TarifMaster::class, 'tarif_id');
     }
 
-    public function konfirmasiPembayaran()
+    public function konfirmasi()
     {
-        return $this->hasMany(KonfirmasiPembayaran::class, 'tagihan_id');
+        // Gunakan hasOne(...)->latestOfMany()
+        // Ini akan otomatis mengambil HANYA 1 data konfirmasi TERBARU
+        // yang terkait dengan tagihan ini (misal: konfirmasi Ditolak yang terakhir).
+        return $this->hasOne(KonfirmasiPembayaran::class, 'tagihan_id', 'tagihan_id')
+        ->latestOfMany('konfirmasi_id');
     }
 
     public function pembayaran()
