@@ -76,6 +76,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/pengaturan', fn() => view('admin.pengaturan'))->name('pengaturan');
         Route::get('/registrasi', fn() => view('admin.registrasi'))->name('registrasi');
         Route::get('/reports/download/{report}', [AdminReportController::class, 'download'])->name('reports.download');
+        Route::resource('users', App\Http\Controllers\Admin\UserManagementController::class);
     });
 
     // --- RUTE KASIR ---
