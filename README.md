@@ -1,61 +1,238 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# KampusPay STTP - Sistem Pembayaran Kampus
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Sistem pembayaran kampus berbasis web yang memungkinkan manajemen pembayaran tagihan mahasiswa secara digital. Aplikasi ini menyediakan antarmuka untuk tiga role pengguna: Admin, Kasir, dan Mahasiswa.
 
-## About Laravel
+## 📋 Deskripsi
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+KampusPay STTP adalah aplikasi web untuk mengelola pembayaran tagihan mahasiswa di kampus. Sistem ini memungkinkan:
+- Admin mengelola data mahasiswa, tarif, tagihan, dan laporan
+- Kasir memproses pembayaran tunai dan verifikasi transfer
+- Mahasiswa melihat tagihan, melakukan pembayaran (tunai/transfer), dan mengunduh kwitansi
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## ✨ Fitur Utama
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 👨‍💼 Admin
+- **Dashboard** - Overview statistik pembayaran dan registrasi
+- **Manajemen Mahasiswa** - CRUD data mahasiswa (Create, Read, Update, Delete) dengan import/export Excel
+- **Manajemen Tarif** - Kelola jenis pembayaran dan tarif
+- **Manajemen Tagihan** - Buat dan kelola tagihan mahasiswa
+- **Manajemen Pembayaran** - Lihat semua pembayaran yang telah diproses
+- **Laporan** - Generate laporan dengan format PDF/Excel
+- **Pengaturan Sistem** - Konfigurasi aplikasi (nama aplikasi, logo, dll)
+- **Manajemen User** - Kelola user admin dan kasir
 
-## Learning Laravel
+### 💰 Kasir
+- **Dashboard** - Overview transaksi harian
+- **Transaksi** - Proses pembayaran tunai dan lihat riwayat transaksi
+- **Verifikasi Pembayaran** - Verifikasi pembayaran transfer dari mahasiswa
+- **Laporan** - Generate laporan transaksi dengan export CSV/PDF
+- **Pengaturan** - Ubah password
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### 🎓 Mahasiswa
+- **Dashboard** - Overview tagihan dan status pembayaran
+- **Tagihan & Pembayaran** - Lihat tagihan dan pilih metode pembayaran (Tunai/Transfer)
+- **Upload Bukti Transfer** - Upload bukti pembayaran untuk verifikasi
+- **Riwayat Pembayaran** - Lihat riwayat pembayaran yang telah dilakukan
+- **Kwitansi** - Download kwitansi pembayaran dalam format PDF
+- **Laporan** - Download laporan histori dan tunggakan pembayaran
+- **Profil** - Lihat dan update profil
+- **Ubah Password** - Ganti password akun
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## 🛠 Teknologi yang Digunakan
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- **Framework**: Laravel 12.0
+- **PHP**: ^8.2
+- **Frontend**: 
+  - Blade Templates
+  - Tailwind CSS
+  - JavaScript (Vanilla JS)
+- **Database**: SQLite (default) / MySQL / PostgreSQL
+- **Libraries**:
+  - Laravel Sanctum (API Authentication)
+  - DomPDF (PDF Generation)
+  - Maatwebsite Excel (Excel Import/Export)
+- **Testing**: Pest PHP
 
-## Laravel Sponsors
+## 📦 Persyaratan Sistem
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+- PHP >= 8.2
+- Composer
+- Node.js & NPM (untuk asset compilation)
+- SQLite (default) atau MySQL/PostgreSQL
+- Web Server (Apache/Nginx) atau PHP Built-in Server
 
-### Premium Partners
+## 🚀 Instalasi
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+1. **Clone repository**
+```bash
+git clone https://github.com/afifatul562/KampusPay_STTP.git
+cd KampusPay_STTP
+```
 
-## Contributing
+2. **Install dependencies**
+```bash
+composer install
+npm install
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+3. **Setup environment**
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-## Code of Conduct
+4. **Konfigurasi database**
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+   Edit file `.env` dan sesuaikan konfigurasi database:
+```env
+DB_CONNECTION=sqlite
+# atau
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=kampuspay
+DB_USERNAME=root
+DB_PASSWORD=
+```
 
-## Security Vulnerabilities
+   Jika menggunakan SQLite, pastikan file `database/database.sqlite` sudah ada:
+```bash
+touch database/database.sqlite
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+5. **Jalankan migration dan seeder**
+```bash
+php artisan migrate
+php artisan db:seed
+```
 
-## License
+6. **Compile assets**
+```bash
+npm run build
+# atau untuk development
+npm run dev
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+7. **Buat storage link**
+```bash
+php artisan storage:link
+```
+
+8. **Jalankan aplikasi**
+```bash
+php artisan serve
+```
+
+Aplikasi akan berjalan di `http://localhost:8000`
+
+## 👤 Default Login
+
+Setelah menjalankan seeder, Anda dapat login dengan kredensial default:
+
+### Admin
+- **Username**: `admin`
+- **Password**: `password` (atau sesuai yang di-set di seeder)
+
+### Kasir
+- Buat akun kasir melalui menu Admin → Registrasi
+
+### Mahasiswa
+- Akun mahasiswa dibuat saat Admin mendaftarkan mahasiswa baru
+
+## 🔐 Role & Permission
+
+Aplikasi menggunakan sistem role-based access control dengan 3 role:
+
+1. **Admin** - Akses penuh ke semua fitur
+2. **Kasir** - Akses untuk memproses pembayaran dan verifikasi
+3. **Mahasiswa** - Akses terbatas untuk melihat tagihan dan melakukan pembayaran
+
+## 📁 Struktur Project
+
+```
+KampusPay_STTP/
+├── app/
+│   ├── Http/
+│   │   ├── Controllers/
+│   │   │   ├── Admin/          # Controller untuk Admin
+│   │   │   ├── Kasir/          # Controller untuk Kasir
+│   │   │   └── Mahasiswa/      # Controller untuk Mahasiswa
+│   │   ├── Middleware/         # Custom middleware
+│   │   └── Requests/           # Form request validation
+│   ├── Models/                 # Eloquent models
+│   ├── Policies/               # Authorization policies
+│   ├── Services/               # Business logic services
+│   └── Mail/                   # Email notifications
+├── database/
+│   ├── migrations/             # Database migrations
+│   └── seeders/                # Database seeders
+├── resources/
+│   ├── views/                  # Blade templates
+│   ├── css/                    # CSS files
+│   └── js/                     # JavaScript files
+├── routes/
+│   ├── web.php                 # Web routes
+│   └── api.php                 # API routes
+└── tests/                      # Test files
+```
+
+## 🔧 Konfigurasi
+
+### Email Configuration
+
+Edit `.env` untuk mengkonfigurasi email (untuk notifikasi tagihan):
+
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.mailtrap.io
+MAIL_PORT=2525
+MAIL_USERNAME=your_username
+MAIL_PASSWORD=your_password
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=noreply@kampuspay.com
+MAIL_FROM_NAME="${APP_NAME}"
+```
+
+### Storage Configuration
+
+Pastikan folder storage memiliki permission yang tepat:
+
+```bash
+chmod -R 775 storage
+chmod -R 775 bootstrap/cache
+```
+
+## 📝 Testing
+
+Jalankan test suite dengan Pest:
+
+```bash
+php artisan test
+```
+
+## 🤝 Kontribusi
+
+1. Fork repository
+2. Buat feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit perubahan (`git commit -m 'Add some AmazingFeature'`)
+4. Push ke branch (`git push origin feature/AmazingFeature`)
+5. Buat Pull Request
+
+## 📄 License
+
+Aplikasi ini menggunakan lisensi [MIT](https://opensource.org/licenses/MIT).
+
+## 👥 Authors
+
+- **Afifatul** - [afifatul562](https://github.com/afifatul562)
+
+## 🙏 Acknowledgments
+
+- Laravel Framework
+- Tailwind CSS
+- DomPDF
+- Maatwebsite Excel
+
+---
+
+**Note**: Pastikan untuk mengubah kredensial default setelah instalasi di production!
