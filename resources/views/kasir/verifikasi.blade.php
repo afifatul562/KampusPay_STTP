@@ -4,75 +4,76 @@
 @section('page-title', 'Verifikasi Pembayaran Transfer')
 
 @section('content')
-    <div class="bg-white rounded-2xl shadow-lg">
-        <div class="p-6 border-b">
-            <h2 class="text-xl font-semibold text-gray-800">Menunggu Verifikasi</h2>
-            <p class="text-sm text-gray-500 mt-1">Daftar pembayaran via transfer yang perlu diperiksa dan dikonfirmasi.</p>
-        </div>
+@php
+    $headerIcon = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>';
+    $emptyIcon = '<svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>';
+@endphp
 
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200" id="verifikasi-table">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waktu Upload</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mahasiswa</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis Tagihan</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Bukti</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200 text-sm">
-                    @forelse ($pendingVerifications as $item)
-                        <tr id="row-{{ $item->konfirmasi_id }}" class="hover:bg-gray-50 transition-colors">
-                            <td class="px-6 py-4 whitespace-nowrap text-gray-700">
-                                {{ \Carbon\Carbon::parse($item->created_at)->isoFormat('D MMM YYYY, HH:mm') }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="font-medium text-gray-900">{{ optional($item->tagihan->mahasiswa->user)->nama_lengkap ?? 'N/A' }}</div>
-                                <div class="text-gray-500">{{ optional($item->tagihan->mahasiswa)->npm ?? 'N/A' }}</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ optional($item->tagihan->tarif)->nama_pembayaran ?? 'N/A' }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right font-medium text-gray-800">
-                                Rp {{ number_format(optional($item->tagihan)->jumlah_tagihan ?? 0, 0, ',', '.') }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-center">
-                                <a href="{{ Storage::url($item->file_bukti_pembayaran) }}" target="_blank"
-                                   class="inline-flex items-center text-blue-600 hover:text-blue-800 font-semibold">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                                    Lihat
-                                </a>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-center font-medium">
-                                <div class="flex justify-center items-center gap-2">
-                                    <button class="action-btn-approve inline-flex items-center px-3 py-1 text-xs rounded-md bg-green-100 text-green-800 hover:bg-green-200 font-bold" data-id="{{ $item->konfirmasi_id }}">
-                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                        Setujui
-                                    </button>
-                                    <button class="action-btn-reject inline-flex items-center px-3 py-1 text-xs rounded-md bg-red-100 text-red-800 hover:bg-red-200 font-bold" data-id="{{ $item->konfirmasi_id }}">
-                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                                        Tolak
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="text-center py-10 text-gray-500">
-                                ✅ Tidak ada pembayaran yang menunggu verifikasi.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+<div class="space-y-6">
+    <x-page-header
+        title="Verifikasi Pembayaran Transfer"
+        subtitle="Daftar pembayaran via transfer yang perlu diperiksa dan dikonfirmasi"
+        :icon="$headerIcon">
+    </x-page-header>
 
-        @if ($pendingVerifications->hasPages())
-            <div class="p-6 border-t">
-                {{ $pendingVerifications->links() }}
-            </div>
-        @endif
-    </div>
+    @if($pendingVerifications->count() > 0)
+        <x-data-table
+            :headers="['Waktu Upload', 'Mahasiswa', 'Jenis Tagihan', 'Jumlah', 'Bukti', 'Aksi']"
+            id="verifikasi-table"
+            aria-label="Tabel verifikasi pembayaran transfer">
+            @foreach ($pendingVerifications as $item)
+                <tr id="row-{{ $item->konfirmasi_id }}" class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap text-gray-700">
+                        {{ \Carbon\Carbon::parse($item->created_at)->isoFormat('D MMM YYYY, HH:mm') }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="font-medium text-gray-900">{{ optional($item->tagihan->mahasiswa->user)->nama_lengkap ?? 'N/A' }}</div>
+                        <div class="text-gray-500">{{ optional($item->tagihan->mahasiswa)->npm ?? 'N/A' }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ optional($item->tagihan->tarif)->nama_pembayaran ?? 'N/A' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right font-medium text-gray-800">
+                        Rp {{ number_format(optional($item->tagihan)->jumlah_tagihan ?? 0, 0, ',', '.') }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        <a href="{{ Storage::url($item->file_bukti_pembayaran) }}" target="_blank"
+                           class="inline-flex items-center text-primary-600 hover:text-primary-800 font-semibold">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                            Lihat
+                        </a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center font-medium">
+                        <div class="flex justify-center items-center gap-2">
+                            <button class="action-btn-approve inline-flex items-center px-3 py-1.5 text-xs rounded-md bg-gradient-to-r from-success-100 to-success-200 text-success-800 hover:from-success-200 hover:to-success-300 font-bold shadow-sm hover:shadow-md transition-all duration-200" data-id="{{ $item->konfirmasi_id }}">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                Setujui
+                            </button>
+                            <button class="action-btn-reject inline-flex items-center px-3 py-1.5 text-xs rounded-md bg-gradient-to-r from-danger-100 to-danger-200 text-danger-800 hover:from-danger-200 hover:to-danger-300 font-bold shadow-sm hover:shadow-md transition-all duration-200" data-id="{{ $item->konfirmasi_id }}">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                Tolak
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            @endforeach
+
+            @if ($pendingVerifications->hasPages())
+                <x-slot:pagination>
+                    {{ $pendingVerifications->links() }}
+                </x-slot:pagination>
+            @endif
+        </x-data-table>
+    @else
+        <x-empty-state
+            title="Tidak ada verifikasi"
+            message="✅ Tidak ada pembayaran yang menunggu verifikasi."
+            :icon="$emptyIcon" />
+    @endif
+
+</div>
 @endsection
 
 
@@ -81,52 +82,9 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
 
-        // ==========================================================
-        // FUNGSI apiRequest ANDA (Tidak Berubah)
-        // ==========================================================
-        async function apiRequest(url, method = 'POST', body = null) {
-            const apiToken = document.querySelector('meta[name="api-token"]')?.getAttribute('content');
-            if (!apiToken) {
-                Swal.fire({ icon: 'error', title: 'Sesi Tidak Valid', text: 'Sesi Anda tidak ditemukan. Harap login kembali.', confirmButtonText: 'Login' }).then(() => { window.location.href = '{{ route("login") }}'; });
-                return Promise.reject('Token not found');
-            }
-            const options = {
-                method: method,
-                headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${apiToken}`, 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') }
-            };
-            if (body) { options.body = JSON.stringify(body); } // Ini akan kita pakai
-
-            try {
-                const response = await fetch(url, options);
-                if (response.status === 401) {
-                    Swal.fire({ icon: 'error', title: 'Sesi Berakhir', text: 'Sesi Anda telah berakhir. Harap login kembali.', confirmButtonText: 'Login' }).then(() => { window.location.href = '{{ route("login") }}'; });
-                    throw new Error('Unauthorized');
-                }
-                if (response.status === 204) {
-                    return { success: true, message: 'Operasi berhasil.' };
-                }
-                const contentType = response.headers.get("content-type");
-                if (!contentType || !contentType.includes("application/json")) {
-                    const responseBody = await response.text();
-                    console.error("Non-JSON response received:", response.status, responseBody);
-                    throw new Error(`Server (${response.status}): Respon tidak valid.`);
-                }
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    if (response.status === 422 && data.errors) {
-                        throw { status: 422, errors: data.errors, message: data.message || 'Validation failed' };
-                    }
-                    throw new Error(data.message || `HTTP error! status: ${response.status}`);
-                }
-                return data;
-            } catch (error) {
-                console.error("Error in apiRequest:", error);
-                if (error.status === 422) throw error;
-                throw new Error(error.message || 'Gagal terhubung ke server.');
-            }
-        }
+        // Gunakan util global apiRequest
+        const apiRequest = (window.App && window.App.apiRequest) ? window.App.apiRequest : null;
+        if (!apiRequest) { console.error('apiRequest util tidak tersedia'); }
 
         // ==========================================================
         // Event Listener Tabel (Tidak Berubah)

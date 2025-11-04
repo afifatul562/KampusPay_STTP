@@ -26,7 +26,12 @@ class TransaksiController extends Controller
 
         // Kirim filter ke class Export
         // Pastikan TransaksiKasirExport bisa menangani filter ini
-        return Excel::download(new TransaksiKasirExport($filters), "transaksi-kasir-{$tanggal}.xlsx");
+        return Excel::download(
+            new TransaksiKasirExport($filters),
+            "transaksi-kasir-{$tanggal}.csv",
+            \Maatwebsite\Excel\Excel::CSV,
+            [ 'Content-Type' => 'text/csv' ]
+        );
     }
 
     /**
@@ -47,7 +52,7 @@ class TransaksiController extends Controller
 
 
         // 2. Mulai query pembayaran
-        $query = Pembayaran::with('tagihan.mahasiswa.user', 'tagihan.tarif')
+        $query = Pembayaran::with('tagihan.mahasiswa.user', 'tagihan.tarif', 'konfirmasi')
             ->where('diverifikasi_oleh', $kasirId) // Filter berdasarkan kasir yg login
             ->latest('tanggal_bayar'); // Urutkan terbaru dulu
 
@@ -113,5 +118,34 @@ class TransaksiController extends Controller
             'transaksi' => $transaksi,
             'jenisTarif' => $jenisTarif,
         ]);
+    }
+
+    /**
+     * Batalkan pembayaran (hanya untuk pembayaran Transfer).
+     */
+    public function cancel(Request $request, Pembayaran $pembayaran)
+    {
+        // Validasi alasan
+        $validated = $request->validate([
+            'alasan_pembatalan' => 'required|string|min:10|max:500',
+        ]);
+
+        // Hanya izinkan batalkan jika metode adalah Transfer dan belum dibatalkan
+        if (strtolower($pembayaran->metode_pembayaran) !== 'transfer') {
+            return back()->with('error', 'Hanya pembayaran transfer yang dapat dibatalkan.');
+        }
+        if ($pembayaran->status_dibatalkan) {
+            return back()->with('error', 'Pembayaran ini sudah dibatalkan sebelumnya.');
+        }
+
+        $pembayaran->update([
+            'alasan_pembatalan' => $validated['alasan_pembatalan'],
+            'status_dibatalkan' => true,
+            'tanggal_pembatalan' => now(),
+        ]);
+
+        // Opsional: Tidak mengubah status tagihan; tampilan mahasiswa/admin sudah menangani label Dibatalkan
+
+        return back()->with('success', 'Pembayaran berhasil dibatalkan.');
     }
 }

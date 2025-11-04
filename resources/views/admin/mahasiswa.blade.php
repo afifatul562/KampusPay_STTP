@@ -10,6 +10,40 @@
       Kita akan memindahkannya ke dalam @push('scripts') agar menjadi popup SweetAlert.
     --}}
 
+@php
+    $headerIcon = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+    </svg>';
+@endphp
+
+<div class="space-y-6">
+    <x-breadcrumbs :items="[
+        ['label' => 'Dashboard', 'url' => route('admin.dashboard')],
+        ['label' => 'Manajemen Mahasiswa']
+    ]" />
+    
+    <x-page-header
+        title="Manajemen Mahasiswa"
+        subtitle="Kelola data mahasiswa"
+        :icon="$headerIcon">
+        <x-slot:actions>
+            <div class="flex items-center gap-2">
+                <button @click="importModalOpen = true" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-success-600 to-success-700 hover:from-success-700 hover:to-success-800 shadow-md hover:shadow-lg transition-all duration-200">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Import CSV
+                </button>
+                <a href="{{ route('admin.mahasiswa.export') }}" class="inline-flex items-center px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-100 to-indigo-200 text-indigo-700 text-sm font-semibold hover:from-indigo-200 hover:to-indigo-300 shadow-sm hover:shadow-md transition-all duration-200" title="Ekspor CSV">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8v12h16V8M4 8l8-5 8 5M12 12v6m0 0l3-3m-3 3l-3-3"></path></svg>
+                    Ekspor CSV
+                </a>
+                <a href="{{ route('admin.create-mahasiswa') }}" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 shadow-md hover:shadow-lg transition-all duration-200">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                    Tambah Mahasiswa
+                </a>
+            </div>
+        </x-slot:actions>
+    </x-page-header>
+
     {{-- DEFINISI FUNGSI ALPINE.JS --}}
     <script>
         function mahasiswaPage() {
@@ -173,44 +207,87 @@
         }
     </script>
 
-    {{-- DIV UTAMA ALPINE.JS (HTML Tetap Sama) --}}
+    {{-- DIV UTAMA ALPINE.JS --}}
     <div x-data="mahasiswaPage()">
-
-        {{-- Filter, Tombol, Tabel, dan Modal (HTML tetap sama) --}}
-        {{-- ... (Seluruh kode HTML dari <div class="flex flex-col sm:flex-row ..."> ... </div> sampai ... </div> </div>) ... --}}
-
-        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
-            <div class="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-                <div class="relative w-full sm:w-auto">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></div>
-                    <input type="text" x-model="searchQuery" @input.debounce.300ms="filterMahasiswa" class="block w-full sm:w-64 pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Cari nama atau NPM...">
+        {{-- Filter --}}
+        <x-card title="Filter">
+            <div class="flex flex-col sm:flex-row items-center gap-4">
+                <div class="relative w-full sm:w-auto flex-grow">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                    <input type="text" x-model="searchQuery" @input.debounce.300ms="filterMahasiswa" class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Cari nama atau NPM...">
                 </div>
                 <div class="relative w-full sm:w-auto">
-                    <select x-model="selectedAngkatan" @change="filterMahasiswa" class="block w-full sm:w-48 appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm">
+                    <select x-model="selectedAngkatan" @change="filterMahasiswa" class="block w-full sm:w-48 appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:text-sm">
                         <option value="">Semua Angkatan</option>
-                        <template x-for="angkatan in angkatanList" :key="angkatan"><option :value="angkatan" x-text="'20' + angkatan"></option></template>
+                        <template x-for="angkatan in angkatanList" :key="angkatan">
+                            <option :value="angkatan" x-text="'20' + angkatan"></option>
+                        </template>
                     </select>
-                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700"><svg class="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg></div>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                        <svg class="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                    </div>
                 </div>
             </div>
-            <div class="flex items-center gap-2 w-full sm:w-auto">
-                <button @click="importModalOpen = true" class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700"><svg class="w-5 h-5 mr-2 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> Import CSV</button>
-                <a href="{{ route('admin.create-mahasiswa') }}" class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"><svg class="w-5 h-5 mr-2 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg> Tambah Mahasiswa</a>
-            </div>
-        </div>
+        </x-card>
 
-        <div class="bg-white rounded-2xl shadow-lg">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mahasiswa</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program Studi</th><th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Semester</th><th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th></tr></thead>
-                    <tbody class="bg-white divide-y divide-gray-200 text-sm" x-ref="mahasiswaTableBody">
-                        <template x-if="loading"><tr><td colspan="5" class="px-6 py-4"><div class="space-y-3"><div class="h-4 bg-gray-200 rounded w-full animate-pulse"></div><div class="h-4 bg-gray-200 rounded w-5/6 animate-pulse"></div></div></td></tr></template>
-                        <template x-if="!loading && filteredMahasiswa.length === 0"><tr><td colspan="5" class="text-center py-10 text-gray-500"><div x-show="searchQuery || selectedAngkatan" x-cloak>Tidak ada mahasiswa yang cocok dengan filter.</div><div x-show="!searchQuery && !selectedAngkatan" x-cloak>Belum ada data mahasiswa.</div></td></tr></template>
-                        <template x-for="mhs in filteredMahasiswa" :key="mhs.mahasiswa_id"><tr class="hover:bg-gray-50 transition-colors"><td class="px-6 py-4 whitespace-nowrap"><div class="font-medium text-gray-900" x-text="mhs.user?.nama_lengkap || 'N/A'"></div><div class="text-gray-500" x-text="mhs.npm || 'N/A'"></div></td><td class="px-6 py-4 whitespace-nowrap text-gray-700" x-text="mhs.program_studi || 'N/A'"></td><td class="px-6 py-4 whitespace-nowrap text-gray-700 text-center" x-text="mhs.semester_aktif || 'N/A'"></td><td class="px-6 py-4 whitespace-nowrap text-center"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" :class="mhs.status === 'Aktif' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'" x-text="mhs.status || 'N/A'"></span></td><td class="px-6 py-4 whitespace-nowrap text-right font-medium"><div class="flex justify-end items-center gap-2"><button @click="showDetailModal(mhs.mahasiswa_id)" class="text-gray-500 hover:text-blue-600" title="Detail"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg></button><a :href="`{{ url('admin/mahasiswa') }}/${mhs.mahasiswa_id}/edit`" class="text-gray-500 hover:text-yellow-600" title="Edit"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536l12.232-12.232z"></path></svg></a><button @click="deleteMahasiswa(mhs.mahasiswa_id, mhs.user?.nama_lengkap)" class="text-gray-500 hover:text-red-600" title="Hapus"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></div></td></tr></template>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        {{-- Tabel --}}
+        <x-data-table
+            :headers="['Mahasiswa', 'Program Studi', 'Semester', 'Status', 'Aksi']"
+            aria-label="Tabel manajemen mahasiswa">
+            <template x-if="loading">
+                <tr>
+                    <td colspan="5" class="px-6 py-4">
+                        <div class="space-y-3">
+                            <div class="h-4 bg-gray-200 rounded w-full animate-pulse"></div>
+                            <div class="h-4 bg-gray-200 rounded w-5/6 animate-pulse"></div>
+                        </div>
+                    </td>
+                </tr>
+            </template>
+            <template x-if="!loading && filteredMahasiswa.length === 0">
+                <tr>
+                    <td colspan="5" class="px-6 py-12">
+                        <div class="text-center">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                            <h3 class="mt-2 text-sm font-medium text-gray-900" x-text="(searchQuery || selectedAngkatan) ? 'Tidak ada data' : 'Belum ada data mahasiswa'"></h3>
+                            <p class="mt-1 text-sm text-gray-500" x-text="(searchQuery || selectedAngkatan) ? 'Tidak ada mahasiswa yang cocok dengan filter yang dipilih.' : 'Silakan import atau tambahkan mahasiswa baru untuk memulai.'"></p>
+                        </div>
+                    </td>
+                </tr>
+            </template>
+            <template x-for="mhs in filteredMahasiswa" :key="mhs.mahasiswa_id">
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="font-medium text-gray-900" x-text="mhs.user?.nama_lengkap || 'N/A'"></div>
+                        <div class="text-gray-500" x-text="mhs.npm || 'N/A'"></div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-gray-700" x-text="mhs.program_studi || 'N/A'"></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-gray-700 text-center" x-text="mhs.semester_aktif || 'N/A'"></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" :class="mhs.status === 'Aktif' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'" x-text="mhs.status || 'N/A'"></span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right font-medium">
+                        <div class="flex justify-end items-center gap-2">
+                            <button @click="showDetailModal(mhs.mahasiswa_id)" class="text-gray-500 hover:text-primary-600" data-tooltip="Lihat detail mahasiswa" title="Detail">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                            </button>
+                            <a :href="`{{ url('admin/mahasiswa') }}/${mhs.mahasiswa_id}/edit`" class="text-gray-500 hover:text-yellow-600" data-tooltip="Edit data mahasiswa" title="Edit">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536l12.232-12.232z"></path></svg>
+                            </a>
+                            <button @click="deleteMahasiswa(mhs.mahasiswa_id, mhs.user?.nama_lengkap)" class="text-gray-500 hover:text-danger-600" data-tooltip="Hapus mahasiswa" title="Hapus">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            </template>
+        </x-data-table>
 
         {{-- MODAL DETAIL MAHASISWA (Layout Grid sudah diperbaiki) --}}
         <div x-show="detailModalOpen" @keydown.escape.window="detailModalOpen = false" x-cloak class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -268,10 +345,9 @@
                         </div>
                     </form>
                 </div>
-            </div>
         </div>
-
     </div>
+</div>
 @endsection
 
 @push('scripts')

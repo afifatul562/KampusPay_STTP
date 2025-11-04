@@ -18,8 +18,15 @@ class SettingController extends Controller
     public function getSystemSettings()
     {
         try {
-            // Mengambil semua setting dan mengubahnya menjadi format { "key": "value" }
-            $settings = Setting::all()->pluck('value', 'key');
+            // Ambil settings menggunakan cache helper untuk efisiensi
+            $settings = Setting::getCachedMap();
+
+            // Tambahkan computed defaults jika belum ada: academic_year & semester
+            if (!isset($settings['academic_year']) || !isset($settings['semester'])) {
+                [$computedYear, $computedSemester] = $this->computeAcademicYearAndSemester();
+                $settings['academic_year'] = $settings['academic_year'] ?? $computedYear;
+                $settings['semester'] = $settings['semester'] ?? $computedSemester;
+            }
             // Bungkus dalam 'data' agar konsisten
             return response()->json(['data' => $settings]);
         } catch (\Exception $e) {
@@ -36,8 +43,9 @@ class SettingController extends Controller
         try {
             $validatedData = $request->validate([
                 'app_name' => 'required|string|max:255',
-                'academic_year' => 'required|string|max:255',
-                'semester' => 'required|string|max:255',
+                // academic_year & semester dihitung otomatis
+                'academic_year' => 'nullable|string|max:255',
+                'semester' => 'nullable|string|max:255',
                 'bank_name' => 'nullable|string|max:255',
                 'account_holder' => 'nullable|string|max:255',
                 'account_number' => 'nullable|string|max:255',
@@ -45,6 +53,11 @@ class SettingController extends Controller
 
             DB::beginTransaction(); // <-- MULAI TRANSAKSI
             try {
+                // Hitung academic_year & semester otomatis
+                [$computedYear, $computedSemester] = $this->computeAcademicYearAndSemester();
+                $validatedData['academic_year'] = $computedYear;
+                $validatedData['semester'] = $computedSemester;
+
                 foreach ($validatedData as $key => $value) {
                     Setting::updateOrCreate(
                         ['key' => $key],
@@ -53,6 +66,9 @@ class SettingController extends Controller
                     );
                 }
                 DB::commit(); // <-- COMMIT JIKA SUKSES
+
+                // Hapus cache settings agar pembacaan berikutnya segar
+                \Illuminate\Support\Facades\Cache::forget('settings:key_value_map');
 
                 Log::info('Pengaturan sistem berhasil diperbarui.');
                 return response()->json([
@@ -97,5 +113,43 @@ class SettingController extends Controller
             Log::error('Gagal mengambil system info: ' . $e->getMessage());
             return response()->json(['message' => 'Gagal mengambil informasi sistem.'], 500);
         }
+    }
+
+    /**
+     * Hitung Tahun Akademik dan Semester aktif otomatis.
+     * Aturan kampus: Tahun ajaran aktif dimulai Oktober s/d pertengahan Juli.
+     * - Semester Ganjil: Okt (10) s/d Feb (2)
+     * - Semester Genap: Mar (3) s/d Jul (7)
+     * Libur: Agustus-September.
+     *
+     * @return array{0:string,1:string} ["YYYY/YYYY+1", "Ganjil|Genap"]
+     */
+    private function computeAcademicYearAndSemester(): array
+    {
+        $now = now();
+        $y = (int) $now->year;
+        $m = (int) $now->month;
+
+        if ($m >= 10) { // Okt-Nov-Des
+            $startYear = $y;
+            $endYear = $y + 1;
+            $semester = 'Ganjil';
+        } elseif ($m >= 3 && $m <= 7) { // Mar-Jul
+            $startYear = $y - 1; // masih tahun ajaran yg sama yg dimulai Okt tahun lalu
+            $endYear = $y;
+            $semester = 'Genap';
+        } else { // Jan-Feb (bagian akhir ganjil) atau Aug-Sep (libur, default ke ajaran berjalan)
+            if ($m <= 2) { // Jan-Feb => Ganjil dari tahun ajaran yang dimulai Okt tahun sebelumnya
+                $startYear = $y - 1;
+                $endYear = $y;
+                $semester = 'Ganjil';
+            } else { // Aug-Sep => menjelang ajaran baru; set ke tahun ajaran akan datang & ganjil
+                $startYear = $y;
+                $endYear = $y + 1;
+                $semester = 'Ganjil';
+            }
+        }
+
+        return [sprintf('%d/%d', $startYear, $endYear), $semester];
     }
 }

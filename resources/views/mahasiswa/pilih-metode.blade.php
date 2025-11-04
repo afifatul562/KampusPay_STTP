@@ -6,8 +6,8 @@
 @section('content')
     <div class="max-w-2xl mx-auto">
         {{-- Card utama --}}
-        <div class="bg-white rounded-2xl shadow-lg">
-            <div class="p-6 border-b">
+        <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+            <div class="p-6 border-b bg-gradient-to-r from-gray-50 to-gray-100">
                 <h2 class="text-xl font-semibold text-gray-800">Pilih Metode untuk Tagihan</h2>
             </div>
 
@@ -44,22 +44,26 @@
 
                     {{-- Pilihan 1: Transfer --}}
                     <button type="submit" name="metode" value="transfer"
-                            class="w-full flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                            class="group w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all duration-200 shadow-sm hover:shadow-md">
                         <div class="text-left">
-                            <p class="font-semibold text-gray-800">Bayar via Transfer Bank</p>
+                            <p class="font-semibold text-gray-800 group-hover:text-primary-700">Bayar via Transfer Bank</p>
                             <p class="text-sm text-gray-500">Upload bukti transfer untuk diverifikasi oleh kasir.</p>
                         </div>
-                        <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                        <div class="bg-gradient-to-br from-primary-100 to-primary-200 p-3 rounded-lg group-hover:from-primary-200 group-hover:to-primary-300 transition-all duration-200">
+                            <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                        </div>
                     </button>
 
                     {{-- Pilihan 2: Tunai --}}
                     <button type="submit" name="metode" value="tunai"
-                            class="w-full flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                            class="group w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:border-success-500 hover:bg-success-50 focus:outline-none focus:ring-2 focus:ring-success-500 transition-all duration-200 shadow-sm hover:shadow-md">
                         <div class="text-left">
-                            <p class="font-semibold text-gray-800">Bayar Tunai di Kasir</p>
+                            <p class="font-semibold text-gray-800 group-hover:text-success-700">Bayar Tunai di Kasir</p>
                             <p class="text-sm text-gray-500">Pilih ini dan datang ke kasir untuk pembayaran tunai.</p>
                         </div>
-                        <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+                        <div class="bg-gradient-to-br from-success-100 to-success-200 p-3 rounded-lg group-hover:from-success-200 group-hover:to-success-300 transition-all duration-200">
+                            <svg class="w-6 h-6 text-success-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+                        </div>
                     </button>
                 </div>
             </form>
@@ -67,8 +71,9 @@
 
         {{-- Tombol Kembali --}}
         <div class="mt-6 text-center">
-            <a href="{{ route('mahasiswa.pembayaran.index') }}" class="text-sm font-medium text-blue-600 hover:underline">
-                &larr; Kembali ke Daftar Tagihan
+            <a href="{{ route('mahasiswa.pembayaran.index') }}" class="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-800 transition-colors duration-200">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Kembali ke Daftar Tagihan
             </a>
         </div>
     </div>

@@ -4,59 +4,62 @@
 @section('page-title', 'Overview Dashboard')
 
 @section('content')
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
     {{-- !! KARTU 1 (DIJADIKAN LINK) !! --}}
-    <a href="{{ route('admin.mahasiswa') }}"
-       class="block bg-white p-6 rounded-2xl shadow-lg flex items-start gap-5 hover:bg-gray-50 transition-colors">
-        <div class="flex-1 min-w-0">
-            <div class="text-sm font-medium text-gray-500">Total Mahasiswa</div>
-            <div id="total-mahasiswa-value" class="text-xl lg:text-2xl font-bold text-gray-900 mt-1">...</div>
-            <div id="total-mahasiswa-skeleton" class="w-24 h-8 bg-gray-200 rounded-md animate-pulse"></div>
+    <a href="{{ route('admin.mahasiswa') }}" aria-label="Lihat total dan daftar mahasiswa"
+       class="group relative bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-md border border-gray-200 flex items-start gap-5 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-br from-primary-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div class="flex-1 min-w-0 relative z-10">
+            <div class="text-sm font-medium text-gray-500 mb-1">Total Mahasiswa</div>
+            <div id="total-mahasiswa-value" class="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">...</div>
+            <div id="total-mahasiswa-skeleton" class="w-24 h-8 bg-gray-200 rounded-md animate-pulse mt-1"></div>
         </div>
-        <div class="bg-blue-100 p-4 rounded-full">
-            <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+        <div class="relative z-10 bg-gradient-to-br from-primary-400 to-primary-600 p-4 rounded-xl shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
+            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
         </div>
     </a>
 
     {{-- !! KARTU 2 (DIJADIKAN LINK) !! --}}
-    <a href="{{ route('admin.pembayaran') }}?status=lunas"
-       class="block bg-white p-6 rounded-2xl shadow-lg flex items-start gap-5 hover:bg-gray-50 transition-colors">
-        <div class="flex-1 min-w-0">
-            <div class="text-sm font-medium text-gray-500">Total Pembayaran</div>
-            <div id="total-pembayaran-value" class="font-bold text-gray-900 mt-1 text-right whitespace-nowrap">...</div>
-            <div id="total-pembayaran-skeleton" class="w-36 h-8 bg-gray-200 rounded-md animate-pulse"></div>
+    <a href="{{ route('admin.pembayaran') }}?status=lunas" aria-label="Buka halaman pembayaran status lunas"
+       class="group relative bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-md border border-gray-200 flex items-start gap-5 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-br from-success-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div class="flex-1 min-w-0 relative z-10">
+            <div class="text-sm font-medium text-gray-500 mb-1">Total Pembayaran</div>
+            <div id="total-pembayaran-value" class="font-bold text-gray-900 mt-1 text-left whitespace-nowrap text-xl lg:text-2xl">...</div>
+            <div id="total-pembayaran-skeleton" class="w-36 h-8 bg-gray-200 rounded-md animate-pulse mt-1"></div>
         </div>
-        <div class="bg-green-100 p-4 rounded-full">
-            <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+        <div class="relative z-10 bg-gradient-to-br from-success-400 to-success-600 p-4 rounded-xl shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
+            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
         </div>
     </a>
 
     {{-- Kartu 3: Tingkat Pembayaran (Tetap) --}}
-    <div class="bg-white p-6 rounded-2xl shadow-lg flex items-start gap-5">
-        <div class="flex-1 min-w-0">
-            <div class="text-sm font-medium text-gray-500">Tingkat Pembayaran</div>
-            <div id="tingkat-pembayaran-value" class="text-xl lg:text-2xl font-bold text-gray-900 mt-1">...</div>
-            <div id="tingkat-pembayaran-skeleton" class="w-36 h-8 bg-gray-200 rounded-md animate-pulse"></div>
+    <div class="group relative bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-md border border-gray-200 flex items-start gap-5 hover:shadow-xl transition-all duration-300 overflow-hidden" aria-label="Kartu ringkasan tingkat pembayaran">
+        <div class="absolute inset-0 bg-gradient-to-br from-warning-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div class="flex-1 min-w-0 relative z-10">
+            <div class="text-sm font-medium text-gray-500 mb-1">Tingkat Pembayaran</div>
+            <div id="tingkat-pembayaran-value" class="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">...</div>
+            <div id="tingkat-pembayaran-skeleton" class="w-36 h-8 bg-gray-200 rounded-md animate-pulse mt-1"></div>
         </div>
-        <div class="bg-yellow-100 p-4 rounded-full">
-            <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <div class="relative z-10 bg-gradient-to-br from-warning-400 to-warning-600 p-4 rounded-xl shadow-lg group-hover:scale-110 transition-all duration-300">
+            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2a10 10 0 100 20 10 10 0 000-20zm3.707 6.293a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l6-6z" clip-rule="evenodd" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3" />
             </svg>
         </div>
     </div>
 
     {{-- Kartu 4: Pending Payment (Link sudah ada dari revisi sebelumnya) --}}
-    <a href="{{ route('admin.pembayaran') }}?status=pending"
-       class="block bg-white p-6 rounded-2xl shadow-lg flex items-start gap-5 hover:bg-gray-50 transition-colors">
-        <div class="flex-1 min-w-0">
-            <div class="text-sm font-medium text-gray-500">Pending Payment</div>
-            <div id="pending-payment-value" class="text-xl lg:text-2xl font-bold text-gray-900 mt-1">...</div>
-            <div id="pending-payment-skeleton" class="w-36 h-8 bg-gray-200 rounded-md animate-pulse"></div>
+    <a href="{{ route('admin.pembayaran') }}?status=pending" aria-label="Buka halaman pembayaran pending"
+       class="group relative bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-md border border-gray-200 flex items-start gap-5 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div class="flex-1 min-w-0 relative z-10">
+            <div class="text-sm font-medium text-gray-500 mb-1">Pending Payment</div>
+            <div id="pending-payment-value" class="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">...</div>
+            <div id="pending-payment-skeleton" class="w-36 h-8 bg-gray-200 rounded-md animate-pulse mt-1"></div>
         </div>
-        <div class="bg-purple-100 p-4 rounded-full">
-            <svg class="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <div class="relative z-10 bg-gradient-to-br from-purple-400 to-purple-600 p-4 rounded-xl shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
+            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
         </div>
@@ -64,10 +67,25 @@
 </div>
 
     {{-- Tabel Pembayaran Terbaru --}}
-    <div class="bg-white p-6 rounded-2xl shadow-lg">
-        <h3 class="text-xl font-semibold text-gray-800 mb-4">💳 Pembayaran Terbaru</h3>
+    <div class="mt-6 bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+        {{-- Header Section --}}
+        <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-5 border-b border-gray-200">
+            <div class="flex items-center gap-4">
+                <div class="bg-white p-3 rounded-lg shadow-sm">
+                    <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">Pembayaran Terbaru</h2>
+                    <p class="text-sm text-gray-500 mt-1">Daftar pembayaran terakhir yang masuk</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6">
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
+            <table class="min-w-full divide-y divide-gray-200" aria-label="Tabel pembayaran terbaru">
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mahasiswa</th>
@@ -89,7 +107,9 @@
                     </tbody>
             </table>
         </div>
+        </div>
     </div>
+</div>
 @endsection
 
 @push('scripts')
@@ -188,7 +208,16 @@ document.addEventListener('DOMContentLoaded', function() {
             tbody.innerHTML = ''; // Kosongkan skeleton
 
             if (!data || data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-gray-500">🎉 Tidak ada data pembayaran terbaru.</td></tr>';
+                renderEmptyState(tbody, {
+                    colspan: 5,
+                    title: 'Tidak ada pembayaran terbaru',
+                    message: '🎉 Tidak ada data pembayaran terbaru.',
+                    icon: `
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                    `
+                });
                 return;
             }
 

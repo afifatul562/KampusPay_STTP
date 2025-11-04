@@ -7,7 +7,7 @@
 
 @section('content')
     <div class="max-w-xl mx-auto">
-        <div class="bg-white p-6 rounded-2xl shadow-lg">
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <h3 class="text-xl font-semibold mb-4 text-gray-800">👨‍🎓 Formulir Registrasi Mahasiswa</h3>
 
             {{-- Tampilkan error validasi jika ada --}}
@@ -39,35 +39,42 @@
                 </div>
                 <div>
                     <label for="npm" class="block text-sm font-medium text-gray-700">NPM</label>
-                    <input type="text" id="npm" name="npm" value="{{ old('npm') }}" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <input type="text" id="npm" name="npm" value="{{ old('npm') }}" required maxlength="9" inputmode="numeric" pattern="^[0-9]{9}$" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500" aria-describedby="npm-help">
+                    <p id="npm-help" class="mt-1 text-xs text-gray-500">Masukkan 9 digit angka.</p>
                 </div>
                 <div>
                     <label for="program_studi" class="block text-sm font-medium text-gray-700">Program Studi</label>
-                    <select id="program_studi" name="program_studi" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                        <option value="" disabled {{ old('program_studi') ? '' : 'selected' }}>Pilih Program Studi</option>
+                    <select id="program_studi" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 appearance-none no-native-arrow bg-gray-100 cursor-not-allowed" disabled aria-describedby="prodi-help">
+                        <option value="" disabled {{ old('program_studi') ? '' : 'selected' }}></option>
                         <option value="S1 Informatika" {{ old('program_studi') == 'S1 Informatika' ? 'selected' : '' }}>S1 Informatika</option>
                         <option value="S1 Teknik Sipil" {{ old('program_studi') == 'S1 Teknik Sipil' ? 'selected' : '' }}>S1 Teknik Sipil</option>
                         <option value="D3 Teknik Komputer" {{ old('program_studi') == 'D3 Teknik Komputer' ? 'selected' : '' }}>D3 Teknik Komputer</option>
                     </select>
+                    <input type="hidden" name="program_studi" id="program_studi_hidden" value="{{ old('program_studi') }}">
+                    <p id="prodi-help" class="mt-1 text-xs text-gray-500"></p>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label for="angkatan" class="block text-sm font-medium text-gray-700">Angkatan</label>
-                        <select id="angkatan" name="angkatan" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                            <option value="" disabled {{ old('angkatan') ? '' : 'selected' }}>Pilih</option>
+                        <select id="angkatan" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 appearance-none no-native-arrow bg-gray-100 cursor-not-allowed" disabled aria-describedby="angkatan-help">
+                            <option value="" disabled {{ old('angkatan') ? '' : 'selected' }}></option>
                             <option value="2022" {{ old('angkatan') == '2022' ? 'selected' : '' }}>2022</option>
                             <option value="2023" {{ old('angkatan') == '2023' ? 'selected' : '' }}>2023</option>
                             <option value="2024" {{ old('angkatan') == '2024' ? 'selected' : '' }}>2024</option>
                         </select>
+                        <input type="hidden" name="angkatan" id="angkatan_hidden" value="{{ old('angkatan') }}">
+                        <p id="angkatan-help" class="mt-1 text-xs text-gray-500"></p>
                     </div>
                     <div>
                         <label for="semester_aktif" class="block text-sm font-medium text-gray-700">Semester</label>
-                        <select id="semester_aktif" name="semester_aktif" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                            <option value="" disabled {{ old('semester_aktif') ? '' : 'selected' }}>Pilih</option>
+                        <select id="semester_aktif" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 appearance-none no-native-arrow bg-gray-100 cursor-not-allowed" disabled aria-describedby="semester-help">
+                            <option value="" disabled {{ old('semester_aktif') ? '' : 'selected' }}></option>
                             @for ($i = 1; $i <= 8; $i++)
                                 <option value="{{ $i }}" {{ old('semester_aktif') == $i ? 'selected' : '' }}>{{ $i }}</option>
                             @endfor
                         </select>
+                        <input type="hidden" name="semester_aktif" id="semester_hidden" value="{{ old('semester_aktif') }}">
+                        <p id="semester-help" class="mt-1 text-xs text-gray-500"></p>
                     </div>
                 </div>
                 <div class="pt-2 flex justify-end gap-3">
@@ -97,6 +104,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const prodiSelect = document.getElementById('program_studi');
     const angkatanSelect = document.getElementById('angkatan');
     const semesterSelect = document.getElementById('semester_aktif');
+    const prodiHidden = document.getElementById('program_studi_hidden');
+    const angkatanHidden = document.getElementById('angkatan_hidden');
+    const semesterHidden = document.getElementById('semester_hidden');
 
     // 2. Kamus Program Studi
     const prodiMap = {
@@ -112,6 +122,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 4. Tambahkan "pendengar" ke input NPM
     npmInput.addEventListener('input', function() {
+        // Paksa hanya angka dan batasi 9 digit
+        this.value = this.value.replace(/\D/g, '').slice(0, 9);
         const npmValue = this.value;
 
         // --- Logic for Program Studi ---
@@ -119,8 +131,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const prodiCode = npmValue.substring(4, 6);
             const matchedProdi = prodiMap[prodiCode];
             prodiSelect.value = matchedProdi ? matchedProdi : '';
+            prodiHidden.value = matchedProdi ? matchedProdi : '';
         } else {
             prodiSelect.value = '';
+            prodiHidden.value = '';
         }
 
         // --- Logic for Angkatan ---
@@ -133,12 +147,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (optionExists) {
                 angkatanSelect.value = angkatanTahunString;
+                angkatanHidden.value = angkatanTahunString;
                 angkatanTahun = parseInt(angkatanTahunString);
             } else {
                 angkatanSelect.value = '';
+                angkatanHidden.value = '';
             }
         } else {
             angkatanSelect.value = '';
+            angkatanHidden.value = '';
         }
 
         // --- LOGIKA SEMESTER (DENGAN PERBAIKAN) ---
@@ -157,9 +174,11 @@ document.addEventListener('DOMContentLoaded', function() {
             semesterAktif = Math.max(1, Math.min(semesterAktif, 8));
 
             semesterSelect.value = semesterAktif.toString();
+            semesterHidden.value = semesterAktif.toString();
 
         } else {
             semesterSelect.value = '';
+            semesterHidden.value = '';
         }
     });
 });

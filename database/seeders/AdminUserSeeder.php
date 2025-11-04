@@ -13,12 +13,15 @@ class AdminUserSeeder extends Seeder
      */
     public function run(): void
     {
+        // Gunakan env variable dengan fallback untuk backward compatibility
+        $adminPassword = env('ADMIN_DEFAULT_PASSWORD', 'password123');
+        
         User::updateOrCreate(
             ['username' => 'admin'],
             [
                 'nama_lengkap' => 'Administrator',
                 'email' => 'admin@example.com',
-                'password' => Hash::make('password123'),
+                'password' => Hash::make($adminPassword),
                 'role' => 'admin',
             ]
         );

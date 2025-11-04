@@ -13,8 +13,11 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB; // Pastikan ini ada
 use Illuminate\Database\QueryException; // Untuk catch error DB spesifik
 
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+
 class ReportController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * Menampilkan riwayat laporan.
      */
@@ -34,13 +37,13 @@ class ReportController extends Controller
     // !! METHOD BARU UNTUK MENGAMBIL DATA (REFACTOR) !!
     // ==========================================================
     /**
-     * Mengambil data laporan berdasarkan jenis dan periode.
+     * Mengambil data laporan berdasarkan jenis dan tahun.
      *
      * @param string $jenis 'mahasiswa' atau 'pembayaran'
-     * @param \Carbon\Carbon $periode Objek Carbon periode (Y-m)
+     * @param int $tahun Tahun (YYYY)
      * @return \Illuminate\Support\Collection|null
      */
-    private function getReportData($jenis, Carbon $periode)
+    private function getReportData($jenis, int $tahun)
     {
         $data = null;
         if ($jenis === 'mahasiswa') {
@@ -55,11 +58,10 @@ class ReportController extends Controller
 
         } elseif ($jenis === 'pembayaran') {
             $data = Tagihan::with(['mahasiswa.user', 'tarif', 'pembayaran.userKasir' => fn($q)=>$q->select('id','nama_lengkap')]) // Eager load kasir
-                        ->whereYear('created_at', $periode->year)
-                        ->whereMonth('created_at', $periode->month)
+                        ->whereYear('created_at', $tahun)
                         ->orderBy('created_at') // Urutkan tagihan
                         ->get();
-            Log::info('Mengambil data laporan pembayaran periode ' . $periode->format('Y-m') . ': ' . $data->count() . ' record.');
+            Log::info('Mengambil data laporan pembayaran tahun ' . $tahun . ': ' . $data->count() . ' record.');
         }
         return $data;
     }
@@ -72,18 +74,18 @@ class ReportController extends Controller
         Log::info('Memproses permintaan preview laporan.', $request->all());
         $validated = $request->validate([
             'jenis_laporan' => 'required|string|in:mahasiswa,pembayaran',
-            'periode' => 'required|date_format:Y-m',
+            'tahun' => 'required|digits:4',
         ]);
         $jenis = $validated['jenis_laporan'];
-        $periode = Carbon::createFromFormat('Y-m', $validated['periode']);
-        Log::info("Preview Jenis: {$jenis}, Periode: {$periode->format('Y-m')}");
+        $tahun = (int) $validated['tahun'];
+        Log::info("Preview Jenis: {$jenis}, Tahun: {$tahun}");
 
         try {
             // Panggil method refactor
-            $data = $this->getReportData($jenis, $periode);
+            $data = $this->getReportData($jenis, $tahun);
 
             if ($data === null || ($data instanceof \Illuminate\Support\Collection && $data->isEmpty()) || (is_array($data) && empty($data))) {
-                Log::warning("Tidak ada data preview untuk {$jenis} periode {$periode->format('Y-m')}.");
+                Log::warning("Tidak ada data preview untuk {$jenis} tahun {$tahun}.");
                  // Kembalikan data kosong agar frontend tahu tidak ada data
                  return response()->json(['data' => []]);
             }
@@ -105,19 +107,19 @@ class ReportController extends Controller
         Log::info('Memproses permintaan generate laporan PDF.', $request->all());
         $validated = $request->validate([
             'jenis_laporan' => 'required|string|in:mahasiswa,pembayaran',
-            'periode' => 'required|date_format:Y-m',
+            'tahun' => 'required|digits:4',
         ]);
         $jenis = $validated['jenis_laporan'];
-        $periode = Carbon::createFromFormat('Y-m', $validated['periode']);
-        $periodeFormatted = $periode->isoFormat('MMMM Y');
-        $fileName = "laporan_{$jenis}_{$periode->format('Y_m')}_" . time() . ".pdf";
+        $tahun = (int) $validated['tahun'];
+        $periodeFormatted = (string) $tahun;
+        $fileName = "laporan_{$jenis}_{$tahun}_" . time() . ".pdf";
         $data = null;
 
         // 1. Ambil Data (gunakan method refactor)
         try {
-            $data = $this->getReportData($jenis, $periode);
-             if ($data === null || ($data instanceof \Illuminate\Support\Collection && $data->isEmpty()) || (is_array($data) && empty($data))) {
-                Log::warning("Tidak ada data untuk generate PDF {$jenis} periode {$periode->format('Y-m')}.");
+            $data = $this->getReportData($jenis, $tahun);
+            if ($data === null || ($data instanceof \Illuminate\Support\Collection && $data->isEmpty()) || (is_array($data) && empty($data))) {
+                Log::warning("Tidak ada data untuk generate PDF {$jenis} tahun {$tahun}.");
                 // Kembalikan error agar user tahu tidak ada data
                 return response()->json(['success' => false, 'message' => 'Tidak ada data untuk periode yang dipilih.'], 404); // 404 Not Found or 400 Bad Request
             }
@@ -131,7 +133,7 @@ class ReportController extends Controller
         DB::beginTransaction(); // <-- MULAI TRANSAKSI
         try {
             $pdf = app('dompdf.wrapper');
-             // Load view PDF template (pastikan view ini ada: resources/views/pdf/laporan_template.blade.php)
+            // Load view PDF template (pastikan view ini ada: resources/views/pdf/laporan_template.blade.php)
             $pdf->loadView('pdf.laporan_template', compact('data', 'jenis', 'periodeFormatted'));
 
             $directory = 'public/reports'; // Simpan di storage/app/public/reports
@@ -150,7 +152,7 @@ class ReportController extends Controller
             // Simpan riwayat ke database
             Report::create([
                 'jenis_laporan' => $jenis,
-                'periode' => $periode->format('Y-m'),
+                'periode' => (string) $tahun,
                 'file_name' => $fileName,
             ]);
             Log::info("Riwayat laporan disimpan ke database.");
@@ -171,8 +173,8 @@ class ReportController extends Controller
             }
             // Hapus juga jika gagal saat proses penyimpanan file itu sendiri
              else if ($filePath && Storage::exists($filePath)) {
-                 Storage::delete($filePath);
-                 Log::warning("File PDF {$fileName} dihapus karena error saat proses penyimpanan file.");
+                Storage::delete($filePath);
+                Log::warning("File PDF {$fileName} dihapus karena error saat proses penyimpanan file.");
             }
 
             return response()->json(['success' => false, 'message' => 'Gagal membuat file PDF atau menyimpan riwayat: ' . $e->getMessage()], 500);
@@ -190,6 +192,7 @@ class ReportController extends Controller
             // Gunakan Route Model Binding jika memungkinkan (jika parameter di route adalah {report})
             // Jika tidak, pakai findOrFail
             $report = Report::findOrFail($reportId);
+            $this->authorize('view', $report);
             $fileName = $report->file_name;
             // Path relatif di dalam disk 'public' (storage/app/public/reports/)
             $relativePath = 'reports/' . $fileName;
@@ -218,9 +221,14 @@ class ReportController extends Controller
             } else {
                 // Paksa Download
                 Log::info("Memulai download file: {$fileName}");
-                // Storage::download() lebih mudah untuk download dari storage disk
-                return Storage::download($storagePath, $fileName);
-                 // Alternatif: return response()->download($absolutePath, $fileName);
+                // Streaming download agar hemat memori
+                $stream = Storage::readStream($storagePath);
+                return response()->streamDownload(function () use ($stream) {
+                    fpassthru($stream);
+                    if (is_resource($stream)) { fclose($stream); }
+                }, $fileName, [
+                    'Content-Type' => 'application/pdf'
+                ]);
             }
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -238,6 +246,7 @@ class ReportController extends Controller
     public function destroy(Report $report) // Menggunakan Route Model Binding
     {
         Log::info("Mencoba hapus laporan ID: {$report->id}, File: {$report->file_name}");
+        $this->authorize('delete', $report);
         $filePath = 'public/reports/' . $report->file_name; // Path di dalam storage/app
 
         DB::beginTransaction();

@@ -4,37 +4,64 @@
 @section('page-title', 'Laporan')
 
 @section('content')
-    <div class="mb-6">
-        <div class="bg-white rounded-2xl shadow-lg p-6">
-            <h3 class="text-xl font-semibold text-gray-800 mb-4">📊 Laporan</h3>
-            <form id="reportForm" class="space-y-4">
-                {{-- Form fields --}}
-                <div><label for="jenis_laporan" class="block text-sm font-medium text-gray-700">Jenis Laporan</label><select id="jenis_laporan" name="jenis_laporan" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm sm:text-sm focus:ring-blue-500 focus:border-blue-500"><option value="" disabled selected>Pilih Jenis Laporan</option><option value="mahasiswa">Laporan Mahasiswa</option><option value="pembayaran">Laporan Pembayaran</option></select></div>
-                <div><label for="periode" class="block text-sm font-medium text-gray-700">Periode (Bulan dan Tahun)</label><input type="month" id="periode" name="periode" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm sm:text-sm focus:ring-blue-500 focus:border-blue-500"></div>
-                {{-- Tombol View --}}
-                <button type="submit" id="viewReportBtn" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"><svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg> View Laporan</button>
-                {{-- Tombol Generate PDF --}}
-                <button type="button" id="generatePdfBtn" class="hidden w-full mt-2 inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"><svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> Generate PDF & Simpan Riwayat</button>
-            </form>
-        </div>
-    </div>
+@php
+    $headerIcon = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+    </svg>';
+@endphp
+
+<div class="space-y-6">
+    <x-page-header
+        title="Laporan"
+        subtitle="Generate dan kelola laporan pembayaran"
+        :icon="$headerIcon">
+    </x-page-header>
+
+    <x-card title="Generate Laporan">
+        <form id="reportForm" class="space-y-4">
+            {{-- Form fields --}}
+            <div>
+                <label for="jenis_laporan" class="block text-sm font-medium text-gray-700">Jenis Laporan</label>
+                <select id="jenis_laporan" name="jenis_laporan" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                    <option value="" disabled selected>Pilih Jenis Laporan</option>
+                    <option value="mahasiswa">Laporan Mahasiswa</option>
+                    <option value="pembayaran">Laporan Pembayaran</option>
+                </select>
+            </div>
+            <div>
+                <label for="tahun" class="block text-sm font-medium text-gray-700">Tahun</label>
+                <select id="tahun" name="tahun" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"></select>
+            </div>
+            {{-- Tombol View --}}
+            <x-gradient-button type="submit" id="viewReportBtn" variant="primary" size="md" class="w-full" aria-label="Tampilkan Laporan">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                View Laporan
+            </x-gradient-button>
+            {{-- Tombol Generate PDF --}}
+            <x-gradient-button type="button" id="generatePdfBtn" variant="success" size="md" class="hidden w-full mt-2" aria-label="Generate PDF dan simpan riwayat">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Generate PDF & Simpan Riwayat
+            </x-gradient-button>
+        </form>
+    </x-card>
 
     {{-- Area Preview --}}
-    <div id="reportPreviewArea" class="hidden mb-6 bg-white rounded-2xl shadow-lg p-6">
-        <h3 class="text-xl font-semibold text-gray-800 mb-4">🔍 Preview Laporan</h3>
-        <div id="reportPreviewContent" class="overflow-x-auto"><p class="text-gray-500">Data preview akan muncul di sini...</p></div>
-    </div>
+    <x-card id="reportPreviewArea" class="hidden" title="Preview Laporan" aria-live="polite">
+        <div id="reportPreviewContent" class="overflow-x-auto">
+            <p class="text-gray-500">Data preview akan muncul di sini...</p>
+        </div>
+    </x-card>
 
     {{-- Tabel Riwayat --}}
-    <div class="bg-white rounded-2xl shadow-lg">
-        <div class="p-6"><h3 class="text-xl font-semibold text-gray-800">📋 Riwayat Laporan</h3></div>
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal Dibuat</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis Laporan</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Periode</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama File</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th></tr></thead>
-                <tbody id="reportHistory" class="bg-white divide-y divide-gray-200 text-sm"><tr><td colspan="5" class="text-center py-10 text-gray-500">Memuat riwayat...</td></tr></tbody>
-            </table>
-        </div>
-    </div>
+    <x-data-table
+        title="Riwayat Laporan"
+        :headers="['Tanggal Dibuat', 'Jenis Laporan', 'Periode', 'Nama File', 'Aksi']"
+        aria-label="Tabel riwayat laporan">
+        <tr id="loading-history-row">
+            <td colspan="5" class="text-center py-10 text-gray-500">Memuat riwayat...</td>
+        </tr>
+    </x-data-table>
+</div>
 @endsection
 
 @push('scripts')
@@ -46,59 +73,32 @@ document.addEventListener('DOMContentLoaded', function() {
         const generatePdfBtn = document.getElementById('generatePdfBtn');
         const reportPreviewArea = document.getElementById('reportPreviewArea');
         const reportPreviewContent = document.getElementById('reportPreviewContent');
-        const reportHistoryTable = document.getElementById('reportHistory');
+        // Find table by aria-label since we're using x-data-table component
+        const reportHistoryTableElement = document.querySelector('table[aria-label="Tabel riwayat laporan"]');
+        const reportHistoryTable = reportHistoryTableElement ? reportHistoryTableElement.querySelector('tbody') : null;
+        const tahunSelect = document.getElementById('tahun');
 
         // ============================================
         // !! PASTIKAN VARIABEL INI PAKAI 'let' !!
         // ============================================
         let currentPreviewData = null;
         let currentReportParams = null;
-
-        // -------------------------------------
-        // FUNGSI API REQUEST (DENGAN SWEETALERT)
-        // -------------------------------------
-        async function apiRequest(url, method = 'GET', body = null) {
-            const apiToken = document.querySelector('meta[name="api-token"]')?.getAttribute('content');
-            if (!apiToken) {
-                Swal.fire({ icon: 'error', title: 'Sesi Tidak Valid', text: 'Sesi Anda tidak ditemukan. Harap login kembali.', confirmButtonText: 'Login' }).then(() => { window.location.href = '/login'; });
-                return Promise.reject('No API Token');
+        // Isi pilihan tahun (10 tahun terakhir)
+        (function populateYears(){
+            const currentYear = new Date().getFullYear();
+            const startYear = currentYear - 4;
+            tahunSelect.innerHTML = '<option value="" disabled selected>Pilih Tahun</option>';
+            for (let y = currentYear; y >= startYear; y--) {
+                const opt = document.createElement('option');
+                opt.value = String(y);
+                opt.textContent = String(y);
+                tahunSelect.appendChild(opt);
             }
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            const options = { method: method, headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${apiToken}`, 'X-CSRF-TOKEN': csrfToken } };
-            if (body) { options.headers['Content-Type'] = 'application/json'; options.body = JSON.stringify(body); }
+        })();
 
-            try {
-                const response = await fetch(url, options);
-                if (response.status === 401) {
-                    Swal.fire({ icon: 'error', title: 'Sesi Berakhir', text: 'Sesi Anda telah berakhir. Harap login kembali.', confirmButtonText: 'Login' }).then(() => { window.location.href = '/login'; });
-                    throw new Error('Unauthorized');
-                }
-                if (response.status === 204 && method === 'DELETE') { return { success: true, message: 'Data berhasil dihapus.' }; }
-
-                const contentType = response.headers.get("content-type");
-                const responseBody = await response.text();
-
-                if (!contentType || !contentType.includes("application/json")) {
-                    console.error("Non-JSON response:", response.status, responseBody);
-                    throw new Error(`Server error: ${response.status}. ${responseBody.substring(0,150)}`);
-                }
-
-                const data = JSON.parse(responseBody);
-
-                if (!response.ok) {
-                    if (response.status === 422 && data.errors) {
-                        console.error('Validation errors:', data.errors);
-                        throw { status: 422, errors: data.errors, message: data.message || 'Validation failed' };
-                    }
-                    throw new Error(data.message || `HTTP error! status: ${response.status}`);
-                }
-                return data;
-            } catch (error) {
-                console.error("Error in apiRequest:", error);
-                if (error.status === 422) throw error;
-                throw new Error(error.message || 'Gagal memproses permintaan.');
-            }
-        }
+        // Gunakan util global dari resources/js/utils/api.js
+        const apiRequest = (window.App && window.App.apiRequest) ? window.App.apiRequest : null;
+        if (!apiRequest) { console.error('apiRequest util tidak tersedia'); }
 
         // -------------------------------------
         // FUNGSI LOAD RIWAYAT (AMAN DARI XSS)
@@ -114,7 +114,19 @@ document.addEventListener('DOMContentLoaded', function() {
             apiRequest(historyUrl).then(response => {
                 const data = response.data || response;
                 reportHistoryTable.innerHTML = '';
-                if (!data || data.length === 0) { /* ... pesan kosong ... */ reportHistoryTable.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-gray-500">Belum ada laporan yang dibuat.</td></tr>'; return; }
+                if (!data || data.length === 0) {
+                    renderEmptyState(reportHistoryTable, {
+                        colspan: 5,
+                        title: 'Belum ada laporan',
+                        message: 'Belum ada laporan yang dibuat. Silakan generate laporan baru.',
+                        icon: `
+                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        `
+                    });
+                    return;
+                }
 
                 data.forEach(report => {
                     const tr = document.createElement('tr'); tr.className = 'hover:bg-gray-50';
@@ -150,7 +162,15 @@ document.addEventListener('DOMContentLoaded', function() {
         function displayReportPreview(data, type) {
             reportPreviewContent.innerHTML = ''; // Kosongkan
             if (!data || (Array.isArray(data) && data.length === 0) || (typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length === 0) ) {
-                reportPreviewContent.innerHTML = '<p class="text-center text-gray-500">Tidak ada data untuk laporan ini.</p>';
+                renderEmptyState(reportPreviewContent, {
+                    title: 'Tidak ada data',
+                    message: 'Tidak ada data untuk laporan ini.',
+                    icon: `
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                    `
+                });
                 return;
             }
 
@@ -287,20 +307,36 @@ document.addEventListener('DOMContentLoaded', function() {
         // -------------------------------------
         // EVENT LISTENERS (DENGAN SWEETALERT)
         // -------------------------------------
-        reportForm.addEventListener('submit', function(event) {
+        // Add null checks before adding event listeners
+        if (!reportForm || !viewReportBtn || !generatePdfBtn || !reportPreviewArea || !reportPreviewContent || !tahunSelect) {
+            console.error('Required elements not found');
+        }
+
+        if (reportForm) {
+            reportForm.addEventListener('submit', function(event) {
             event.preventDefault();
             const previewUrl = "{{ route('admin.reports.preview') }}";
-            const formData = { jenis_laporan: this.elements.jenis_laporan.value, periode: this.elements.periode.value, };
-            if (!formData.jenis_laporan || !formData.periode) { Swal.fire({ icon: 'warning', title: 'Input Tidak Lengkap', text: 'Harap pilih jenis laporan dan periode.' }); return; }
+            const formData = { jenis_laporan: this.elements.jenis_laporan.value, tahun: this.elements.tahun.value };
+            if (!formData.jenis_laporan || !formData.tahun) { Swal.fire({ icon: 'warning', title: 'Input Tidak Lengkap', text: 'Harap pilih jenis laporan dan tahun.' }); return; }
             currentReportParams = formData;
             const submitButton = viewReportBtn; const originalButtonHTML = submitButton.innerHTML; submitButton.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Memuat Preview...`; submitButton.disabled = true; generatePdfBtn.classList.add('hidden'); reportPreviewArea.classList.add('hidden');
 
             apiRequest(previewUrl, 'POST', formData).then(response => {
                 currentPreviewData = response.data || response;
                 if (currentPreviewData && ( (Array.isArray(currentPreviewData) && currentPreviewData.length > 0) || (typeof currentPreviewData === 'object' && !Array.isArray(currentPreviewData) && Object.keys(currentPreviewData).length > 0) )) {
-                    displayReportPreview(currentPreviewData, formData.jenis_laporan); reportPreviewArea.classList.remove('hidden'); generatePdfBtn.classList.remove('hidden');
+                    displayReportPreview(currentPreviewData, formData.jenis_laporan); reportPreviewArea.classList.remove('hidden'); generatePdfBtn.classList.remove('hidden'); generatePdfBtn.classList.add('flex', 'justify-center', 'items-center');
                 } else {
-                    reportPreviewContent.innerHTML = '<p class="text-center text-gray-500">Tidak ada data preview untuk periode ini.</p>'; reportPreviewArea.classList.remove('hidden'); generatePdfBtn.classList.add('hidden');
+                    renderEmptyState(reportPreviewContent, {
+                        title: 'Tidak ada data preview',
+                        message: 'Tidak ada data preview untuk periode ini.',
+                        icon: `
+                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        `
+                    });
+                    reportPreviewArea.classList.remove('hidden');
+                    generatePdfBtn.classList.add('hidden');
                 }
             })
             // ==========================================================
@@ -318,9 +354,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }).finally(() => {
                 submitButton.innerHTML = originalButtonHTML; submitButton.disabled = false;
             });
-        });
+            });
+        }
 
-        generatePdfBtn.addEventListener('click', function() {
+        if (generatePdfBtn) {
+            generatePdfBtn.addEventListener('click', function() {
             if (!currentReportParams) { Swal.fire({ icon: 'warning', title: 'Aksi Belum Sesuai', text: 'Harap klik "View Laporan" terlebih dahulu.' }); return; }
             const generateUrl = "{{ route('admin.reports.store') }}";
             const submitButton = this; const originalButtonHTML = submitButton.innerHTML;
@@ -349,16 +387,19 @@ document.addEventListener('DOMContentLoaded', function() {
             }).finally(() => {
                 submitButton.innerHTML = originalButtonHTML; submitButton.disabled = false;
             });
-        });
+            });
+        }
 
-        reportHistoryTable.addEventListener('click', function(event) {
+        if (reportHistoryTable) {
+            reportHistoryTable.addEventListener('click', function(event) {
             const button = event.target.closest('button.delete-report-btn');
             if (button) {
                 const reportId = button.dataset.id;
                 const fileName = button.closest('tr')?.querySelector('td:nth-child(4)')?.textContent || `ID ${reportId}`;
                 deleteReport(reportId, fileName);
             }
-        });
+            });
+        }
 
         loadReportHistory();
     });

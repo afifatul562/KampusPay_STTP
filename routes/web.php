@@ -59,6 +59,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/dashboard/recent-payments', [AdminDashboardController::class, 'recentPayments'])->name('dashboard.recentPayments');
         Route::get('/dashboard/recent-registrations', [AdminDashboardController::class, 'recentRegistrations'])->name('dashboard.recentRegistrations');
         Route::get('/mahasiswa', fn() => view('admin.mahasiswa'))->name('mahasiswa');
+        Route::get('/mahasiswa/export', [MahasiswaController::class, 'export'])->name('mahasiswa.export');
 
         // DIPERBAIKI: Gunakan 'MahasiswaController' yang sudah di-import
         Route::get('/mahasiswa/create', [MahasiswaController::class, 'create'])->name('create-mahasiswa');
@@ -75,7 +76,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/laporan', fn() => view('admin.laporan'))->name('laporan');
         Route::get('/pengaturan', fn() => view('admin.pengaturan'))->name('pengaturan');
         Route::get('/registrasi', fn() => view('admin.registrasi'))->name('registrasi');
-        Route::get('/reports/download/{report}', [AdminReportController::class, 'download'])->name('reports.download');
+        Route::get('/reports/download/{report}', [AdminReportController::class, 'download'])
+            ->middleware('throttle:30,1')
+            ->name('reports.download');
         Route::resource('users', App\Http\Controllers\Admin\UserManagementController::class);
     });
 
@@ -84,7 +87,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/dashboard', fn() => view('kasir.dashboard'))->name('dashboard');
         Route::get('/transaksi', [KasirTransaksiController::class, 'index'])->name('transaksi.index');
         Route::get('/transaksi/export', [KasirTransaksiController::class, 'export'])->name('transaksi.export');
+        Route::post('/transaksi/{pembayaran}/cancel', [KasirTransaksiController::class, 'cancel'])->name('transaksi.cancel');
+        // Kwitansi untuk kasir (otorisasi via policy)
+        Route::get('/kwitansi/{pembayaran}/download', [KwitansiController::class, 'download'])->name('kwitansi.download');
         Route::get('/laporan', [KasirLaporanController::class, 'index'])->name('laporan.index');
+        Route::get('/laporan/export-csv', [KasirLaporanController::class, 'exportCsv'])->name('laporan.exportCsv');
+        Route::get('/laporan/export-pdf', [KasirLaporanController::class, 'exportPdf'])->name('laporan.exportPdf');
         Route::get('/verifikasi', [KasirVerifikasiController::class, 'index'])->name('verifikasi.index');
         Route::get('/pengaturan', [KasirPengaturanController::class, 'showPasswordForm'])->name('pengaturan.password');
         Route::put('/pengaturan', [KasirPengaturanController::class, 'updatePassword'])->name('pengaturan.updatePassword');

@@ -5,15 +5,22 @@ namespace App\Http\Controllers\Admin; // Atau namespace controller kamu
 use App\Http\Controllers\Controller;
 use App\Models\Pembayaran;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf as PDF;
 
 class PrintController extends Controller // Atau nama controller kamu
 {
-    public function cetakBuktiPembayaran(Pembayaran $pembayaran) // Terima objek Pembayaran
+    public function cetakBuktiPembayaran(Pembayaran $pembayaran)
     {
-        // Load relasi yang dibutuhkan oleh view kwitansi.blade.php
-        $pembayaran->load('tagihan.mahasiswa.user', 'tagihan.tarif', 'verifier'); // verifier adalah relasi ke user kasir
+        // Lengkapi relasi yang dibutuhkan oleh template
+        $pembayaran->load('tagihan.mahasiswa.user', 'tagihan.tarif', 'verifier');
 
-        // Kembalikan view kwitansi.blade.php dengan data $pembayaran
-        return view('mahasiswa.kwitansi_pdf', compact('pembayaran')); // Pastikan path view-nya benar
+        // Generate PDF dari view
+        $pdf = PDF::loadView('mahasiswa.kwitansi_pdf', compact('pembayaran'))
+            ->setPaper('a4', 'portrait');
+
+        $filename = 'Kwitansi_' . ($pembayaran->tagihan->kode_pembayaran ?? $pembayaran->tagihan->kode ?? 'pembayaran') . '.pdf';
+
+        // Stream ke browser (bisa diganti ->download($filename) jika perlu mengunduh langsung)
+        return $pdf->stream($filename);
     }
 }

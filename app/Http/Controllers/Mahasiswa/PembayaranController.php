@@ -37,14 +37,11 @@ class PembayaranController extends Controller
 
     public function show(Tagihan $tagihan)
     {
-        // PENTING: Cek keamanan
-        $mahasiswaId = Auth::user()->mahasiswaDetail->mahasiswa_id;
-        if ($tagihan->mahasiswa_id !== $mahasiswaId) {
-            abort(403, 'AKSES DITOLAK');
-        }
+        // Gunakan policy untuk memastikan hanya pemilik yang dapat melihat
+        $this->authorize('view', $tagihan);
 
         // Ambil semua data dari tabel 'settings'
-        $settings = Setting::all()->pluck('value', 'key');
+        $settings = Setting::getCachedMap();
 
         // Kirim data tagihan DAN data settings ke view
         return view('mahasiswa.pembayaran_show', compact('tagihan', 'settings'));
@@ -55,6 +52,8 @@ class PembayaranController extends Controller
      */
     public function pilihMetode(Tagihan $tagihan)
     {
+        // Otorisasi melihat tagihan
+        $this->authorize('view', $tagihan);
         // Keamanan: Cek apakah tagihan ini boleh dibayar.
         // Hanya status 'Belum Lunas' atau 'Ditolak' yang boleh lanjut.
         if ( !in_array($tagihan->status, ['Belum Lunas', 'Ditolak']) ) {
@@ -74,6 +73,8 @@ class PembayaranController extends Controller
      */
     public function prosesMetode(Request $request, Tagihan $tagihan)
     {
+        // Otorisasi melihat tagihan
+        $this->authorize('view', $tagihan);
         $metode = $request->input('metode');
 
         if ($metode == 'transfer') {
@@ -97,19 +98,28 @@ class PembayaranController extends Controller
 
     public function storeKonfirmasi(Request $request, Tagihan $tagihan)
     {
+        // Otorisasi melihat tagihan
+        $this->authorize('view', $tagihan);
         $request->validate([
-            'bukti_pembayaran' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+            'bukti_pembayaran' => 'required|file|max:2048',
         ]);
 
-        $mahasiswaId = Auth::user()->mahasiswaDetail->mahasiswa_id;
-        if ($tagihan->mahasiswa_id !== $mahasiswaId) {
-            abort(403, 'AKSES DITOLAK');
+        // Validasi tambahan (server-side mime sniffing)
+        $file = $request->file('bukti_pembayaran');
+        $mime = $file->getMimeType();
+        $allowed = ['image/jpeg', 'image/png', 'image/jpg'];
+        if (!$mime || !in_array(strtolower($mime), $allowed, true)) {
+            return back()->withErrors(['bukti_pembayaran' => 'Format file tidak didukung. Hanya JPG/PNG.'])->withInput();
+        }
+        // Pastikan file benar2 gambar dengan membaca header
+        if (!@getimagesize($file->getPathname())) {
+            return back()->withErrors(['bukti_pembayaran' => 'File bukan gambar yang valid.'])->withInput();
         }
 
         // 1. Tentukan nama folder
         $folder = 'bukti_pembayaran';
         // 2. Simpan file ke public/storage/bukti_pembayaran
-        $path = $request->file('bukti_pembayaran')->store($folder, 'public');
+        $path = $file->store($folder, 'public');
 
         // 3. Simpan path LENGKAP (termasuk folder) ke database
         //    CATATAN: Kamu mungkin mau ganti 'KonfirmasiPembayaran' jadi 'Pembayaran'

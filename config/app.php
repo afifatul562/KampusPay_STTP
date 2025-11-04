@@ -84,6 +84,9 @@ return [
 
     'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
 
+    // Custom: Prefix kode pembayaran (mis. KP, STTP, FIN, dll)
+    'payment_code_prefix' => env('PAYMENT_CODE_PREFIX', 'KP'),
+
     /*
     |--------------------------------------------------------------------------
     | Encryption Key

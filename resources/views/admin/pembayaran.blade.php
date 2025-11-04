@@ -4,57 +4,61 @@
 @section('page-title', 'Manajemen Pembayaran')
 
 @section('content')
-    {{-- Tombol Buat Tagihan --}}
-    <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-        <h2 class="text-xl font-semibold text-gray-800 self-start">💰 Data Pembayaran & Tagihan</h2>
-        <button id="addTagihanBtn" class="w-full md:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
-            <svg class="w-5 h-5 mr-2 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-            Buat Tagihan Baru
-        </button>
-    </div>
+@php
+    $headerIcon = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+    </svg>';
+@endphp
+
+<div class="space-y-6">
+    <x-breadcrumbs :items="[
+        ['label' => 'Dashboard', 'url' => route('admin.dashboard')],
+        ['label' => 'Manajemen Pembayaran']
+    ]" />
+    
+    <x-page-header
+        title="Manajemen Pembayaran"
+        subtitle="Kelola pembayaran dan tagihan mahasiswa"
+        :icon="$headerIcon">
+        <x-slot:actions>
+            <x-gradient-button id="addTagihanBtn" variant="primary" size="md" aria-label="Buat Tagihan Baru">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                Buat Tagihan Baru
+            </x-gradient-button>
+        </x-slot:actions>
+    </x-page-header>
 
     {{-- Filter Dropdowns --}}
-    <div class="flex flex-col sm:flex-row gap-4 mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-        {{-- Filter Status --}}
-        <div class="flex-1">
-            <label for="filterStatus" class="block text-sm font-medium text-gray-700 mb-1">Status Pembayaran</label>
-            <select id="filterStatus" class="block w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm">
-                <option value="">Semua Status</option>
-                <option value="Lunas">Lunas</option>
-                <option value="Belum Dibayarkan">Belum Dibayarkan</option>
-            </select>
+    <x-card title="Filter">
+        <div class="flex flex-col sm:flex-row gap-4">
+            {{-- Filter Status --}}
+            <div class="flex-1">
+                <label for="filterStatus" class="block text-sm font-medium text-gray-700 mb-1">Status Pembayaran</label>
+                <select id="filterStatus" class="block w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:text-sm">
+                    <option value="">Semua Status</option>
+                    <option value="Lunas">Lunas</option>
+                    <option value="Belum Dibayarkan">Belum Dibayarkan</option>
+                </select>
+            </div>
+            {{-- Filter Jenis Tagihan --}}
+            <div class="flex-1">
+                <label for="filterJenis" class="block text-sm font-medium text-gray-700 mb-1">Jenis Tagihan</label>
+                <select id="filterJenis" class="block w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:text-sm">
+                    <option value="">Semua Jenis</option>
+                    {{-- Opsi akan diisi oleh JavaScript --}}
+                </select>
+            </div>
         </div>
-        {{-- Filter Jenis Tagihan --}}
-        <div class="flex-1">
-            <label for="filterJenis" class="block text-sm font-medium text-gray-700 mb-1">Jenis Tagihan</label>
-            <select id="filterJenis" class="block w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm">
-                <option value="">Semua Jenis</option>
-                {{-- Opsi akan diisi oleh JavaScript --}}
-            </select>
-        </div>
-    </div>
+    </x-card>
 
     {{-- Tabel Pembayaran & Tagihan --}}
-    <div class="bg-white rounded-2xl shadow-lg">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kode Pembayaran</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mahasiswa</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis Tagihan</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tgl Bayar</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody id="payment-table-body" class="bg-white divide-y divide-gray-200 text-sm">
-                    <tr><td colspan="7" class="text-center py-10 text-gray-500">Memuat data...</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
+    <x-data-table
+        :headers="['Kode Pembayaran', 'Mahasiswa', 'Jenis Tagihan', 'Jumlah', 'Status', 'Tgl Bayar', 'Aksi']"
+        aria-label="Tabel pembayaran dan tagihan">
+        <tr id="loading-row">
+            <td colspan="7" class="text-center py-10 text-gray-500">Memuat data...</td>
+        </tr>
+    </x-data-table>
 
     {{-- Modal Buat/Edit Tagihan --}}
     <div id="tagihanModal" class="hidden fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-gray-900 bg-opacity-60">
@@ -73,7 +77,8 @@
                         </div>
                         <div>
                             <label for="mahasiswa_id" class="block text-sm font-medium text-gray-700">Pilih Mahasiswa</label>
-                            <select id="mahasiswa_id" name="mahasiswa_id" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm sm:text-sm focus:ring-blue-500 focus:border-blue-500"><option value="" disabled selected>Pilih angkatan dulu</option></select>
+                            {{-- !! Ini akan di-target oleh Select2 !! --}}
+                            <select id="mahasiswa_id" name="mahasiswa_id" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm sm:text-sm focus:ring-blue-500 focus:border-blue-500" style="width: 100%"><option value="" disabled selected>Pilih angkatan dulu</option></select>
                         </div>
                         <div>
                             <label for="tarif_id" class="block text-sm font-medium text-gray-700">Pilih Jenis Tarif</label>
@@ -81,11 +86,12 @@
                         </div>
                         <div>
                             <label for="jumlah_tagihan" class="block text-sm font-medium text-gray-700">Jumlah Tagihan (Rp)</label>
-                            <input type="number" id="jumlah_tagihan" name="jumlah_tagihan" required placeholder="Akan terisi otomatis" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm sm:text-sm bg-gray-100 focus:ring-blue-500 focus:border-blue-500" readonly>
+                            {{-- !! Ganti type="text" agar Cleave.js berfungsi !! --}}
+                            <input type="text" id="jumlah_tagihan" name="jumlah_tagihan" required placeholder="Akan terisi otomatis" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm sm:text-sm bg-gray-100 focus:ring-blue-500 focus:border-blue-500" readonly>
                         </div>
                         <div>
                             <label for="tanggal_jatuh_tempo" class="block text-sm font-medium text-gray-700">Tanggal Jatuh Tempo</label>
-                            <input type="date" id="tanggal_jatuh_tempo" name="tanggal_jatuh_tempo" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm sm:text-sm focus:ring-blue-500 focus:border-blue-500">
+                            <input type="text" id="tanggal_jatuh_tempo" name="tanggal_jatuh_tempo" required placeholder="dd/mm/yyyy" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm sm:text-sm focus:ring-blue-500 focus:border-blue-500">
                         </div>
                         <div>
                             <label for="kode_pembayaran" class="block text-sm font-medium text-gray-700">Kode Pembayaran</label>
@@ -103,19 +109,24 @@
 
      {{-- Modal Detail Tagihan --}}
      <div id="detailTagihanModal" class="hidden fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-gray-900 bg-opacity-60">
-         <div class="relative bg-white rounded-lg shadow-xl transform transition-all sm:max-w-lg w-full">
-            <div class="bg-white px-6 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div class="flex justify-between items-center pb-3 border-b">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900">Detail Tagihan</h3>
-                    <button type="button" class="detail-close-button text-2xl text-gray-400 hover:text-gray-600">&times;</button>
+        <div class="relative bg-white rounded-lg shadow-xl transform transition-all sm:max-w-2xl w-full max-h-[90vh] flex flex-col">
+            <div class="px-6 py-5 border-b border-gray-200">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-gray-900">Detail Tagihan</h3>
+                    <button type="button" class="detail-close-button text-2xl text-gray-400 hover:text-gray-600 transition-colors">&times;</button>
                 </div>
-                <div class="mt-4 text-base text-gray-700" id="detailTagihanContent">Memuat detail...</div>
             </div>
-             <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button type="button" class="detail-close-button mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">Tutup</button>
+            <div class="px-6 py-5 overflow-y-auto flex-1" id="detailTagihanContent">
+                <div class="text-center text-gray-500 py-4">Memuat detail...</div>
+            </div>
+            <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end">
+                <button type="button" class="detail-close-button inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                    Tutup
+                </button>
             </div>
         </div>
     </div>
+</div>
 @endsection
 
 @push('scripts')
@@ -123,7 +134,9 @@
     document.addEventListener('DOMContentLoaded', function() {
         // --- Bagian Umum ---
         const apiToken = document.querySelector('meta[name="api-token"]')?.getAttribute('content');
-        const paymentTableBody = document.getElementById('payment-table-body');
+        // Find tbody by finding the table with aria-label and then its tbody
+        const paymentTable = document.querySelector('table[aria-label="Tabel pembayaran dan tagihan"]');
+        const paymentTableBody = paymentTable ? paymentTable.querySelector('tbody') : null;
 
         // --- Bagian Modal Tambah/Edit ---
         const tagihanModal = document.getElementById('tagihanModal');
@@ -147,16 +160,123 @@
 
         // --- Variabel Data & Filter Tabel ---
         let allTagihanData = [];
+        let allMahasiswaData = []; // Pindah ke scope atas
+        let allTarifsData = []; // Pindah ke scope atas
         const filterStatusSelect = document.getElementById('filterStatus');
         const filterJenisSelect = document.getElementById('filterJenis');
         let currentFilters = { status: '', jenis: '' };
 
-        // --- Atur Tanggal Minimum Jatuh Tempo ---
-        const today = new Date();
-        const yearNow = today.getFullYear();
-        const monthNow = (today.getMonth() + 1).toString().padStart(2, '0');
-        const dayNow = today.getDate().toString().padStart(2, '0');
-        tglJatuhTempoInput.setAttribute('min', `${yearNow}-${monthNow}-${dayNow}`);
+        // ===========================================
+        // !! Inisialisasi Cleave.js (Format Angka) !!
+        // ===========================================
+        // Gunakan fallback sederhana jika Cleave.js tidak tersedia agar tidak error
+        const cleaveJumlah = (window.Cleave)
+            ? new Cleave(jumlahInput, { numeral: true, numeralThousandsGroupStyle: 'thousand', delimiter: '.' })
+            : {
+                setRawValue: function(value) {
+                    if (value === undefined || value === null || value === '') { jumlahInput.value = ''; return; }
+                    const num = parseInt(String(value).replace(/\D/g, ''), 10);
+                    if (isNaN(num)) { jumlahInput.value = ''; return; }
+                    jumlahInput.value = new Intl.NumberFormat('id-ID').format(num);
+                }
+            };
+
+        // ===========================================
+        // !! Inisialisasi Flatpickr (Format Tanggal) !!
+        // ===========================================
+        // Gunakan fallback ringan jika Flatpickr tidak tersedia agar tidak error
+        // Paksa placeholder Indonesia sebelum inisialisasi
+        tglJatuhTempoInput.setAttribute('placeholder', 'dd/mm/yyyy');
+        // Paksa locale ID secara global bila tersedia
+        if (window.flatpickr && window.flatpickr.l10ns && window.flatpickr.l10ns.id) {
+            window.flatpickr.localize(window.flatpickr.l10ns.id);
+        }
+        const flatpickrDueDate = (window.flatpickr)
+            ? flatpickr(tglJatuhTempoInput, {
+                dateFormat: "d/m/Y",
+                minDate: "today",
+                allowInput: false,
+                defaultDate: null,
+                static: false,
+                disableMobile: true, // hindari native picker yang memaksa mm/dd/yyyy
+                onReady: function(selectedDates, dateStr, instance) {
+                    instance.input.placeholder = 'dd/mm/yyyy';
+                    if (!instance.input.value) instance.input.value = '';
+                },
+                onOpen: function(selectedDates, dateStr, instance) {
+                    instance.input.placeholder = 'dd/mm/yyyy';
+                },
+                onClose: function(selectedDates, dateStr, instance) {
+                    if (!dateStr) instance.input.placeholder = 'dd/mm/yyyy';
+                }
+            })
+            : {
+                clear: function() { tglJatuhTempoInput.value = ''; },
+                setDate: function(date) {
+                    const d = new Date(date);
+                    if (isNaN(d)) { return; }
+                    const dd = String(d.getDate()).padStart(2, '0');
+                    const mm = String(d.getMonth() + 1).padStart(2, '0');
+                    const yyyy = d.getFullYear();
+                    tglJatuhTempoInput.value = `${dd}/${mm}/${yyyy}`;
+                }
+            };
+
+        // Pastikan placeholder tetap "dd/mm/yyyy" setelah Flatpickr diinisialisasi
+        // Gunakan setTimeout untuk memastikan placeholder di-set setelah Flatpickr selesai
+        setTimeout(() => {
+            if (!tglJatuhTempoInput.value) {
+                tglJatuhTempoInput.placeholder = "dd/mm/yyyy";
+            }
+        }, 100);
+
+        // Event listener untuk memastikan placeholder tetap benar saat input kosong
+        tglJatuhTempoInput.addEventListener('focus', function() {
+            if (!this.value) {
+                this.placeholder = "dd/mm/yyyy";
+            }
+        });
+
+        tglJatuhTempoInput.addEventListener('blur', function() {
+            if (!this.value) {
+                this.placeholder = "dd/mm/yyyy";
+            }
+        });
+
+        // MutationObserver untuk memastikan placeholder selalu "dd/mm/yyyy"
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'placeholder') {
+                    if (tglJatuhTempoInput.placeholder !== "dd/mm/yyyy" && !tglJatuhTempoInput.value) {
+                        tglJatuhTempoInput.placeholder = "dd/mm/yyyy";
+                    }
+                }
+            });
+        });
+
+        observer.observe(tglJatuhTempoInput, {
+            attributes: true,
+            attributeFilter: ['placeholder']
+        });
+
+        // ===========================================
+        // !! Inisialisasi Select2 (Pencarian Mahasiswa) - Opsional !!
+        // ===========================================
+        const isjQueryAvailable = !!(window.$ && $.fn);
+        const isSelect2Available = isjQueryAvailable && !!$.fn.select2;
+        if (isSelect2Available) {
+            $(mahasiswaSelect).select2({
+                theme: "default",
+                width: '100%',
+                dropdownParent: $('#tagihanModal'),
+                placeholder: 'Pilih Mahasiswa',
+                allowClear: true
+            });
+            // Pastikan perubahan pilihan memicu pemfilteran tarif
+            $(mahasiswaSelect).on('select2:select select2:clear', function(){
+                mahasiswaSelect.dispatchEvent(new Event('change'));
+            });
+        }
 
         // -------------------------------------
         // FUNGSI API REQUEST (DENGAN SWEETALERT)
@@ -188,17 +308,42 @@
                  throw new Error(error.message || 'Gagal memproses permintaan.');
              }
         }
+        // Util: konversi dd/mm/yyyy -> yyyy-mm-dd untuk backend
+        function toYmdFromDdMmYyyy(input) {
+            if (!input) return '';
+            const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(input.trim());
+            if (!match) return input; // biarkan backend menangani jika format lain
+            const [_, dd, mm, yyyy] = match;
+            return `${yyyy}-${mm}-${dd}`;
+        }
+        // Util: ubah '50.000' -> 50000 (angka)
+        function parseRupiahToNumber(input) {
+            if (input === undefined || input === null) return '';
+            const onlyDigits = String(input).replace(/[^\d-]/g, '');
+            return onlyDigits ? Number(onlyDigits) : '';
+        }
 
         // -------------------------------------
         // FUNGSI RENDER TABEL (Aksi Lengkap)
         // -------------------------------------
         function renderTable(dataToRender) {
-            const tbody = document.getElementById('payment-table-body');
-            tbody.innerHTML = '';
+            if (!paymentTableBody) {
+                console.error('paymentTableBody not found in renderTable');
+                return;
+            }
+            paymentTableBody.innerHTML = '';
             if (!dataToRender || dataToRender.length === 0) {
                  const isFiltering = currentFilters.status || currentFilters.jenis;
-                 const message = isFiltering ? 'Tidak ada data tagihan yang cocok dengan filter.' : 'Belum ada data tagihan.';
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-10 text-gray-500">${message}</td></tr>`;
+                 renderEmptyState(paymentTableBody, {
+                     colspan: 7,
+                     title: isFiltering ? 'Tidak ada data' : 'Belum ada data tagihan',
+                     message: isFiltering ? 'Tidak ada data tagihan yang cocok dengan filter yang dipilih.' : 'Silakan buat tagihan baru untuk memulai.',
+                     icon: `
+                         <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                         </svg>
+                     `
+                 });
                 return;
             }
             const rupiahFormat = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
@@ -244,7 +389,11 @@
                 // 5. Status (Pakai innerHTML tapi aman karena dari logic kita)
                 const cellStatus = document.createElement('td');
                 cellStatus.className = 'px-6 py-4 whitespace-nowrap text-center';
-                cellStatus.innerHTML = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${isLunas ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${statusText}</span>`;
+                const isDibatalkan = pembayaran && pembayaran.status_dibatalkan;
+                if (isDibatalkan) {
+                    statusText = 'Dibatalkan';
+                }
+                cellStatus.innerHTML = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${isDibatalkan ? 'bg-red-100 text-red-800' : (isLunas ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800')}">${statusText}</span>`;
                 tr.appendChild(cellStatus);
 
                 // 6. Tgl Bayar
@@ -252,31 +401,29 @@
 
                 // 7. Aksi (Pakai innerHTML tapi aman karena ID bukan input teks)
                 const cellAksi = document.createElement('td');
-            cellAksi.className = 'px-6 py-4 whitespace-nowrap text-right font-medium';
-            // ==========================================================
-            // !! MASUKKAN KEMBALI KODE SVG ASLI DI SINI !!
-            // ==========================================================
-            cellAksi.innerHTML = `
+                cellAksi.className = 'px-6 py-4 whitespace-nowrap text-right font-medium';
+                cellAksi.innerHTML = `
                 <div class="flex justify-end items-center gap-2">
-                    <button class="view-btn text-gray-500 hover:text-blue-600" data-id="${tagihan.tagihan_id}" title="Lihat Detail">
+                    <button class="view-btn text-gray-500 hover:text-blue-600" data-id="${tagihan.tagihan_id}" data-tooltip="Lihat detail tagihan" title="Lihat Detail">
                         <svg class="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                     </button>
                     ${!isLunas ? `
-                    <button class="edit-btn text-gray-500 hover:text-yellow-600" data-id="${tagihan.tagihan_id}" title="Edit Tagihan">
+                    <button class="edit-btn text-gray-500 hover:text-yellow-600" data-id="${tagihan.tagihan_id}" data-tooltip="Edit tagihan" title="Edit Tagihan">
                         <svg class="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536l12.232-12.232z"></path></svg>
                     </button>` : '<span class="w-5 h-5 inline-block"></span>'}
                     ${!isLunas ? `
-                    <button class="delete-btn text-gray-500 hover:text-red-600" data-id="${tagihan.tagihan_id}" title="Hapus Tagihan">
+                    <button class="delete-btn text-gray-500 hover:text-red-600" data-id="${tagihan.tagihan_id}" data-tooltip="Hapus tagihan" title="Hapus Tagihan">
                         <svg class="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </button>` : '<span class="w-5 h-5 inline-block"></span>'}
                     ${isLunas && pembayaran ? `
-                    <a href="{{ url('admin/pembayaran/print') }}/${pembayaran.pembayaran_id}" target="_blank" class="print-btn text-gray-500 hover:text-indigo-600" title="Cetak Bukti">
+                    <a href="{{ url('admin/pembayaran/print') }}/${pembayaran.pembayaran_id}" target="_blank" class="print-btn text-gray-500 hover:text-indigo-600" data-tooltip="Cetak bukti pembayaran" title="Cetak Bukti">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
                     </a>` : '<span class="w-5 h-5 inline-block"></span>'}
-                </div>`;
-            tr.appendChild(cellAksi);
+                </div>
+            `;
+                tr.appendChild(cellAksi);
 
-                tbody.appendChild(tr);
+                paymentTableBody.appendChild(tr);
             });
         }
 
@@ -322,24 +469,170 @@
             }).catch(error => {
                 console.error('Error fetching tagihan:', error);
                 Swal.fire({ icon: 'error', title: 'Gagal Memuat Data', text: `Gagal memuat data tagihan: ${error.message}` });
-                paymentTableBody.innerHTML = `<tr><td colspan="7" class="text-center py-10 text-red-500">Gagal memuat data. Silakan refresh.</td></tr>`;
+                if (paymentTableBody) {
+                    paymentTableBody.innerHTML = `<tr><td colspan="7" class="text-center py-10 text-red-500">Gagal memuat data. Silakan refresh.</td></tr>`;
+                }
             });
         }
 
-        // --- Fungsi Modal & Form Handling (Tetap Sama) ---
-        async function populateFormDropdowns() { /* ... Kode populateFormDropdowns ... */
-             const mahasiswaUrl = "{{ route('admin.mahasiswa.index') }}"; const tarifUrl = "{{ route('admin.tarif.index') }}"; try { const [mahasiswaResponse, tarifResponse] = await Promise.all([apiRequest(mahasiswaUrl),apiRequest(tarifUrl)]); allMahasiswaData = mahasiswaResponse.data || mahasiswaResponse; allTarifsData = tarifResponse.data || tarifResponse; const angkatanUnik = [...new Set(allMahasiswaData.map(mhs => mhs.angkatan))].sort().reverse(); angkatanFilterSelect.innerHTML = '<option value="">Tampilkan Semua Angkatan</option>'; angkatanUnik.forEach(angkatan => { angkatanFilterSelect.innerHTML += `<option value="${angkatan}">${angkatan}</option>`; }); filterMahasiswaDropdown(); } catch (error) { console.error("Gagal memuat data form:", error); Swal.fire({ icon: 'error', title: 'Gagal Memuat Data Form', text: `Gagal memuat data mahasiswa/tarif: ${error.message}` }); mahasiswaSelect.innerHTML = '<option value="">Gagal memuat</option>'; tarifSelect.innerHTML = '<option value="">Gagal memuat</option>';}
+        // --- Fungsi Modal & Form Handling (Diperbarui) ---
+
+        async function populateFormDropdowns() {
+            const mahasiswaUrl = "{{ route('admin.mahasiswa.index') }}";
+            const tarifUrl = "{{ route('admin.tarif.index') }}";
+            try {
+                const [mahasiswaResponse, tarifResponse] = await Promise.all([apiRequest(mahasiswaUrl), apiRequest(tarifUrl)]);
+                allMahasiswaData = mahasiswaResponse.data || mahasiswaResponse;
+                allTarifsData = tarifResponse.data || tarifResponse;
+
+                const angkatanUnik = [...new Set(allMahasiswaData.map(mhs => mhs.angkatan))].sort().reverse();
+                angkatanFilterSelect.innerHTML = '<option value="">Tampilkan Semua Angkatan</option>';
+                angkatanUnik.forEach(angkatan => {
+                    angkatanFilterSelect.innerHTML += `<option value="${angkatan}">${angkatan}</option>`;
+                });
+
+                // Panggil filterMahasiswaDropdown untuk populasi awal
+                filterMahasiswaDropdown();
+
+            } catch (error) {
+                console.error("Gagal memuat data form:", error);
+                Swal.fire({ icon: 'error', title: 'Gagal Memuat Data Form', text: `Gagal memuat data mahasiswa/tarif: ${error.message}` });
+                // Fallback tanpa jQuery
+                mahasiswaSelect.innerHTML = '';
+                mahasiswaSelect.appendChild(new Option('Gagal memuat', ''));
+                mahasiswaSelect.dispatchEvent(new Event('change'));
+                tarifSelect.innerHTML = '<option value="">Gagal memuat</option>';
+            }
         }
-        function filterMahasiswaDropdown() { /* ... Kode filterMahasiswaDropdown ... */
-            const selectedAngkatan = angkatanFilterSelect.value; const filteredMahasiswa = allMahasiswaData.filter(mhs => !selectedAngkatan || (mhs.angkatan == selectedAngkatan)); mahasiswaSelect.innerHTML = '<option value="" disabled selected>Pilih Mahasiswa</option>'; filteredMahasiswa.forEach(mhs => { mahasiswaSelect.innerHTML += `<option value="${mhs.mahasiswa_id}" data-prodi="${mhs.program_studi}" data-angkatan="${mhs.angkatan}">${mhs.npm} - ${mhs.user?.nama_lengkap ?? 'N/A'}</option>`; }); filterTarifDropdown();
+
+        function filterMahasiswaDropdown() {
+            const selectedAngkatan = angkatanFilterSelect.value;
+            const filteredMahasiswa = allMahasiswaData.filter(mhs => !selectedAngkatan || (mhs.angkatan == selectedAngkatan));
+
+            // Kosongkan dan tambah placeholder (native)
+            mahasiswaSelect.innerHTML = '';
+            const placeholderOpt = new Option('Pilih Mahasiswa', '', true, true);
+            mahasiswaSelect.appendChild(placeholderOpt);
+
+            filteredMahasiswa.forEach(mhs => {
+                const option = new Option(`${mhs.npm} - ${mhs.user?.nama_lengkap ?? 'N/A'}`, mhs.mahasiswa_id, false, false);
+                option.dataset.prodi = mhs.program_studi ?? '';
+                option.dataset.angkatan = mhs.angkatan ?? '';
+                mahasiswaSelect.appendChild(option);
+            });
+
+            // Trigger change agar dependent dropdown ter-update
+            mahasiswaSelect.dispatchEvent(new Event('change'));
+            filterTarifDropdown();
         }
-        function filterTarifDropdown() { /* ... Kode filterTarifDropdown ... */
-            const selectedMahasiswaOption = mahasiswaSelect.options[mahasiswaSelect.selectedIndex]; if (!selectedMahasiswaOption || !selectedMahasiswaOption.value) { tarifSelect.innerHTML = '<option value="" disabled selected>Pilih mahasiswa dulu</option>'; jumlahInput.value = ''; kodeInput.value = ''; return; } const prodiMhs = selectedMahasiswaOption.dataset.prodi; const angkatanMhs = selectedMahasiswaOption.dataset.angkatan; const filteredTarifs = allTarifsData.filter(tarif => { const prodiCocok = !tarif.program_studi || tarif.program_studi === prodiMhs; const angkatanCocok = !tarif.angkatan || tarif.angkatan === angkatanMhs; return prodiCocok && angkatanCocok; }); tarifSelect.innerHTML = '<option value="" disabled selected>Pilih Jenis Tarif</option>'; filteredTarifs.forEach(tarif => { tarifSelect.innerHTML += `<option value="${tarif.tarif_id}">${tarif.nama_pembayaran} (${tarif.program_studi || 'Semua'}, ${tarif.angkatan || 'Semua'})</option>`; }); jumlahInput.value = ''; kodeInput.value = ''; tarifSelect.dispatchEvent(new Event('change'));
+
+        function filterTarifDropdown() {
+            // Ambil option terpilih secara aman (kompatibel dengan Select2)
+            const selectedValue = mahasiswaSelect.value;
+            const selectedOption = mahasiswaSelect.querySelector(`option[value="${CSS.escape(selectedValue)}"]`);
+
+            if (!selectedOption || !selectedOption.value) {
+                tarifSelect.innerHTML = '<option value="" disabled selected>Pilih mahasiswa dulu</option>';
+                cleaveJumlah.setRawValue(''); // Set ke kosong
+                kodeInput.value = '';
+                return;
+            }
+
+            // Ambil dataset dari <option> terpilih
+            const prodiMhs = selectedOption.dataset.prodi;
+            const angkatanMhs = selectedOption.dataset.angkatan;
+
+            const filteredTarifs = allTarifsData.filter(tarif => {
+                const prodiCocok = !tarif.program_studi || tarif.program_studi === prodiMhs;
+                const angkatanCocok = !tarif.angkatan || tarif.angkatan === angkatanMhs;
+                return prodiCocok && angkatanCocok;
+            });
+
+            tarifSelect.innerHTML = '<option value="" disabled selected>Pilih Jenis Tarif</option>';
+            filteredTarifs.forEach(tarif => {
+                tarifSelect.innerHTML += `<option value="${tarif.tarif_id}">${tarif.nama_pembayaran}</option>`;
+            });
+
+            cleaveJumlah.setRawValue(''); // Set ke kosong
+            kodeInput.value = '';
+            tarifSelect.dispatchEvent(new Event('change'));
         }
-        function openTagihanModal(mode = 'add', tagihanData = null) { /* ... Kode openTagihanModal ... */
-             tagihanForm.reset(); tagihanIdInput.value = ''; jumlahInput.value = ''; kodeInput.value = ''; angkatanFilterSelect.value = ''; mahasiswaSelect.innerHTML = '<option value="" disabled selected>Pilih angkatan dulu</option>'; tarifSelect.innerHTML = '<option value="" disabled selected>Pilih mahasiswa dulu</option>'; if (mode === 'add') { modalTitle.textContent = 'Buat Tagihan Baru'; populateFormDropdowns(); } else if (mode === 'edit' && tagihanData) { modalTitle.textContent = 'Edit Tagihan'; tagihanIdInput.value = tagihanData.tagihan_id; populateFormDropdowns().then(() => { angkatanFilterSelect.value = tagihanData.mahasiswa?.angkatan ?? ''; angkatanFilterSelect.dispatchEvent(new Event('change')); setTimeout(() => { mahasiswaSelect.value = tagihanData.mahasiswa_id; mahasiswaSelect.dispatchEvent(new Event('change')); setTimeout(() => { tarifSelect.value = tagihanData.tarif_id; jumlahInput.value = tagihanData.jumlah_tagihan; tglJatuhTempoInput.value = tagihanData.tanggal_jatuh_tempo ? tagihanData.tanggal_jatuh_tempo.split('T')[0] : ''; kodeInput.value = tagihanData.kode_pembayaran; tarifSelect.dispatchEvent(new Event('change')); }, 150); }, 150); }); } tagihanModal.classList.remove('hidden'); tagihanModal.classList.add('flex');
+
+        // !! Perbarui fungsi openTagihanModal !!
+        function openTagihanModal(mode = 'add', tagihanData = null) {
+            tagihanForm.reset();
+            tagihanIdInput.value = '';
+
+            // Reset 3 library
+            cleaveJumlah.setRawValue('');
+            flatpickrDueDate.clear();
+            tglJatuhTempoInput.value = ''; // Reset input field secara eksplisit
+            tglJatuhTempoInput.placeholder = "dd/mm/yyyy"; // Pastikan placeholder benar
+            mahasiswaSelect.innerHTML = '';
+            mahasiswaSelect.appendChild(new Option('Pilih angkatan dulu', '', true, true));
+            mahasiswaSelect.dispatchEvent(new Event('change'));
+
+            angkatanFilterSelect.value = '';
+            tarifSelect.innerHTML = '<option value="" disabled selected>Pilih mahasiswa dulu</option>';
+            kodeInput.value = '';
+
+            // Pastikan placeholder "dd/mm/yyyy" ditampilkan setelah modal dibuka
+            setTimeout(() => {
+                if (!tglJatuhTempoInput.value) {
+                    tglJatuhTempoInput.placeholder = "dd/mm/yyyy";
+                }
+            }, 150);
+
+            if (mode === 'add') {
+                modalTitle.textContent = 'Buat Tagihan Baru';
+                populateFormDropdowns();
+            } else if (mode === 'edit' && tagihanData) {
+                modalTitle.textContent = 'Edit Tagihan';
+                tagihanIdInput.value = tagihanData.tagihan_id;
+
+                populateFormDropdowns().then(() => {
+                    // Isi data yang ada
+                    angkatanFilterSelect.value = tagihanData.mahasiswa?.angkatan ?? '';
+                    angkatanFilterSelect.dispatchEvent(new Event('change')); // Trigger filter mahasiswa
+
+                    setTimeout(() => {
+                        // Set value (support Select2 jika ada)
+                        if (isSelect2Available) {
+                            $(mahasiswaSelect).val(tagihanData.mahasiswa_id).trigger('change');
+                        } else {
+                            mahasiswaSelect.value = String(tagihanData.mahasiswa_id);
+                            mahasiswaSelect.dispatchEvent(new Event('change'));
+                        }
+
+                        setTimeout(() => {
+                            tarifSelect.value = tagihanData.tarif_id;
+
+                            // Set Cleave.js value
+                            cleaveJumlah.setRawValue(tagihanData.jumlah_tagihan);
+
+                            // Set Flatpickr value (konversi YYYY-MM-DD ke Date object)
+                            if(tagihanData.tanggal_jatuh_tempo) {
+                                const dateStr = tagihanData.tanggal_jatuh_tempo.split('T')[0]; // Ambil bagian tanggal saja
+                                const dateObj = new Date(dateStr + 'T00:00:00'); // Tambahkan time untuk menghindari timezone issue
+                                if (!isNaN(dateObj.getTime())) {
+                                    flatpickrDueDate.setDate(dateObj, false); // false = gunakan dateFormat dari config (d/m/Y)
+                                }
+                            }
+
+                            kodeInput.value = tagihanData.kode_pembayaran;
+                            tarifSelect.dispatchEvent(new Event('change'));
+                        }, 200); // Delay kecil untuk Select2
+                    }, 200); // Delay kecil untuk Select2
+                });
+            }
+            tagihanModal.classList.remove('hidden');
+            tagihanModal.classList.add('flex');
         }
-        function closeTagihanModal() { /* ... Kode closeTagihanModal ... */ tagihanModal.classList.add('hidden'); tagihanModal.classList.remove('flex'); }
+
+        function closeTagihanModal() {
+            tagihanModal.classList.add('hidden');
+            tagihanModal.classList.remove('flex');
+        }
 
         // --- Fungsi Modal Detail (Tetap Sama) ---
         function openDetailModal(tagihanData) {
@@ -348,64 +641,128 @@
             let statusText = tagihanData.status === 'Belum Lunas' ? 'Belum Dibayarkan' : tagihanData.status;
             const isLunas = tagihanData.status === 'Lunas';
             const pembayaran = tagihanData.pembayaran;
-            const tglJatuhTempo = tagihanData.tanggal_jatuh_tempo ? new Date(tagihanData.tanggal_jatuh_tempo).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric'}) : '-';
-            const tglBayar = pembayaran ? new Date(pembayaran.tanggal_bayar).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric'}) : '-';
+            const isDibatalkan = pembayaran && pembayaran.status_dibatalkan;
 
+            if (isDibatalkan) {
+                statusText = 'Dibatalkan';
+            }
+
+            const tglJatuhTempo = tagihanData.tanggal_jatuh_tempo ? new Date(tagihanData.tanggal_jatuh_tempo).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric'}) : '-';
+            const tglBayar = pembayaran ? new Date(pembayaran.tanggal_bayar).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric'}) : '-';
+            let tglPembatalan = '-';
+            if (pembayaran && pembayaran.tanggal_pembatalan) {
+                const pembatalanDate = new Date(pembayaran.tanggal_pembatalan);
+                const dateStr = pembatalanDate.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric'});
+                const timeStr = pembatalanDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit'});
+                tglPembatalan = `${dateStr} pukul ${timeStr}`;
+            }
+
+            // Container utama untuk detail
+            const detailContainer = document.createElement('div');
+            detailContainer.className = 'space-y-4';
+
+            // Grid untuk informasi detail
             const detailGrid = document.createElement('div');
-            detailGrid.className = 'grid grid-cols-[max-content,max-content,1fr] gap-y-2 gap-x-3 text-base';
+            detailGrid.className = 'grid grid-cols-[max-content,max-content,1fr] gap-y-2 gap-x-3 text-sm';
 
-            // Helper untuk menambah baris detail (AMAN)
             function addDetailRow(label, value) {
                 const labelSpan = document.createElement('span');
-                labelSpan.className = 'font-medium text-gray-900';
+                labelSpan.className = 'font-medium text-gray-700';
                 labelSpan.textContent = label;
-
                 const colonSpan = document.createElement('span');
                 colonSpan.textContent = ':';
-
+                colonSpan.className = 'text-gray-500';
                 const valueSpan = document.createElement('span');
-                valueSpan.textContent = value ?? '-'; // Default ke '-' jika null/undefined
-
+                valueSpan.textContent = value ?? '-';
+                valueSpan.className = 'text-gray-900';
+                detailGrid.appendChild(labelSpan);
+                detailGrid.appendChild(colonSpan);
+                detailGrid.appendChild(valueSpan);
+            }
+            function addStatusRow(label, statusHtml) {
+                const labelSpan = document.createElement('span');
+                labelSpan.className = 'font-medium text-gray-700';
+                labelSpan.textContent = label;
+                const colonSpan = document.createElement('span');
+                colonSpan.textContent = ':';
+                colonSpan.className = 'text-gray-500';
+                const valueSpan = document.createElement('span');
+                valueSpan.innerHTML = statusHtml;
                 detailGrid.appendChild(labelSpan);
                 detailGrid.appendChild(colonSpan);
                 detailGrid.appendChild(valueSpan);
             }
 
-            // Helper untuk menambah baris status (innerHTML aman)
-            function addStatusRow(label, statusHtml) {
-                const labelSpan = document.createElement('span');
-                labelSpan.className = 'font-medium text-gray-900';
-                labelSpan.textContent = label;
-                const colonSpan = document.createElement('span'); colonSpan.textContent = ':';
-                const valueSpan = document.createElement('span');
-                valueSpan.innerHTML = statusHtml; // Aman karena HTML dari logic kita
-
-                detailGrid.appendChild(labelSpan); detailGrid.appendChild(colonSpan); detailGrid.appendChild(valueSpan);
-            }
-
+            // Informasi dasar tagihan
             addDetailRow('Kode Pembayaran', tagihanData.kode_pembayaran);
             addDetailRow('Nama Mahasiswa', tagihanData.mahasiswa?.user?.nama_lengkap);
             addDetailRow('NPM', tagihanData.mahasiswa?.npm);
             addDetailRow('Jenis Tagihan', tagihanData.tarif?.nama_pembayaran);
             addDetailRow('Jumlah', rupiahFormat.format(tagihanData.jumlah_tagihan));
 
-            const statusBadgeHtml = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${isLunas ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${statusText}</span>`;
+            // Status badge
+            let statusBadgeClass = 'bg-yellow-100 text-yellow-800';
+            if (isDibatalkan) {
+                statusBadgeClass = 'bg-red-100 text-red-800';
+            } else if (isLunas) {
+                statusBadgeClass = 'bg-green-100 text-green-800';
+            }
+            const statusBadgeHtml = `<span class="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusBadgeClass}">${statusText}</span>`;
             addStatusRow('Status', statusBadgeHtml);
 
             addDetailRow('Tgl Jatuh Tempo', tglJatuhTempo);
-            addDetailRow('Tgl Bayar', tglBayar);
 
+            // Informasi pembayaran jika ada
             if (pembayaran) {
+                addDetailRow('Tgl Bayar', tglBayar);
                 addDetailRow('ID Pembayaran', pembayaran.pembayaran_id);
                 addDetailRow('Metode Bayar', pembayaran.metode_pembayaran);
-                addDetailRow('Diverifikasi Oleh', pembayaran.user_kasir?.nama_lengkap);
+                addDetailRow('Diverifikasi Oleh', pembayaran.user_kasir?.nama_lengkap || '-');
+            } else {
+                addDetailRow('Tgl Bayar', '-');
             }
 
-            detailTagihanContent.appendChild(detailGrid);
+            detailContainer.appendChild(detailGrid);
+
+            // Tampilkan informasi pembatalan jika ada (HANYA SEKALI, di luar grid)
+            if (pembayaran && isDibatalkan && pembayaran.alasan_pembatalan) {
+                const pembatalanDiv = document.createElement('div');
+                pembatalanDiv.className = 'mt-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-sm';
+                pembatalanDiv.innerHTML = `
+                    <div class="flex items-start gap-3">
+                        <div class="flex-shrink-0">
+                            <svg class="w-5 h-5 text-red-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-bold text-sm text-red-900 mb-2">Pembayaran Dibatalkan</p>
+                            <div class="mb-3">
+                                <p class="text-xs text-red-700 font-medium mb-1">Tanggal Pembatalan:</p>
+                                <p class="text-sm text-red-900">${tglPembatalan}</p>
+                            </div>
+                            <div class="mb-3">
+                                <p class="text-xs text-red-700 font-medium mb-1.5">Alasan Pembatalan:</p>
+                                <div class="bg-white p-3 rounded border border-red-200">
+                                    <p class="text-sm text-red-900 leading-relaxed">${pembayaran.alasan_pembatalan}</p>
+                                </div>
+                            </div>
+                            <p class="text-xs text-red-600 italic mt-2">Pembayaran ini dibatalkan oleh kasir karena ditemukan kesalahan pada saat verifikasi.</p>
+                        </div>
+                    </div>
+                `;
+                detailContainer.appendChild(pembatalanDiv);
+            }
+
+            detailTagihanContent.appendChild(detailContainer);
             detailTagihanModal.classList.remove('hidden');
             detailTagihanModal.classList.add('flex');
         }
-        function closeDetailModal() { /* ... Kode closeDetailModal ... */ detailTagihanModal.classList.add('hidden'); detailTagihanModal.classList.remove('flex'); detailTagihanContent.innerHTML = 'Memuat detail...'; }
+        function closeDetailModal() {
+            detailTagihanModal.classList.add('hidden');
+            detailTagihanModal.classList.remove('flex');
+            detailTagihanContent.innerHTML = '<div class="text-center text-gray-500 py-4">Memuat detail...</div>';
+        }
 
         // --- Fungsi Hapus (DENGAN SWEETALERT) ---
         function deleteTagihan(tagihanId, namaTagihan = 'ini') {
@@ -434,20 +791,58 @@
         // -------------------------------------
         // EVENT LISTENERS
         // -------------------------------------
+        // Add null checks before adding event listeners
+        if (!paymentTableBody) {
+            console.error('paymentTableBody not found');
+        }
+        if (!tagihanModal || !modalTitle || !tagihanForm || !tagihanIdInput) {
+            console.error('Modal elements not found');
+        }
+        if (!filterStatusSelect || !filterJenisSelect) {
+            console.error('Filter elements not found');
+        }
+
         // Listener Tombol Tambah & Modal
-        addTagihanBtn.addEventListener('click', () => openTagihanModal('add'));
-        closeModalButton.addEventListener('click', closeTagihanModal);
-        cancelBtn.addEventListener('click', closeTagihanModal);
-        window.addEventListener('click', (event) => { if (event.target == tagihanModal) { closeTagihanModal(); } });
+        if (addTagihanBtn) {
+            addTagihanBtn.addEventListener('click', () => openTagihanModal('add'));
+        }
+        if (closeModalButton) {
+            closeModalButton.addEventListener('click', closeTagihanModal);
+        }
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', closeTagihanModal);
+        }
+        if (tagihanModal) {
+            window.addEventListener('click', (event) => { if (event.target == tagihanModal) { closeTagihanModal(); } });
+        }
         // Listener Dropdown di Modal
-        angkatanFilterSelect.addEventListener('change', filterMahasiswaDropdown);
-        mahasiswaSelect.addEventListener('change', filterTarifDropdown);
-        tarifSelect.addEventListener('change', function() { /* ... Kode listener tarifSelect (Kode Invoice) ... */
-             const selectedTarifId = this.value; const selectedTarif = allTarifsData.find(t => t.tarif_id == selectedTarifId); if (selectedTarif) { jumlahInput.value = selectedTarif.nominal; let paymentCode = "INV"; const namaPembayaran = selectedTarif.nama_pembayaran; const today = new Date(); const year = today.getFullYear().toString().slice(-2); const month = (today.getMonth() + 1).toString().padStart(2, '0'); const day = today.getDate().toString().padStart(2, '0'); const datePart = `${year}${month}${day}`; switch (namaPembayaran) { case "Uang Semester": paymentCode = "SMT"; break; case "Uang Pembangunan": paymentCode = "PBN"; break; case "Uang Skripsi": paymentCode = "SKR"; break; case "Uang Wisuda": paymentCode = "WSD"; break; case "Uang KP": paymentCode = "KP"; break; case "Uang Kemahasiswaan": paymentCode = "KHS"; break; case "Uang Ujian Akhir": paymentCode = "UAS"; break; default: paymentCode = "OTH"; } kodeInput.value = `INV-${paymentCode}-${datePart}-${selectedTarifId}`; } else { jumlahInput.value = ''; kodeInput.value = ''; }
-        });
+        if (angkatanFilterSelect) {
+            angkatanFilterSelect.addEventListener('change', filterMahasiswaDropdown);
+        }
+        // Dengarkan event change native (Select2 juga mem-bubble event ini)
+        if (mahasiswaSelect) {
+            mahasiswaSelect.addEventListener('change', filterTarifDropdown);
+        }
+
+        // !! Perbarui Jumlah Tagihan !!
+        if (tarifSelect) {
+            tarifSelect.addEventListener('change', function() {
+                const selectedTarifId = this.value;
+                const selectedTarif = allTarifsData.find(t => t.tarif_id == selectedTarifId);
+
+                if (selectedTarif) {
+                    // Set nilai Cleave.js
+                    cleaveJumlah.setRawValue(selectedTarif.nominal);
+                    // Kode pembayaran akan di-generate oleh backend saat simpan
+                } else {
+                    cleaveJumlah.setRawValue(''); // Set ke kosong
+                }
+            });
+        }
 
         // Listener untuk Tombol Aksi di Tabel
-        paymentTableBody.addEventListener('click', function(event) {
+        if (paymentTableBody) {
+            paymentTableBody.addEventListener('click', function(event) {
             const button = event.target.closest('button, a'); // Tangkap <a> (print) atau <button> (view, edit, delete)
             if (!button) return;
 
@@ -472,26 +867,33 @@
             } else if (button.classList.contains('delete-btn')) {
                 deleteTagihan(tagihanId, namaTagihan);
             }
-        });
+            });
+        }
 
         // Listener untuk tombol close di Modal Detail
-         detailCloseButtons.forEach(button => { button.addEventListener('click', closeDetailModal); });
-         window.addEventListener('click', (event) => { if (event.target == detailTagihanModal) { closeDetailModal(); } });
+        if (detailCloseButtons && detailCloseButtons.length > 0) {
+            detailCloseButtons.forEach(button => { button.addEventListener('click', closeDetailModal); });
+        }
+        if (detailTagihanModal) {
+            window.addEventListener('click', (event) => { if (event.target == detailTagihanModal) { closeDetailModal(); } });
+        }
 
         // Listener Form Submit Modal (DENGAN SWEETALERT)
-        tagihanForm.addEventListener('submit', function(event) {
+        if (tagihanForm) {
+            tagihanForm.addEventListener('submit', function(event) {
              event.preventDefault();
              const id = tagihanIdInput.value; const isEdit = !!id;
              const url = isEdit ? `{{ url('api/admin/tagihan') }}/${id}` : "{{ route('admin.payments.tagihan.create') }}";
              const method = isEdit ? 'PUT' : 'POST';
-             const formData = { mahasiswa_id: mahasiswaSelect.value, tarif_id: tarifSelect.value, jumlah_tagihan: jumlahInput.value, tanggal_jatuh_tempo: tglJatuhTempoInput.value, kode_pembayaran: kodeInput.value, };
+            const formData = { mahasiswa_id: mahasiswaSelect.value, tarif_id: tarifSelect.value, jumlah_tagihan: parseRupiahToNumber(jumlahInput.value), tanggal_jatuh_tempo: toYmdFromDdMmYyyy(tglJatuhTempoInput.value), kode_pembayaran: kodeInput.value, };
 
              if (!formData.mahasiswa_id || !formData.tarif_id || !formData.tanggal_jatuh_tempo) {
                  Swal.fire({ icon: 'warning', title: 'Input Tidak Lengkap', text: 'Harap lengkapi semua field (Mahasiswa, Tarif, Tgl. Jatuh Tempo)!' });
                  return;
              }
 
-             const submitButton = this.querySelector('button[type="submit"]'); const originalText = submitButton.textContent; submitButton.textContent = 'Menyimpan...'; submitButton.disabled = true;
+             const submitButton = this.querySelector('button[type="submit"]');
+             setButtonLoading(submitButton, true, 'Menyimpan...');
 
              apiRequest(url, method, formData).then(response => {
                  Swal.fire({ icon: 'success', title: 'Berhasil!', text: response.message || 'Data berhasil disimpan.', timer: 1500, showConfirmButton: false });
@@ -517,14 +919,19 @@
                 }
                 Swal.fire({ icon: 'error', title: 'Gagal Menyimpan', html: errorContent });
              }).finally(() => {
-                 submitButton.textContent = originalText; submitButton.disabled = false;
+                 setButtonLoading(submitButton, false);
                  tagihanIdInput.value = '';
              });
         });
+        }
 
          // Listener untuk Filter Tabel
-         filterStatusSelect.addEventListener('change', applyFilters);
-         filterJenisSelect.addEventListener('change', applyFilters);
+         if (filterStatusSelect) {
+             filterStatusSelect.addEventListener('change', applyFilters);
+         }
+         if (filterJenisSelect) {
+             filterJenisSelect.addEventListener('change', applyFilters);
+         }
 
         // -------------------------------------
         // MUAT DATA AWAL (DENGAN LOGIKA URL PARAM)

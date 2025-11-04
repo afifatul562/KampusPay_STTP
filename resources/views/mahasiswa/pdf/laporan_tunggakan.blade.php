@@ -4,89 +4,49 @@
     <meta charset="UTF-8">
     <title>Laporan Tunggakan - {{ $mahasiswa->user->nama_lengkap ?? '' }}</title>
     <style>
-        /* ===== CSS UNTUK KOP SURAT FIXED ===== */
-        @page {
-            margin: 0cm 0cm; /* Hapus margin default */
-        }
+        :root { --text:#222; --muted:#555; --line:#000; --soft:#F3F4F6; }
+        @page { margin: 0cm; }
+        body { margin: 5.4cm 2cm 2cm 2cm; font-family:'Helvetica','Arial',sans-serif; color: var(--text); font-size: 12px; }
+        /* Kop surat selaras kwitansi */
+        header { position: fixed; top: 1cm; left: 2cm; right: 2cm; height: auto; }
+        .kop-surat { width:100%; border:1px solid #000; border-collapse: collapse; margin-bottom:6px; }
+        .kop-surat td { vertical-align: middle; padding:4px 8px; border:1px solid #000; }
+        .logo-cell { width:100px; text-align:center; }
+        .logo { width:80px; height:auto; }
+        .info-cell { text-align:center; line-height:1.3; }
+        .info-cell .yayasan { font-size:13px; font-weight:bold; text-transform:uppercase; }
+        .info-cell .kampus { font-size:17px; font-weight:bold; text-transform:uppercase; text-decoration: underline; margin:4px 0; }
+        .info-cell .alamat { font-size:10px; }
 
-        body {
-            /* Beri ruang di atas untuk kop surat */
-            margin-top: 4.5cm;
+        .container { width:100%; }
+        .report-title { text-align:center; font-size:20px; font-weight:bold; margin-bottom:6px; letter-spacing:.6px; }
+        .student-details-table { width:100%; margin-bottom: 12px; font-size: 12px; border-collapse: collapse; }
+        .student-details-table td { padding:6px 10px; vertical-align: top; border:1px solid #000; }
+        .student-details-table th { background: var(--soft); text-align:left; border:1px solid #000; }
 
-            /* Atur margin halaman standar */
-            margin-left: 2cm;
-            margin-right: 2cm;
-            margin-bottom: 2cm;
+        .summary-title { font-size: 12px; font-weight: 700; margin: 12px 0 6px; text-transform: uppercase; letter-spacing:.6px; }
+        table.arrears-table { width:100%; border-collapse: collapse; margin-top:5px; }
+        table.arrears-table th, table.arrears-table td { border:1px solid #000; padding:7px 10px; }
+        table.arrears-table th { background: var(--soft); font-size:12px; font-weight:600; }
+        td.text-center { text-align:center; } td.text-right { text-align:right; }
+        tfoot td { font-weight:700; background:#F8F9FA; border-top:2px solid #000; }
+        .overdue { color: #991B1B; }
 
-            /* Font dari file asli Anda */
-            font-family: 'Helvetica', 'Arial', sans-serif;
-            color: #333;
-            font-size: 11px;
-            line-height: 1.4;
-        }
-
-        header {
-            position: fixed;
-            top: 1cm; /* Jarak kop surat dari atas */
-            left: 2cm; /* Samakan dengan margin-left body */
-            right: 2cm; /* Samakan dengan margin-right body */
-            height: 3cm; /* Perkiraan tinggi kop surat */
-            border-bottom: 2px solid black;
-        }
-
-        .header-table { width: 100%; }
-        .header-table td { vertical-align: middle; padding-bottom: 10px; }
-        .logo { width: 60px; height: auto; }
-        .institute-details { text-align: center; }
-        .institute-details .yayasan { font-size: 12px; }
-        .institute-details .nama-kampus { font-size: 16px; font-weight: bold; margin: 2px 0; }
-        .institute-details .alamat { font-size: 9px; }
-        /* ===== AKHIR CSS KOP SURAT ===== */
-
-
-        /* General Styles */
-        .container { width: 100%; /* Lebar 100% krn margin diatur di body */ }
-
-        /* Report Title */
-        .report-title { text-align: center; font-size: 14px; font-weight: bold; margin-bottom: 5px; } /* Kurangi margin-bottom */
-
-        /* Student Details Table */
-        .student-details-table { width: 100%; margin-bottom: 25px; font-size: 11px; }
-        .student-details-table td { padding: 2px 5px; vertical-align: top; }
-        .student-details-table td:nth-child(1), .student-details-table td:nth-child(4) { width: 15%; }
-        .student-details-table td:nth-child(2), .student-details-table td:nth-child(5) { width: 2%; }
-        .student-details-table td:nth-child(3), .student-details-table td:nth-child(6) { width: 33%; font-weight: bold; }
-
-        /* Arrears Table Styles */
-        .summary-title { font-size: 13px; font-weight: bold; margin-bottom: 10px; }
-        table.arrears-table { width: 100%; border-collapse: collapse; margin-top: 5px; }
-        table.arrears-table th, table.arrears-table td { border: 1px solid #ccc; padding: 7px 10px; text-align: left; }
-        table.arrears-table th { background-color: #eee; font-size: 12px; font-weight: bold; }
-        td.text-center { text-align: center; }
-        td.text-right { text-align: right; }
-        tfoot td { font-weight: bold; background-color: #f9f9f9; }
-        .overdue { color: red; } /* Style untuk tanggal telat */
-
-        /* Footer Styles */
-        .footer { margin-top: 40px; font-size: 9px; text-align: right; color: #888; }
+        .footer { margin-top: 24px; font-size: 10px; text-align: right; color: var(--muted); }
     </style>
 </head>
 <body>
 
     <header>
-        <table class="header-table">
+        <table class="kop-surat">
             <tr>
-                <td style="width: 80px;">
-                    <img src="{{ public_path('images/logo_kampus.png') }}" alt="Logo" class="logo">
+                <td class="logo-cell"><img src="{{ public_path('images/logo_kampus.png') }}" alt="Logo" class="logo"></td>
+                <td class="info-cell">
+                    <div class="yayasan">YAYASAN PENDIDIKAN TINGGI PAYAKUMBUH</div>
+                    <div class="kampus">SEKOLAH TINGGI TEKNOLOGI PAYAKUMBUH</div>
+                    <div class="alamat">Jln. Khatib Sulaiman Sawah Padang, Telp. 0752-796063<br>Fax. 0752-90063, Website: www.sttpyk.ac.id, Email: info@sttpyk.ac.id</div>
                 </td>
-                <td class="institute-details">
-                    <div class="yayasan">Yayasan Pendidikan Tinggi Payakumbuh</div>
-                    <div class="nama-kampus">SEKOLAH TINGGI TEKNOLOGI PAYAKUMBUH</div>
-                    <div class="alamat">
-                        Jln. Khatib Sulaiman Sawah Padang, Telp. 0752-796063, Fax. 0752-90063, Website www.sttpyk.ac.id, Email: info@sttpyk.ac.id
-                    </div>
-                </td>
-                <td style="width: 80px;">&nbsp;</td> </tr>
+            </tr>
         </table>
     </header>
     <div class="container">
@@ -108,7 +68,7 @@
                 <td>Program Studi</td><td>:</td><td>{{ $mahasiswa->program_studi ?? 'N/A' }}</td>
             </tr>
             <tr>
-                 <td>Dosen PA</td><td>:</td><td>{{ $mahasiswa->dosen_pa ?? '-' }}</td>
+                <td colspan="3"></td>
                 <td>Semester</td><td>:</td><td>{{ $mahasiswa->semester_aktif ?? 'N/A' }}</td>
             </tr>
         </table>

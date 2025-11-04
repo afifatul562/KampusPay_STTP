@@ -11,6 +11,7 @@ use App\Models\TarifMaster;
 use App\Models\MahasiswaDetail; // <-- 1. TAMBAHKAN IMPORT INI
 use App\Mail\TagihanBaruNotification; // <-- 2. TAMBAHKAN IMPORT INI
 use App\Notifications\TagihanBaruCreated;
+use App\Services\PaymentCodeGenerator; // Service class untuk generate kode pembayaran
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -79,6 +80,9 @@ class PaymentController extends Controller
                 'pembayaran.userKasir' => fn($q)=>$q->select('id','nama_lengkap')
                 ])
                 ->findOrFail($id);
+
+            // Otorisasi akses melihat tagihan
+            $this->authorize('view', $tagihan);
             Log::info("Tagihan ID {$id} ditemukan.");
             return response()->json(['success' => true, 'data' => $tagihan]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -99,6 +103,9 @@ class PaymentController extends Controller
     {
         Log::info("Mencoba membuat tagihan baru.", $request->all());
 
+        // Otorisasi pembuatan tagihan (admin only via policy)
+        $this->authorize('create', Tagihan::class);
+
         // 1. Validasi input
         $validatedData = $request->validate([
             'mahasiswa_id' => 'required|exists:mahasiswa_detail,mahasiswa_id',
@@ -107,28 +114,24 @@ class PaymentController extends Controller
             'tanggal_jatuh_tempo' => 'required|date|after_or_equal:today',
         ]);
 
-        // 2. Cek duplikat
+        // 2. Cek duplikat yang tidak dibatalkan (baik yang Lunas maupun belum)
+        //    Admin TIDAK boleh membuat tagihan sejenis lagi jika pernah dibuat,
+        //    kecuali tagihan sebelumnya dibatalkan secara resmi.
         $existingTagihan = Tagihan::where('mahasiswa_id', $validatedData['mahasiswa_id'])
             ->where('tarif_id', $validatedData['tarif_id'])
-            ->where('status', '!=', 'Lunas')
+            ->whereDoesntHave('pembayaran', function($q) {
+                $q->where('status_dibatalkan', true);
+            })
             ->first();
         if ($existingTagihan) {
-            Log::warning("Gagal buat tagihan: Duplikat tagihan belum lunas...");
-            return response()->json(['message' => 'Tagihan sejenis untuk mahasiswa ini sudah ada dan belum lunas.'], 409);
+            Log::warning("Gagal buat tagihan: Duplikat tagihan sejenis sudah pernah dibuat dan tidak dibatalkan.");
+            return response()->json(['message' => 'Tagihan sejenis untuk mahasiswa ini sudah pernah dibuat (lunas/menunggu). Tidak dapat membuat ulang.'], 409);
         }
 
-        // 3. GENERATE KODE UNIK
-        $baseCode = 'INV-KP-' . now()->format('ymd') . '-' . $validatedData['tarif_id'];
-        $uniqueCode = $baseCode;
-        do {
-            $tagihanExists = Tagihan::where('kode_pembayaran', $uniqueCode)->exists();
-            if ($tagihanExists) {
-                $uniqueCode = $baseCode . '-' . strtoupper(Str::random(3));
-            }
-        } while ($tagihanExists);
+        // 3. GENERATE KODE UNIK menggunakan Service Class
+        $validatedData['kode_pembayaran'] = PaymentCodeGenerator::generate($validatedData['tarif_id']);
 
-        // 4. Tambahkan kode unik & status
-        $validatedData['kode_pembayaran'] = $uniqueCode;
+        // 4. Tambahkan status
         $validatedData['status'] = 'Belum Lunas';
 
         try {
@@ -194,8 +197,11 @@ class PaymentController extends Controller
       */
      public function updateTagihan(Request $request, $id)
      {
-         Log::info("Mencoba update tagihan ID: {$id}", $request->all());
-         $tagihan = Tagihan::find($id);
+        Log::info("Mencoba update tagihan ID: {$id}", $request->all());
+        $tagihan = Tagihan::find($id);
+
+        // Otorisasi update tagihan
+        $this->authorize('update', $tagihan);
 
          if (!$tagihan) { Log::error("Update gagal: Tagihan ID {$id} tidak ditemukan."); return response()->json(['message' => 'Tagihan tidak ditemukan.'], 404); }
          if ($tagihan->status === 'Lunas') { Log::warning("Update ditolak: Tagihan ID {$id} sudah lunas."); return response()->json(['message' => 'Tagihan yang sudah lunas tidak dapat diubah.'], 403); }
@@ -232,10 +238,13 @@ class PaymentController extends Controller
       */
      public function destroyTagihan($id)
      {
-         Log::info("Mencoba hapus tagihan ID: {$id}");
-         $tagihan = Tagihan::find($id);
+        Log::info("Mencoba hapus tagihan ID: {$id}");
+        $tagihan = Tagihan::find($id);
 
-         if (!$tagihan) { Log::error("Hapus gagal: Tagihan ID {$id} tidak ditemukan."); return response()->json(['message' => 'Tagihan tidak ditemukan.'], 404); }
+        if (!$tagihan) { Log::error("Hapus gagal: Tagihan ID {$id} tidak ditemukan."); return response()->json(['message' => 'Tagihan tidak ditemukan.'], 404); }
+        
+        // Otorisasi hapus tagihan
+        $this->authorize('delete', $tagihan);
          if ($tagihan->status === 'Lunas') { Log::warning("Hapus ditolak: Tagihan ID {$id} sudah lunas."); return response()->json(['message' => 'Tagihan yang sudah lunas tidak dapat dihapus.'], 403); }
 
          // Opsional: Cek relasi Konfirmasi Pembayaran

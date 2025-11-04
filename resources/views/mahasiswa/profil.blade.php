@@ -7,7 +7,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {{-- Kolom Kiri: Informasi Pribadi --}}
-        <div class="lg:col-span-1 bg-white p-6 rounded-2xl shadow-lg text-center">
+        <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-md border border-gray-200 text-center">
             {{-- Foto Profil & Nama --}}
             <div class="mb-4">
                 <div class="w-24 h-24 rounded-full mx-auto bg-gray-200 flex items-center justify-center mb-2">
@@ -41,7 +41,7 @@
         </div>
 
         {{-- Kolom Kanan: Ringkasan Keuangan --}}
-        <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-lg">
+        <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-md border border-gray-200">
             <h3 class="text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
                 Ringkasan Keuangan

@@ -12,11 +12,8 @@ class KwitansiController extends Controller
 {
     public function download(Pembayaran $pembayaran)
     {
-        // 1. KEAMANAN: Pastikan mahasiswa hanya bisa download kwitansinya sendiri
-        $mahasiswaId = Auth::user()->mahasiswaDetail->mahasiswa_id;
-        if ($pembayaran->tagihan->mahasiswa_id !== $mahasiswaId) {
-            abort(403, 'AKSES DITOLAK');
-        }
+        // 1. KEAMANAN: Gunakan policy untuk validasi akses
+        $this->authorize('view', $pembayaran);
 
         // 2. Load semua relasi yang dibutuhkan untuk ditampilkan di PDF
         $pembayaran->load('tagihan.mahasiswa.user', 'tagihan.tarif', 'verifier');

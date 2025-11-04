@@ -19,7 +19,10 @@ class Pembayaran extends Model
         'diverifikasi_oleh',
         'tanggal_bayar',
         'metode_pembayaran',
-        'alasan_ditolak'
+        'alasan_ditolak',
+        'alasan_pembatalan',
+        'status_dibatalkan',
+        'tanggal_pembatalan'
     ];
 
     public function tagihan()
@@ -46,5 +49,7 @@ class Pembayaran extends Model
 
     protected $casts = [
         'tanggal_bayar' => 'datetime',
+        'tanggal_pembatalan' => 'datetime',
+        'status_dibatalkan' => 'boolean',
     ];
 }

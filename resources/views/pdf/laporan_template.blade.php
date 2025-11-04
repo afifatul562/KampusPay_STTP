@@ -5,78 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Laporan {{ ucfirst($jenis) }} - Periode {{ $periodeFormatted }}</title>
     <style>
-        /* ===== CSS UNTUK KOP SURAT FIXED ===== */
-        @page {
-            margin: 0cm 0cm; /* Hapus margin default */
-        }
-
+        :root { --text:#222; --muted:#555; --line:#000; --soft:#F3F4F6; }
+        @page { margin: 0cm; }
         body {
-            /* Beri ruang di atas untuk kop surat */
-            margin-top: 4.5cm;
-
-            /* Atur margin halaman standar */
-            margin-left: 2cm;
-            margin-right: 2cm;
-            margin-bottom: 2cm;
-
-            /* Font dari file asli Anda */
-            font-family: 'Helvetica', sans-serif;
-            font-size: 10pt;
+            margin: 5.4cm 2cm 2cm 2cm; /* ruang untuk header, selaras kwitansi */
+            font-family: 'Helvetica','Arial',sans-serif; font-size: 12px; color: var(--text);
         }
+        /* ===== KOP SURAT (selaras kwitansi) ===== */
+        header { position: fixed; top: 1cm; left: 2cm; right: 2cm; height: auto; }
+        .kop-surat { width:100%; border:1px solid #000; border-collapse: collapse; margin-bottom: 6px; }
+        .kop-surat td { vertical-align: middle; padding: 4px 8px; border:1px solid #000; }
+        .logo-cell { width: 100px; text-align:center; }
+        .logo { width:80px; height:auto; }
+        .info-cell { text-align:center; line-height:1.3; }
+        .info-cell .yayasan { font-size:13px; font-weight:bold; text-transform:uppercase; }
+        .info-cell .kampus { font-size:17px; font-weight:bold; text-transform:uppercase; text-decoration: underline; margin:4px 0; }
+        .info-cell .alamat { font-size:10px; }
 
-        header {
-            position: fixed;
-            top: 1cm; /* Jarak kop surat dari atas */
-            left: 2cm; /* Samakan dengan margin-left body */
-            right: 2cm; /* Samakan dengan margin-right body */
-            height: 3cm; /* Perkiraan tinggi kop surat */
-            border-bottom: 2px solid black;
-        }
-
-        .header-table { width: 100%; }
-        .header-table td { vertical-align: middle; padding-bottom: 10px; }
-        .logo { width: 60px; height: auto; }
-        .institute-details { text-align: center; }
-        .institute-details .yayasan { font-size: 12px; }
-        .institute-details .nama-kampus { font-size: 16px; font-weight: bold; margin: 2px 0; }
-        .institute-details .alamat { font-size: 9px; }
-        /* ===== AKHIR CSS KOP SURAT ===== */
-
-
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { border: 1px solid #ddd; padding: 6px; text-align: left; vertical-align: top; }
-        th { background-color: #f2f2f2; font-weight: bold; }
-        h1, h2 { text-align: center; margin-bottom: 5px;}
-        h3.semester-header { margin-top: 20px; margin-bottom: 5px; background-color: #f0f4f8; padding: 5px; border-left: 3px solid #3b82f6; font-size: 11pt;}
-        .group-header td { background-color: #e2e8f0; font-weight: bold; padding: 8px; text-align: left; border: 1px solid #ddd; }
-        .text-right { text-align: right; }
-        .text-center { text-align: center; }
-        .badge { display: inline-block; padding: 2px 6px; font-size: 8pt; border-radius: 4px; color: white; white-space: nowrap; }
-        .badge-lunas { background-color: #10B981; } /* Hijau */
-        .badge-belum { background-color: #F59E0B; } /* Kuning */
-        small { font-size: 8pt; color: #666; }
-        .total-row th, .total-row td { background-color: #f8f9fa; font-weight: bold; border-top: 2px solid #ccc; }
+        /* ===== TYPOS & TABLE ===== */
+        h1 { text-align:center; margin: 0; font-size:20px; font-weight:bold; letter-spacing:.6px; }
+        h2 { text-align:center; margin: 4px 0 8px; font-size: 14px; }
+        h3.semester-header { margin-top: 16px; margin-bottom: 6px; background:#f0f4f8; padding:6px; border-left:3px solid #3b82f6; font-size:12px; }
+        table { width:100%; border-collapse: collapse; margin-top: 8px; }
+        th, td { border:1px solid #000; padding:7px 9px; font-size:12px; vertical-align: top; }
+        th { background: var(--soft); text-align:left; }
+        .group-header td { background:#e2e8f0; font-weight:600; padding:8px; border:1px solid #000; }
+        .text-right{ text-align:right; } .text-center{ text-align:center; }
+        .badge { display:inline-block; font-size:10px; padding:2px 8px; border-radius:8px; font-weight:700; border:1px solid #000; }
+        .badge-lunas { background:#DCFCE7; color:#166534; }
+        .badge-belum { background:#FEF3C7; color:#92400E; }
+        small { font-size: 10px; color:#000; }
+        .total-row th, .total-row td { background:#F8F9FA; font-weight:700; border-top:2px solid #000; }
     </style>
 </head>
 <body>
 
     <header>
-        <table class="header-table">
+        <table class="kop-surat">
             <tr>
-                <td style="width: 80px;">
-                    <img src="{{ public_path('images/logo_kampus.png') }}" alt="Logo" class="logo">
+                <td class="logo-cell"><img src="{{ public_path('images/logo_kampus.png') }}" alt="Logo" class="logo"></td>
+                <td class="info-cell">
+                    <div class="yayasan">YAYASAN PENDIDIKAN TINGGI PAYAKUMBUH</div>
+                    <div class="kampus">SEKOLAH TINGGI TEKNOLOGI PAYAKUMBUH</div>
+                    <div class="alamat">Jln. Khatib Sulaiman Sawah Padang, Telp. 0752-796063<br>Fax. 0752-90063, Website: www.sttpyk.ac.id, Email: info@sttpyk.ac.id</div>
                 </td>
-                <td class="institute-details">
-                    <div class="yayasan">Yayasan Pendidikan Tinggi Payakumbuh</div>
-                    <div class="nama-kampus">SEKOLAH TINGGI TEKNOLOGI PAYAKUMBUH</div>
-                    <div class="alamat">
-                        Jln. Khatib Sulaiman Sawah Padang, Telp. 0752-796063, Fax. 0752-90063, Website www.sttpyk.ac.id, Email: info@sttpyk.ac.id
-                    </div>
-                </td>
-                <td style="width: 80px;">&nbsp;</td> </tr>
+            </tr>
         </table>
     </header>
-    <h1>Laporan {{ ucfirst($jenis) }}</h1>
+    <h1>LAPORAN {{ strtoupper($jenis) }}</h1>
     <h2>Periode: {{ $periodeFormatted }}</h2>
 
     @if($jenis === 'mahasiswa')

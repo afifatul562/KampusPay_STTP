@@ -31,6 +31,12 @@ class VerifikasiController extends Controller
      */
     public function approve(KonfirmasiPembayaran $konfirmasi)
     {
+        Log::info('Kasir mencoba menyetujui konfirmasi', [
+            'konfirmasi_id' => $konfirmasi->konfirmasi_id,
+            'tagihan_id' => $konfirmasi->tagihan_id,
+            'kasir_id' => Auth::id(),
+            'status_sekarang' => $konfirmasi->status_verifikasi,
+        ]);
         // Pastikan statusnya masih 'Menunggu Verifikasi' untuk mencegah aksi ganda
         if ($konfirmasi->status_verifikasi !== 'Menunggu Verifikasi') {
             return response()->json(['success' => false, 'message' => 'Status pembayaran ini sudah diubah.'], 409); // 409 Conflict
@@ -66,6 +72,12 @@ class VerifikasiController extends Controller
      */
     public function reject(KonfirmasiPembayaran $konfirmasi, Request $request)
     {
+        Log::info('Kasir mencoba menolak konfirmasi', [
+            'konfirmasi_id' => $konfirmasi->konfirmasi_id,
+            'tagihan_id' => $konfirmasi->tagihan_id,
+            'kasir_id' => Auth::id(),
+            'status_sekarang' => $konfirmasi->status_verifikasi,
+        ]);
         // 1. Validasi: Pastikan alasan_ditolak dikirim dan valid
         //    (Ini sesuai dengan 'alasan_ditolak' yang dikirim JavaScript)
         //    (Dan 'min:10' sesuai dengan validasi di SweetAlert)

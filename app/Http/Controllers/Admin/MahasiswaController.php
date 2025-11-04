@@ -53,11 +53,13 @@ class MahasiswaController extends Controller
         DB::beginTransaction();
         try {
             // Buat data di tabel 'users'
+            // Password default dapat dikonfigurasi via env; fallback ke NPM agar non-breaking
+            $defaultPassword = env('MAHASISWA_DEFAULT_PASSWORD', $validatedData['npm']);
             $user = User::create([
                 'nama_lengkap' => $validatedData['nama_lengkap'],
                 'email' => $validatedData['email'],
                 'username' => $validatedData['npm'],
-                'password' => Hash::make($validatedData['npm']),
+                'password' => Hash::make($defaultPassword),
                 'role' => 'mahasiswa',
             ]);
 
@@ -191,11 +193,12 @@ class MahasiswaController extends Controller
                     }
 
                     // --- Simpan ke Database ---
+                    $defaultPassword = env('MAHASISWA_DEFAULT_PASSWORD', $npm);
                     $user = User::create([
                         'nama_lengkap' => $nama_lengkap,
                         'email' => $email,
                         'username' => $npm,
-                        'password' => Hash::make($npm), // Password default = NPM
+                        'password' => Hash::make($defaultPassword), // Default bisa diubah via env
                         'role' => 'mahasiswa',
                     ]);
 
@@ -262,6 +265,43 @@ class MahasiswaController extends Controller
             }
         }
     }
+
+    /**
+     * Ekspor daftar mahasiswa ke CSV (untuk Web)
+     */
+    public function export()
+    {
+        $filename = 'mahasiswa_' . now()->format('Ymd_His') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        $callback = function () {
+            $handle = fopen('php://output', 'w');
+            // BOM UTF-8 untuk Excel
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            // Header kolom
+            fputcsv($handle, ['Nama Lengkap', 'Email', 'NPM', 'Program Studi', 'Angkatan', 'Semester', 'Status']);
+
+            $rows = MahasiswaDetail::with('user')->orderBy('npm')->get();
+            foreach ($rows as $row) {
+                fputcsv($handle, [
+                    optional($row->user)->nama_lengkap,
+                    optional($row->user)->email,
+                    $row->npm,
+                    $row->program_studi,
+                    $row->angkatan,
+                    $row->semester_aktif,
+                    $row->status,
+                ]);
+            }
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
     /**
      * Menampilkan satu data mahasiswa spesifik. (Untuk API)
      */
@@ -318,20 +358,44 @@ class MahasiswaController extends Controller
                 'email',
                 Rule::unique('users')->ignore($user->id),
             ],
-            'program_studi' => 'required|string|max:100',
-            'semester_aktif' => 'required|integer|min:1|max:14',
+            'npm' => [
+                'required',
+                'regex:/^\\d{9}$/',
+                Rule::unique('users', 'username')->ignore($user->id),
+                Rule::unique('mahasiswa_detail', 'npm')->ignore($mahasiswaDetail->mahasiswa_id, 'mahasiswa_id'),
+            ],
         ]);
 
         DB::beginTransaction();
         try {
+            // Hitung nilai turunan dari NPM
+            $npm = $validatedData['npm'];
+            $prodiMap = [ '11' => 'S1 Teknik Sipil', '12' => 'D3 Teknik Komputer', '13' => 'S1 Informatika' ];
+            $angkatan = '20' . substr($npm, 0, 2);
+            $prodiCode = substr($npm, 4, 2);
+            $programStudi = $prodiMap[$prodiCode] ?? $mahasiswaDetail->program_studi;
+
+            $today = now();
+            $currentYear = (int)$today->format('Y');
+            $currentMonth = (int)$today->format('m');
+            $selisihTahun = $currentYear - (int)$angkatan;
+            $semesterAktif = $selisihTahun * 2;
+            if ($currentMonth >= 10) { $semesterAktif += 1; }
+            $semesterAktif = max(1, min($semesterAktif, 8));
+
+            // Update user (termasuk username = npm)
             $user->update([
                 'nama_lengkap' => $validatedData['nama_lengkap'],
                 'email' => $validatedData['email'],
+                'username' => $npm,
             ]);
 
+            // Update detail mahasiswa
             $mahasiswaDetail->update([
-                'program_studi' => $validatedData['program_studi'],
-                'semester_aktif' => $validatedData['semester_aktif'],
+                'npm' => $npm,
+                'program_studi' => $programStudi,
+                'angkatan' => $angkatan,
+                'semester_aktif' => $semesterAktif,
             ]);
 
             DB::commit();

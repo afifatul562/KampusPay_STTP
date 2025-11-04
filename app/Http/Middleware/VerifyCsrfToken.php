@@ -12,32 +12,7 @@ class VerifyCsrfToken extends Middleware
      * @var array<int, string>
      */
     protected $except = [
+        // Cukup whitelist prefix API. Semua endpoint API dilindungi oleh Sanctum.
         'api/*',
-        'api/register-mahasiswa',
-        'api/register-kasir',
-        'api/recent-registrations',
-        'api/dashboard-stats',
-        'api/recent-payments',
-        'api/mahasiswa',
-        'api/tarif',
-        'api/payments',
-        'api/mahasiswa-stats',
-        'api/payment-distribution',
-        'api/all-mahasiswa',
-        'api/all-tarif',
-        'api/all-payments',
-        'api/mahasiswa-detail/*',
-        'api/tarif/*',
-        'api/payment-detail/*',
-        'api/generate-report',
-        'api/download-report/*',
-        'api/report-history',
-        'api/system-settings',
-        'api/payment-settings',
-        'api/admin-users',
-        'api/system-info',
-        'api/tagihan',
-        'api/konfirmasi-pembayaran',
-        'api/pembayaran',
     ];
 }

@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
@@ -34,13 +35,18 @@ class UserController extends Controller
                 'nama_lengkap' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email',
                 'username' => 'required|string|unique:users,username',
+                // Opsional: jika admin ingin set password sendiri saat registrasi
+                'password' => ['nullable', 'confirmed', Password::defaults()],
             ]);
+
+            // Tentukan password: gunakan input jika disediakan, jika tidak gunakan env dengan fallback
+            $password = $request->filled('password') ? $request->input('password') : env('KASIR_DEFAULT_PASSWORD', 'password123');
 
             $user = User::create([
                 'nama_lengkap' => $validatedData['nama_lengkap'],
                 'email' => $validatedData['email'],
                 'username' => $validatedData['username'],
-                'password' => Hash::make('password'), // Password default
+                'password' => Hash::make($password),
                 'role' => 'kasir',
             ]);
 

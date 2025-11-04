@@ -4,51 +4,60 @@
 @section('page-title', 'Proses Pembayaran Tunai')
 
 @section('content')
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-        <a href="{{ route('kasir.transaksi.index', ['filter' => 'hari_ini']) }}" class="block rounded-2xl transition-all hover:scale-[1.02] hover:shadow-xl">
-            <div class="bg-white p-6 rounded-2xl shadow-lg flex items-center gap-5 h-full">
-                <div class="flex-1 min-w-0">
-                    <div class="text-sm font-medium text-gray-500">Transaksi Hari Ini</div>
-                    <div id="transaksi-hari-ini" class="text-2xl font-bold text-gray-900 mt-1 truncate">...</div>
-                </div>
-                <div class="bg-blue-100 p-3 rounded-full">
-                    <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M12 7h.01M15 7h.01"></path></svg>
-                </div>
+    <div class="space-y-6">
+        <x-breadcrumbs :items="[
+            ['label' => 'Dashboard', 'url' => route('kasir.dashboard')],
+            ['label' => 'Proses Pembayaran Tunai']
+        ]" />
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <a href="{{ route('kasir.transaksi.index', ['filter' => 'hari_ini']) }}" aria-label="Lihat transaksi hari ini"
+           class="group relative bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-md border border-gray-200 flex items-start gap-5 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-br from-primary-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div class="flex-1 min-w-0 relative z-10">
+                <div class="text-sm font-medium text-gray-500 mb-1">Transaksi Hari Ini</div>
+                <div id="transaksi-hari-ini" class="text-2xl lg:text-3xl font-bold text-gray-900 mt-1 truncate">...</div>
+            </div>
+            <div class="relative z-10 bg-gradient-to-br from-primary-400 to-primary-600 p-4 rounded-xl shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M12 7h.01M15 7h.01"></path></svg>
             </div>
         </a>
-        <div class="bg-white p-6 rounded-2xl shadow-lg flex items-center gap-5">
-            <div class="flex-1 min-w-0">
-                <div class="text-sm font-medium text-gray-500">Penerimaan Hari Ini</div>
-                <div id="total-penerimaan" class="text-2xl font-bold text-gray-900 mt-1 truncate">...</div>
+        <div class="group relative bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-md border border-gray-200 flex items-start gap-5 hover:shadow-xl transition-all duration-300 overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-br from-success-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div class="flex-1 min-w-0 relative z-10">
+                <div class="text-sm font-medium text-gray-500 mb-1">Penerimaan Hari Ini</div>
+                <div id="total-penerimaan" class="text-2xl lg:text-3xl font-bold text-gray-900 mt-1 truncate">...</div>
             </div>
-            <div class="bg-green-100 p-3 rounded-full"><svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg></div>
+            <div class="relative z-10 bg-gradient-to-br from-success-400 to-success-600 p-4 rounded-xl shadow-lg group-hover:scale-110 transition-all duration-300">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+            </div>
         </div>
-        <a href="{{ route('kasir.verifikasi.index') }}" class="block rounded-2xl transition-all hover:scale-[1.02] hover:shadow-xl">
-            <div class="bg-white p-6 rounded-2xl shadow-lg flex items-center gap-5 h-full">
-                <div class="flex-1 min-w-0">
-                    <div class="text-sm font-medium text-gray-500">Pending Verifikasi</div>
-                    <div id="pending-verifikasi-count" class="text-2xl font-bold text-gray-900 mt-1 truncate">...</div>
-                </div>
-                <div class="bg-yellow-100 p-3 rounded-full">
-                    <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                </div>
+        <a href="{{ route('kasir.verifikasi.index') }}" aria-label="Buka halaman pending verifikasi"
+           class="group relative bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-md border border-gray-200 flex items-start gap-5 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-br from-warning-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div class="flex-1 min-w-0 relative z-10">
+                <div class="text-sm font-medium text-gray-500 mb-1">Pending Verifikasi</div>
+                <div id="pending-verifikasi-count" class="text-2xl lg:text-3xl font-bold text-gray-900 mt-1 truncate">...</div>
+            </div>
+            <div class="relative z-10 bg-gradient-to-br from-warning-400 to-warning-600 p-4 rounded-xl shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             </div>
         </a>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="bg-white p-6 rounded-2xl shadow-lg lg:col-span-1">
+        <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 lg:col-span-1">
             <h3 class="text-lg font-semibold mb-1 text-gray-800">1. Cari Mahasiswa</h3>
             <p class="text-sm text-gray-500 mb-4">Masukkan NPM untuk memulai transaksi.</p>
             <div class="flex gap-2">
-                <input type="text" id="npm-search-input" placeholder="Masukkan NPM..." class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                <button id="search-btn" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700">Cari</button>
+                <input type="text" id="npm-search-input" placeholder="Masukkan NPM..." aria-label="Input NPM mahasiswa" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                <button id="search-btn" aria-label="Cari mahasiswa" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 shadow-md hover:shadow-lg transition-all duration-200">Cari</button>
             </div>
             <div id="mahasiswa-info" class="mt-4 text-sm"></div>
         </div>
 
         <div class="lg:col-span-2 space-y-6">
-            <div class="bg-white p-6 rounded-2xl shadow-lg">
+            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
                 <h3 class="text-lg font-semibold mb-1 text-gray-800">2. Pilih Tagihan</h3>
                 <p class="text-sm text-gray-500 mb-4">Centang tagihan yang akan dibayar.</p>
                 <div id="tagihan-list" class="text-gray-400 text-center py-5 border-2 border-dashed rounded-lg">
@@ -56,7 +65,7 @@
                 </div>
             </div>
 
-            <div class="bg-white p-6 rounded-2xl shadow-lg">
+            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
                 <h3 class="text-lg font-semibold mb-1 text-gray-800">3. Proses Pembayaran</h3>
                 <p class="text-sm text-gray-500 mb-4">Pilih metode dan konfirmasi pembayaran.</p>
                 <div id="payment-form-container" class="text-gray-400 text-center py-5 border-2 border-dashed rounded-lg">
@@ -243,7 +252,15 @@ document.addEventListener('DOMContentLoaded', function() {
         tagihanListDiv.innerHTML = ''; // Kosongkan
 
         if (!tagihan || tagihan.length === 0) {
-            tagihanListDiv.innerHTML = '<div class="text-center text-green-600 py-5 font-semibold border-2 border-dashed rounded-lg">✅ Tidak ada tagihan yang belum lunas.</div>';
+            renderEmptyState(tagihanListDiv, {
+                title: 'Tidak ada tagihan',
+                message: '✅ Tidak ada tagihan yang belum lunas.',
+                icon: `
+                    <svg class="mx-auto h-12 w-12 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                `
+            });
             return;
         }
 
@@ -253,7 +270,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         tagihan.forEach(item => {
             const label = document.createElement('label');
-            label.className = 'flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors';
+            // Tambahkan border biru jika status "Menunggu Pembayaran Tunai"
+            const isWaitingCash = item.status === 'Menunggu Pembayaran Tunai';
+            label.className = `flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors ${isWaitingCash ? 'border-blue-300 bg-blue-50' : ''}`;
 
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
@@ -269,12 +288,24 @@ document.addEventListener('DOMContentLoaded', function() {
             namaP.className = 'font-medium text-gray-800';
             namaP.textContent = item.tarif?.nama_pembayaran ?? 'N/A'; // AMAN
 
+            const detailDiv = document.createElement('div');
+            detailDiv.className = 'flex items-center gap-2 mt-1';
+
             const jumlahP = document.createElement('p');
             jumlahP.className = 'text-gray-600';
             jumlahP.textContent = rupiahFormat.format(item.jumlah_tagihan);
 
+            // Tambahkan badge jika status "Menunggu Pembayaran Tunai"
+            if (isWaitingCash) {
+                const badge = document.createElement('span');
+                badge.className = 'px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-700 border border-blue-300';
+                badge.textContent = '✓ Menunggu Bayar Tunai';
+                detailDiv.appendChild(badge);
+            }
+
+            detailDiv.appendChild(jumlahP);
             textDiv.appendChild(namaP);
-            textDiv.appendChild(jumlahP);
+            textDiv.appendChild(detailDiv);
             label.appendChild(checkbox);
             label.appendChild(textDiv);
             container.appendChild(label);
@@ -296,13 +327,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <form id="process-payment-form">
                         <div>
-                            <label for="metode_pembayaran" class="block text-sm font-medium text-gray-700">Metode Pembayaran</label>
-                            <select id="metode_pembayaran" name="metode_pembayaran" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
-                                <option>Tunai</option>
-                                {{-- <option>Transfer Bank Nagari</option> --}}
-                                {{-- <option>Transfer</option> --}}
-                                {{-- Opsi Transfer disembunyikan sementara sesuai logika controller --}}
-                            </select>
+                            <label class="block text-sm font-medium text-gray-700">Metode Pembayaran</label>
+                            <div class="mt-2">
+                                <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-green-100 text-green-800">Tunai</span>
+                            </div>
+                            <input type="hidden" id="metode_pembayaran" name="metode_pembayaran" value="Tunai">
                         </div>
                        <button type="submit" class="mt-4 w-full inline-flex justify-center items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold transition-colors">
                            Proses Pembayaran
@@ -325,14 +354,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const submitButton = event.target.querySelector('button[type="submit"]');
-        const originalButtonHTML = submitButton.innerHTML; // Simpan HTML asli
-        submitButton.innerHTML = `<svg class="animate-spin h-5 w-5 text-white mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
-        submitButton.disabled = true;
+        setButtonLoading(submitButton, true, 'Memproses Pembayaran...');
 
         try {
             const response = await apiRequest("{{ route('kasir.process-payment') }}", 'POST', {
                 tagihan_ids: tagihanIds,
-                metode_pembayaran: document.getElementById('metode_pembayaran').value
+                metode_pembayaran: 'Tunai'
             });
             if (response.success) {
                 // !! GANTI ALERT !!
@@ -342,8 +369,6 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 // !! GANTI ALERT !!
                  Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal memproses pembayaran: ' + (response.message || 'Error tidak diketahui.') });
-                 submitButton.innerHTML = originalButtonHTML;
-                 submitButton.disabled = false;
             }
         } catch(error) {
             console.error("Error saat proses pembayaran:", error);
@@ -353,8 +378,8 @@ document.addEventListener('DOMContentLoaded', function() {
                  // !! GANTI ALERT !!
                  Swal.fire({ icon: 'error', title: 'Error Koneksi', text: error.message || 'Terjadi kesalahan saat menghubungkan ke server.' });
              }
-            submitButton.innerHTML = originalButtonHTML;
-            submitButton.disabled = false;
+        } finally {
+            setButtonLoading(submitButton, false);
         }
     }
 

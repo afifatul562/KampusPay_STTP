@@ -4,25 +4,47 @@
 @section('page-title', 'Ubah Password')
 
 @section('content')
+<div class="space-y-6">
+    {{-- Header Section --}}
+    <div class="bg-white rounded-xl shadow-md border border-gray-200 p-6">
+        <div class="flex items-center gap-4">
+            <div class="bg-gradient-to-br from-primary-100 to-primary-200 p-3 rounded-lg shadow-sm">
+                <svg class="w-6 h-6 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Pengaturan Akun</h1>
+                <p class="text-sm text-gray-500 mt-1">Kelola keamanan akun Anda</p>
+            </div>
+        </div>
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         {{-- Kolom Kiri: Deskripsi --}}
         <div class="md:col-span-1">
-            <h3 class="text-lg font-semibold text-gray-900">Ubah Password Akun</h3>
-            <p class="mt-1 text-sm text-gray-600">
-                Pastikan Anda menggunakan password yang kuat dan mudah diingat untuk menjaga keamanan akun Anda.
-            </p>
+            <div class="bg-white rounded-xl shadow-md border border-gray-200 p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-3">Ubah Password</h3>
+                <p class="text-sm text-gray-600 leading-relaxed">
+                    Pastikan Anda menggunakan password yang kuat dan mudah diingat untuk menjaga keamanan akun Anda.
+                </p>
+            </div>
         </div>
 
         {{-- Kolom Kanan: Form --}}
         <div class="md:col-span-2">
-            <div class="bg-white p-6 rounded-2xl shadow-lg">
+            <div class="bg-white rounded-xl shadow-md border border-gray-200 p-6">
                 <form method="POST" action="{{ route('mahasiswa.profil.password.update') }}" class="space-y-4">
                     @csrf
 
                     {{-- Pesan Sukses --}}
                     @if (session('status') === 'password-updated')
-                        <div class="flex items-center p-4 text-sm text-green-800 rounded-lg bg-green-100" role="alert">
-                            <svg class="flex-shrink-0 inline w-4 h-4 mr-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                        <div class="flex items-center p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-100 border-l-4 border-green-500" role="alert">
+                            <div class="flex items-center justify-center w-8 h-8 bg-green-500 rounded-full mr-3 flex-shrink-0">
+                                <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                </svg>
+                            </div>
                             <div><span class="font-medium">Berhasil!</span> Password Anda telah berhasil diperbarui.</div>
                         </div>
                     @endif
@@ -97,15 +119,16 @@
                     </div>
 
                     <div class="flex justify-end pt-2">
-                        <button type="submit" class="inline-flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700">
-                            <svg class="w-5 h-5 mr-2 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
-                            Simpan Password
+                        <button type="submit" class="inline-flex items-center justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-200">
+                            <svg class="w-5 h-5 mr-2 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            Simpan Perubahan
                         </button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
+</div>
 @endsection
 
 {{-- PERUBAHAN: Tambahkan Script di Bawah --}}

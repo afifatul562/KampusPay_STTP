@@ -38,16 +38,23 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // User & Kasir
         Route::post('users/kasir/register', [UserController::class, 'registerKasir'])->name('users.kasir.register');
-        Route::get('users', [UserController::class, 'index'])->name('users.index');
+        // Ganti nama route agar tidak bentrok dengan route web 'admin.users.index'
+        Route::get('users', [UserController::class, 'index'])->name('users.api.index');
 
         // Tarif (CRUD via API)
         Route::apiResource('tarif', TarifController::class); // index, show, store, update, destroy
 
-        // Report
+        // Report (rate limited)
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
-        Route::post('reports/generate', [ReportController::class, 'store'])->name('reports.store');
-        Route::post('reports/preview', [ReportController::class, 'preview'])->name('reports.preview'); // Preview Data
-        Route::delete('reports/{report}', [ReportController::class, 'destroy'])->name('reports.destroy');
+        Route::post('reports/generate', [ReportController::class, 'store'])
+            ->middleware('throttle:10,1') // max 10/min per user
+            ->name('reports.store');
+        Route::post('reports/preview', [ReportController::class, 'preview']) // Preview Data
+            ->middleware('throttle:20,1') // lebih longgar dari generate
+            ->name('reports.preview');
+        Route::delete('reports/{report}', [ReportController::class, 'destroy'])
+            ->middleware('throttle:10,1')
+            ->name('reports.destroy');
 
         // Pembayaran (Hanya lihat data pembayaran yg sudah ada)
         Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
@@ -69,10 +76,18 @@ Route::middleware('auth:sanctum')->group(function () {
     // --- RUTE KHUSUS UNTUK KASIR ---
     Route::middleware('role:kasir')->prefix('kasir')->name('kasir.')->group(function () {
         Route::get('/dashboard-stats', [KasirDashboardController::class, 'getDashboardStats'])->name('dashboard-stats');
-        Route::post('/search-mahasiswa', [KasirDashboardController::class, 'searchMahasiswa'])->name('search-mahasiswa');
-        Route::post('/process-payment', [KasirDashboardController::class, 'processPayment'])->name('process-payment');
-        Route::post('/verifikasi/approve/{konfirmasi}', [KasirVerifikasiController::class, 'approve'])->name('verifikasi.approve');
-        Route::post('/verifikasi/reject/{konfirmasi}', [KasirVerifikasiController::class, 'reject'])->name('verifikasi.reject');
+        Route::post('/search-mahasiswa', [KasirDashboardController::class, 'searchMahasiswa'])
+            ->middleware('throttle:30,1')
+            ->name('search-mahasiswa');
+        Route::post('/process-payment', [KasirDashboardController::class, 'processPayment'])
+            ->middleware('throttle:10,1')
+            ->name('process-payment');
+        Route::post('/verifikasi/approve/{konfirmasi}', [KasirVerifikasiController::class, 'approve'])
+            ->middleware('throttle:15,1')
+            ->name('verifikasi.approve');
+        Route::post('/verifikasi/reject/{konfirmasi}', [KasirVerifikasiController::class, 'reject'])
+            ->middleware('throttle:15,1')
+            ->name('verifikasi.reject');
     });
 
     // --- RUTE KHUSUS UNTUK MAHASISWA ---

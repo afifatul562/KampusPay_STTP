@@ -7,9 +7,9 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {{-- Kolom Kiri: Form Pengaturan Sistem --}}
-        <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-lg">
+        <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-md border border-gray-200">
             <h3 class="text-xl font-semibold mb-4 text-gray-800">⚙️ Pengaturan Sistem</h3>
-            <form id="systemSettingsForm" class="space-y-4">
+            <form id="systemSettingsForm" class="space-y-4" aria-label="Form pengaturan sistem">
                 {{-- Pengaturan Dasar Aplikasi --}}
                 <div>
                     <label for="app_name" class="block text-sm font-medium text-gray-700">Nama Aplikasi</label>
@@ -18,15 +18,13 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label for="academic_year" class="block text-sm font-medium text-gray-700">Tahun Akademik</label>
-                        <input type="text" id="academic_year" name="academic_year" placeholder="Contoh: 2025/2026" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <input type="text" id="academic_year" name="academic_year" placeholder="Contoh: 2025/2026" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-gray-100 cursor-not-allowed" readonly disabled aria-readonly="true">
+                        <p class="text-xs text-gray-500 mt-1"></p>
                     </div>
                     <div>
                         <label for="semester" class="block text-sm font-medium text-gray-700">Semester Aktif</label>
-                        <select id="semester" name="semester" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                            <option value="" disabled selected>Pilih Semester</option>
-                            <option value="Ganjil">Ganjil</option>
-                            <option value="Genap">Genap</option>
-                        </select>
+                        <input type="text" id="semester" name="semester" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-gray-100 cursor-not-allowed" readonly disabled aria-readonly="true">
+                        <p class="text-xs text-gray-500 mt-1"></p>
                     </div>
                 </div>
                 <hr class="my-6">
@@ -45,7 +43,7 @@
                     <input type="text" id="account_number" name="account_number" placeholder="Contoh: 1234567890" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
                 <div class="pt-4">
-                    <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 shadow-md hover:shadow-lg transition-all duration-200">
                         Simpan Pengaturan
                     </button>
                 </div>
@@ -54,9 +52,9 @@
 
         {{-- Kolom Kanan: Informasi & Registrasi Kasir --}}
         <div class="lg:col-span-1 space-y-6">
-            <div class="bg-white p-6 rounded-2xl shadow-lg">
+            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
                 <h3 class="text-xl font-semibold mb-4 text-gray-800">ℹ️ Informasi Sistem</h3>
-                <div class="space-y-4 text-sm bg-gray-50 p-4 rounded-lg border">
+                <div class="space-y-4 text-sm bg-gray-50 p-4 rounded-lg border" aria-live="polite">
                     <div class="flex justify-between"><span class="text-gray-600">Versi PHP:</span><strong id="php-version" class="font-mono text-gray-800 bg-gray-200 px-2 py-0.5 rounded">...</strong></div>
                     <div class="flex justify-between"><span class="text-gray-600">Versi Laravel:</span><strong id="laravel-version" class="font-mono text-gray-800 bg-gray-200 px-2 py-0.5 rounded">...</strong></div>
                     <div class="flex justify-between"><span class="text-gray-600">Database Driver:</span><strong id="database-driver" class="font-mono text-gray-800 bg-gray-200 px-2 py-0.5 rounded">...</strong></div>
@@ -64,7 +62,7 @@
                 </div>
             </div>
 
-            <div class="bg-white p-6 rounded-2xl shadow-lg">
+            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
                 <h3 class="text-xl font-semibold mb-4 text-gray-800">👔 Registrasi Kasir Baru</h3>
                 <form id="kasirForm" class="space-y-4">
                     <div>
@@ -80,7 +78,7 @@
                         <input type="text" id="kasir_username" name="username" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500">
                     </div>
                     <div class="pt-2">
-                        <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700">
+                        <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-success-600 to-success-700 hover:from-success-700 hover:to-success-800 shadow-md hover:shadow-lg transition-all duration-200">
                             Daftarkan Kasir
                         </button>
                     </div>
@@ -93,60 +91,9 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-        // --- FUNGSI BERSAMA (DENGAN SWEETALERT & ERROR 422 AMAN) ---
-        async function apiRequest(url, method = 'GET', body = null) {
-            const apiToken = document.querySelector('meta[name="api-token"]')?.getAttribute('content');
-            if (!apiToken) {
-                Swal.fire({ icon: 'error', title: 'Sesi Tidak Valid', text: 'Sesi Anda tidak ditemukan. Harap login kembali.', confirmButtonText: 'Login' }).then(() => { window.location.href = '/login'; });
-                return Promise.reject('No API Token');
-            }
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            const options = {
-                method: method,
-                headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${apiToken}`, 'X-CSRF-TOKEN': csrfToken }
-            };
-            // Jangan set Content-Type jika body adalah FormData
-            if (body && !(body instanceof FormData)) {
-                options.headers['Content-Type'] = 'application/json';
-                options.body = JSON.stringify(body);
-            } else if (body) {
-                options.body = body; // Body adalah FormData
-            }
-
-            try {
-                const response = await fetch(url, options);
-                if (response.status === 401) {
-                    Swal.fire({ icon: 'error', title: 'Sesi Berakhir', text: 'Sesi Anda telah berakhir. Harap login kembali.', confirmButtonText: 'Login' }).then(() => { window.location.href = '/login'; });
-                    throw new Error('Unauthorized');
-                }
-                // Handle No Content response
-                 if (response.status === 204) {
-                     return { success: true, message: 'Operasi berhasil.' }; // Asumsi sukses jika 204
-                 }
-
-                // Cek content type sebelum parse JSON
-                const contentType = response.headers.get("content-type");
-                if (!contentType || !contentType.includes("application/json")) {
-                     const responseBody = await response.text(); // Ambil teks error jika bukan JSON
-                    console.error("Non-JSON response received:", response.status, responseBody);
-                    throw new Error(`Server (${response.status}): ${responseBody.substring(0, 150)}`);
-                }
-
-                const data = await response.json(); // Sekarang aman parse JSON
-
-                if (!response.ok) {
-                    if (response.status === 422 && data.errors) {
-                        throw { status: 422, errors: data.errors, message: data.message || 'Validation failed' };
-                    }
-                    throw new Error(data.message || `HTTP error! status: ${response.status}`);
-                }
-                return data; // Sukses
-            } catch (error) {
-                console.error("Error in apiRequest:", error);
-                if (error.status === 422) throw error;
-                throw new Error(error.message || 'Gagal memproses permintaan.');
-            }
-        }
+        // Pakai util global apiRequest
+        const apiRequest = (window.App && window.App.apiRequest) ? window.App.apiRequest : null;
+        if (!apiRequest) { console.error('apiRequest util tidak tersedia'); }
 
         // Helper untuk menampilkan error 422 di SweetAlert (AMAN)
         function displayValidationErrors(errors) {
@@ -211,6 +158,11 @@ document.addEventListener('DOMContentLoaded', function() {
             apiRequest(url, 'POST', data)
                 .then(response => {
                     Swal.fire({ icon: 'success', title: 'Berhasil!', text: response.message || 'Pengaturan berhasil disimpan.', timer: 1500, showConfirmButton: false });
+                    // Update nama aplikasi di sidebar secara live
+                    try {
+                        const newName = document.getElementById('app_name').value || 'Aplikasi';
+                        document.querySelectorAll('[data-app-name]')?.forEach(el => { el.textContent = newName; });
+                    } catch (e) { /* ignore */ }
                 })
                 .catch(err => {
                     if (err.status === 422 && err.errors) {

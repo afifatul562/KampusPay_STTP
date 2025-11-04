@@ -26,13 +26,77 @@ class DashboardController extends Controller
         $mahasiswa = MahasiswaDetail::with([
             'user',
             'tagihan' => function ($query) {
-                // DIUBAH: Ambil semua tagihan yang BUKAN 'Lunas'.
+                // Ambil tagihan yang bisa dibayar (status bukan 'Lunas')
                 // Ini akan mencakup: 'Belum Lunas', 'Menunggu Pembayaran Tunai',
-                // 'Ditolak', dan 'Menunggu Verifikasi Transfer' (Kasus Dinda)
+                // 'Ditolak', dan 'Menunggu Verifikasi Transfer'
                 $query->where('status', '!=', 'Lunas');
             },
-            'tagihan.tarif'
+            'tagihan.tarif',
+            'tagihan.pembayaran' // Eager load untuk cek status pembayaran
         ])->where('npm', $request->npm)->first();
+
+        // Filter tambahan: Pastikan tidak ada tagihan yang statusnya "Lunas" atau sudah punya pembayaran aktif
+        // Juga sembunyikan tagihan yang dibatalkan jika sudah ada tagihan pengganti dengan jenis yang sama yang sudah lunas
+        if ($mahasiswa && $mahasiswa->tagihan) {
+            // Ambil semua tagihan mahasiswa untuk cek tagihan pengganti
+            $allTagihan = Tagihan::with('pembayaran', 'tarif')
+                ->where('mahasiswa_id', $mahasiswa->mahasiswa_id)
+                ->get();
+
+            $mahasiswa->tagihan = $mahasiswa->tagihan->filter(function ($tagihan) use ($allTagihan) {
+                // Jangan tampilkan jika:
+                // 1. Status tagihan adalah "Lunas" (double check)
+                if ($tagihan->status === 'Lunas') {
+                    return false;
+                }
+
+                // 2. Tagihan punya pembayaran yang tidak dibatalkan (sudah lunas)
+                if ($tagihan->pembayaran) {
+                    $isCancelled = $tagihan->pembayaran->status_dibatalkan ?? false;
+                    // Jika pembayaran tidak dibatalkan, berarti sudah lunas, jangan tampilkan
+                    if (!$isCancelled) {
+                        return false;
+                    }
+
+                    // 3. Jika pembayaran dibatalkan, cek apakah ada tagihan lain dengan jenis yang sama yang sudah lunas
+                    if ($isCancelled) {
+                        // Cari tagihan lain dengan tarif_id yang sama (jenis pembayaran sama) yang sudah lunas
+                        $hasReplacement = $allTagihan->contains(function ($otherTagihan) use ($tagihan) {
+                            // Tagihan lain dengan jenis yang sama (tarif_id sama)
+                            if ($otherTagihan->tagihan_id === $tagihan->tagihan_id) {
+                                return false; // Skip tagihan yang sama
+                            }
+
+                            if ($otherTagihan->tarif_id !== $tagihan->tarif_id) {
+                                return false; // Bukan jenis yang sama
+                            }
+
+                            // Cek apakah tagihan lain sudah lunas
+                            if ($otherTagihan->status === 'Lunas') {
+                                return true;
+                            }
+
+                            // Cek apakah tagihan lain punya pembayaran yang tidak dibatalkan
+                            if ($otherTagihan->pembayaran) {
+                                $otherIsCancelled = $otherTagihan->pembayaran->status_dibatalkan ?? false;
+                                if (!$otherIsCancelled) {
+                                    return true; // Ada tagihan pengganti yang sudah lunas
+                                }
+                            }
+
+                            return false;
+                        });
+
+                        // Jika ada tagihan pengganti yang sudah lunas, jangan tampilkan tagihan yang dibatalkan
+                        if ($hasReplacement) {
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
+            })->values();
+        }
 
         if (!$mahasiswa) {
             return response()->json(['success' => false, 'message' => 'Mahasiswa tidak ditemukan.'], 404);

@@ -6,12 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\TarifMaster;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Cache;
 
 class TarifController extends Controller
 {
     public function index()
     {
-        $tarifs = TarifMaster::orderBy('created_at', 'desc')->get();
+        // Gunakan cache ringan untuk daftar tarif
+        $tarifs = TarifMaster::getCachedAll();
         return response()->json([
             'success' => true,
             'data' => $tarifs
@@ -29,6 +31,7 @@ class TarifController extends Controller
             ]);
 
             $tarif = TarifMaster::create($validatedData);
+            Cache::forget('tarif_master:all');
 
             return response()->json([
                 'success' => true,
@@ -63,6 +66,7 @@ class TarifController extends Controller
 
             $tarif = TarifMaster::findOrFail($id);
             $tarif->update($validatedData);
+            Cache::forget('tarif_master:all');
 
             return response()->json([
                 'success' => true,
@@ -92,6 +96,7 @@ class TarifController extends Controller
             }
 
             $tarif->delete();
+            Cache::forget('tarif_master:all');
 
             return response()->json(['success' => true, 'message' => 'Tarif berhasil dihapus']);
         } catch (\Exception $e) {

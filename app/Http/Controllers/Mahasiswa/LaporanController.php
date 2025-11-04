@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\TarifMaster;
 use App\Models\Pembayaran;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\Setting;
 
 class LaporanController extends Controller
 {
@@ -35,19 +36,37 @@ class LaporanController extends Controller
      */
     public function downloadHistori(Request $request)
     {
-        $mahasiswaId = Auth::user()->mahasiswaDetail->mahasiswa_id;
+        // Load user dengan mahasiswaDetail dan relasi user
+        $user = User::with('mahasiswaDetail.user')->findOrFail(Auth::id());
+        $mahasiswa = $user->mahasiswaDetail;
+        $mahasiswaId = $mahasiswa?->mahasiswa_id;
 
-        $query = Pembayaran::with('tagihan.tarif')
+        $query = Pembayaran::with('tagihan.tarif', 'userKasir')
             ->whereHas('tagihan', function ($q) use ($mahasiswaId) {
                 $q->where('mahasiswa_id', $mahasiswaId);
             });
 
-        // Filter berdasarkan tanggal jika ada
-        if ($request->filled('dari_tanggal')) {
-            $query->whereDate('tanggal_bayar', '>=', $request->dari_tanggal);
+        // Parse tanggal dari format Y-m-d (sudah dikonversi oleh JavaScript)
+        $startDate = null;
+        $endDate = null;
+
+        if ($request->filled('start_date')) {
+            try {
+                // Format yang diterima sudah Y-m-d dari JavaScript
+                $startDate = \Carbon\Carbon::parse($request->start_date)->format('Y-m-d');
+                $query->whereDate('tanggal_bayar', '>=', $startDate);
+            } catch (\Exception $e) {
+                // Jika parsing gagal, skip filter tanggal
+            }
         }
-        if ($request->filled('sampai_tanggal')) {
-            $query->whereDate('tanggal_bayar', '<=', $request->sampai_tanggal);
+        if ($request->filled('end_date')) {
+            try {
+                // Format yang diterima sudah Y-m-d dari JavaScript
+                $endDate = \Carbon\Carbon::parse($request->end_date)->format('Y-m-d');
+                $query->whereDate('tanggal_bayar', '<=', $endDate);
+            } catch (\Exception $e) {
+                // Jika parsing gagal, skip filter tanggal
+            }
         }
 
         // Filter berdasarkan jenis pembayaran jika ada
@@ -59,10 +78,21 @@ class LaporanController extends Controller
 
         $histori = $query->latest('tanggal_bayar')->get();
 
+        // Ambil tahun akademik dari settings
+        $settings = Setting::getCachedMap();
+        $tahunAkademik = $settings['academic_year'] ?? ($settings['tahun_akademik'] ?? ($settings['tahun_ajaran'] ?? '-'));
+
+        // Siapkan filters untuk view
+        $filters = [
+            'tahun_akademik' => $tahunAkademik,
+            'dari_tanggal' => $startDate ?? now()->format('Y-m-d'),
+            'sampai_tanggal' => $endDate ?? now()->format('Y-m-d'),
+        ];
+
         $pdf = Pdf::loadView('mahasiswa.pdf.laporan_histori', [
             'histori' => $histori,
-            'user' => Auth::user(),
-            'filter' => $request->all()
+            'mahasiswa' => $mahasiswa,
+            'filters' => $filters
         ]);
 
         return $pdf->download('laporan-histori-pembayaran.pdf');
@@ -73,16 +103,22 @@ class LaporanController extends Controller
      */
     public function downloadTunggakan()
     {
-        $mahasiswaId = Auth::user()->mahasiswaDetail->mahasiswa_id;
+        $user = \App\Models\User::with('mahasiswaDetail.user')->findOrFail(Auth::id());
+        $mahasiswa = $user->mahasiswaDetail;
+        $mahasiswaId = $mahasiswa?->mahasiswa_id;
 
         $tunggakan = \App\Models\Tagihan::with('tarif')
             ->where('mahasiswa_id', $mahasiswaId)
             ->where('status', 'Belum Lunas')
             ->get();
 
+        $settings = Setting::getCachedMap();
+        $tahunAkademik = $settings['academic_year'] ?? ($settings['tahun_akademik'] ?? ($settings['tahun_ajaran'] ?? null));
+
         $pdf = Pdf::loadView('mahasiswa.pdf.laporan_tunggakan', [
             'tunggakan' => $tunggakan,
-            'user' => Auth::user()
+            'mahasiswa' => $mahasiswa,
+            'tahunAkademik' => $tahunAkademik,
         ]);
 
         return $pdf->download('laporan-data-tunggakan.pdf');

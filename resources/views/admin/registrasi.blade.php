@@ -5,7 +5,6 @@
 
 @section('content')
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
         <div class="bg-white p-6 rounded-2xl shadow-lg">
             <h3 class="text-xl font-semibold mb-4 text-gray-800">👨‍🎓 Registrasi Mahasiswa</h3>
             <form id="mahasiswaForm" class="space-y-4">

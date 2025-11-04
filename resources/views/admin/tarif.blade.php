@@ -4,68 +4,74 @@
 @section('page-title', 'Manajemen Tarif')
 
 @section('content')
-    {{-- Tombol Tambah Tarif --}}
-    <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-        <h2 class="text-xl font-semibold text-gray-800 self-start">💰 Master Data Tarif</h2>
-        <button id="addTarifBtn" class="w-full md:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
-            <svg class="w-5 h-5 mr-2 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-            Tambah Tarif
-        </button>
-    </div>
+@php
+    $headerIcon = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>';
+@endphp
+
+<div class="space-y-6">
+    <x-breadcrumbs :items="[
+        ['label' => 'Dashboard', 'url' => route('admin.dashboard')],
+        ['label' => 'Master Data Tarif']
+    ]" />
+
+    <x-page-header
+        title="Master Data Tarif"
+        subtitle="Kelola tarif pembayaran untuk mahasiswa"
+        :icon="$headerIcon">
+        <x-slot:actions>
+            <x-gradient-button id="addTarifBtn" variant="primary" size="md" aria-label="Tambah Tarif">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                Tambah Tarif
+            </x-gradient-button>
+        </x-slot:actions>
+    </x-page-header>
 
     {{-- Filter Dropdowns --}}
-    <div class="flex flex-col sm:flex-row gap-4 mb-4">
-        {{-- Filter Nama Pembayaran --}}
-        <div class="relative flex-grow">
-            <select id="filterNama" class="block w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm">
-                <option value="">Semua Nama Pembayaran</option>
-                {{-- Opsi akan diisi oleh JavaScript --}}
-            </select>
-            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                <svg class="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+    <x-card title="Filter">
+        <div class="flex flex-col sm:flex-row gap-4">
+            {{-- Filter Nama Pembayaran --}}
+            <div class="relative flex-grow">
+                <select id="filterNama" class="block w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:text-sm">
+                    <option value="">Semua Nama Pembayaran</option>
+                    {{-- Opsi akan diisi oleh JavaScript --}}
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                    <svg class="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                </div>
+            </div>
+            {{-- Filter Program Studi --}}
+            <div class="relative">
+                <select id="filterProdi" class="block w-full sm:w-48 appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:text-sm">
+                    <option value="">Semua Prodi</option>
+                    {{-- Opsi akan diisi oleh JavaScript --}}
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                    <svg class="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                </div>
+            </div>
+            {{-- Filter Angkatan --}}
+            <div class="relative">
+                <select id="filterAngkatan" class="block w-full sm:w-48 appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:text-sm">
+                    <option value="">Semua Angkatan</option>
+                    {{-- Opsi akan diisi oleh JavaScript --}}
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                    <svg class="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                </div>
             </div>
         </div>
-        {{-- Filter Program Studi --}}
-        <div class="relative">
-            <select id="filterProdi" class="block w-full sm:w-48 appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm">
-                <option value="">Semua Prodi</option>
-                {{-- Opsi akan diisi oleh JavaScript --}}
-            </select>
-            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                <svg class="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-            </div>
-        </div>
-        {{-- Filter Angkatan --}}
-        <div class="relative">
-            <select id="filterAngkatan" class="block w-full sm:w-48 appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm">
-                <option value="">Semua Angkatan</option>
-                {{-- Opsi akan diisi oleh JavaScript --}}
-            </select>
-            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                <svg class="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-            </div>
-        </div>
-    </div>
+    </x-card>
 
     {{-- Tabel Tarif --}}
-    <div class="bg-white rounded-2xl shadow-lg">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Pembayaran</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Nominal</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program Studi</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Angkatan</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody id="tarif-table-body" class="bg-white divide-y divide-gray-200 text-sm">
-                    <tr><td colspan="5" class="text-center py-10 text-gray-500">Memuat data...</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
+    <x-data-table
+        :headers="['Nama Pembayaran', 'Nominal', 'Program Studi', 'Angkatan', 'Aksi']"
+        aria-label="Tabel master tarif">
+        <tr id="loading-row">
+            <td colspan="5" class="text-center py-10 text-gray-500">Memuat data...</td>
+        </tr>
+    </x-data-table>
 
     {{-- Modal Tambah/Edit Tarif --}}
     <div id="tarifModal" class="hidden fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-gray-900 bg-opacity-60">
@@ -131,7 +137,9 @@
 document.addEventListener('DOMContentLoaded', function() {
         // --- Bagian Umum ---
         const apiToken = document.querySelector('meta[name="api-token"]')?.getAttribute('content');
-        const tarifTableBody = document.getElementById('tarif-table-body');
+        // Find tbody by finding the table with aria-label and then its tbody
+        const tarifTable = document.querySelector('table[aria-label="Tabel master tarif"]');
+        const tarifTableBody = tarifTable ? tarifTable.querySelector('tbody') : null;
 
         // --- Bagian Filter Tabel ---
         const filterNamaSelect = document.getElementById('filterNama');
@@ -155,49 +163,9 @@ document.addEventListener('DOMContentLoaded', function() {
             attachModalListeners();
         }
 
-        // -------------------------------------
-        // FUNGSI API REQUEST (Dengan SweetAlert Error)
-        // -------------------------------------
-        async function apiRequest(url, method = 'GET', body = null) {
-            if (!apiToken) {
-                Swal.fire({ icon: 'error', title: 'Sesi Tidak Valid', text: 'Sesi Anda tidak ditemukan. Harap login kembali.', confirmButtonText: 'Login' }).then(() => { window.location.href = '/login'; });
-                return Promise.reject('No API Token');
-            }
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            const options = { method: method, headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${apiToken}`, 'X-CSRF-TOKEN': csrfToken } };
-            if (body) { options.body = JSON.stringify(body); options.headers['Content-Type'] = 'application/json'; }
-            if (method === 'DELETE') { delete options.headers['Content-Type']; }
-
-            try {
-                const response = await fetch(url, options);
-                if (response.status === 401) {
-                    Swal.fire({ icon: 'error', title: 'Sesi Berakhir', text: 'Sesi Anda telah berakhir. Harap login kembali.', confirmButtonText: 'Login' }).then(() => { window.location.href = '/login'; });
-                    throw new Error('Unauthorized');
-                }
-                if (response.status === 204 && method === 'DELETE') { return { success: true, message: 'Data berhasil dihapus.' }; }
-
-                const contentType = response.headers.get("content-type");
-                const responseBody = await response.text();
-
-                if (!contentType || !contentType.includes("application/json")) {
-                    console.error("Non-JSON response:", response.status, responseBody);
-                    throw new Error(`Server error: ${response.status}. ${responseBody.substring(0,150)}`);
-                }
-
-                const data = JSON.parse(responseBody);
-
-                if (!response.ok && response.status === 422 && data.errors) {
-                    console.error('Validation errors:', data.errors);
-                    throw { status: 422, errors: data.errors, message: data.message || 'Validation failed' };
-                }
-                if (!response.ok) { throw new Error(data.message || `HTTP error! status: ${response.status}`); }
-                return data;
-            } catch (error) {
-                console.error("Error in apiRequest:", error);
-                if (error.status === 422) throw error;
-                throw new Error(error.message || 'Gagal memproses permintaan.');
-            }
-        }
+        // Pakai util global apiRequest
+        const apiRequest = (window.App && window.App.apiRequest) ? window.App.apiRequest : null;
+        if (!apiRequest) { console.error('apiRequest util tidak tersedia'); }
 
         // -------------------------------------
         // FUNGSI FORMAT NOMINAL (Tetap Sama)
@@ -214,10 +182,23 @@ document.addEventListener('DOMContentLoaded', function() {
         // !! PERBAIKAN KEAMANAN XSS (Stored) DI SINI !!
         // ===================================================
         function renderTable(dataToRender) {
+            if (!tarifTableBody) {
+                console.error('tarifTableBody not found in renderTable');
+                return;
+            }
             tarifTableBody.innerHTML = '';
             if (!dataToRender || dataToRender.length === 0) {
-                const message = (currentFilters.nama || currentFilters.prodi || currentFilters.angkatan) ? 'Tidak ada data tarif yang cocok dengan filter.' : 'Belum ada data tarif.';
-                tarifTableBody.innerHTML = `<tr><td colspan="5" class="text-center py-10 text-gray-500">${message}</td></tr>`;
+                const isFiltering = (currentFilters.nama || currentFilters.prodi || currentFilters.angkatan);
+                renderEmptyState(tarifTableBody, {
+                    colspan: 5,
+                    title: isFiltering ? 'Tidak ada data' : 'Belum ada data tarif',
+                    message: isFiltering ? 'Tidak ada data tarif yang cocok dengan filter yang dipilih.' : 'Silakan tambahkan tarif baru untuk memulai.',
+                    icon: `
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    `
+                });
                 return;
             }
 
@@ -257,10 +238,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 cellAksi.className = 'px-6 py-4 whitespace-nowrap text-right font-medium';
                 cellAksi.innerHTML = `
                     <div class="flex justify-end items-center gap-2">
-                        <button class="edit-btn text-gray-500 hover:text-yellow-600" data-id="${tarif.tarif_id}" title="Edit">
+                        <button class="edit-btn text-gray-500 hover:text-yellow-600" data-id="${tarif.tarif_id}" data-tooltip="Edit tarif" title="Edit">
                             <svg class="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536l12.232-12.232z"></path></svg>
                         </button>
-                        <button class="delete-btn text-gray-500 hover:text-red-600" data-id="${tarif.tarif_id}" title="Hapus">
+                        <button class="delete-btn text-gray-500 hover:text-red-600" data-id="${tarif.tarif_id}" data-tooltip="Hapus tarif" title="Hapus">
                             <svg class="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                         </button>
                     </div>`;
@@ -273,10 +254,9 @@ document.addEventListener('DOMContentLoaded', function() {
         function applyFilters() {
             currentFilters.nama = filterNamaSelect.value; currentFilters.prodi = filterProdiSelect.value; currentFilters.angkatan = filterAngkatanSelect.value;
             const filteredData = allTarifs.filter(tarif => {
-                // Logika ini sudah benar, 'Semua Jurusan' akan memfilter 'null' di database
                 const namaMatch = !currentFilters.nama || tarif.nama_pembayaran === currentFilters.nama;
-                const prodiMatch = currentFilters.prodi === "" || (tarif.program_studi === currentFilters.prodi) || (!tarif.program_studi && currentFilters.prodi === "Semua Jurusan");
-                const angkatanMatch = currentFilters.angkatan === "" || (tarif.angkatan === currentFilters.angkatan) || (!tarif.angkatan && currentFilters.angkatan === "Semua Angkatan");
+                const prodiMatch = currentFilters.prodi === "" || tarif.program_studi === currentFilters.prodi;
+                const angkatanMatch = currentFilters.angkatan === "" || tarif.angkatan === currentFilters.angkatan;
                 return namaMatch && prodiMatch && angkatanMatch;
             });
             renderTable(filteredData);
@@ -292,10 +272,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             filterNamaSelect.innerHTML = '<option value="">Semua Nama Pembayaran</option>'; Array.from(uniqueNama).sort().forEach(nama => { const option = document.createElement('option'); option.value = nama; option.textContent = nama; filterNamaSelect.appendChild(option); });
             filterProdiSelect.innerHTML = '<option value="">Semua Prodi</option>'; Array.from(uniqueProdi).sort().forEach(prodi => { const option = document.createElement('option'); option.value = prodi; option.textContent = prodi; filterProdiSelect.appendChild(option); });
-            // Logika ini sudah benar, menambah 'Semua Jurusan' jika ada data 'null'
-            if(allTarifs.some(t => !t.program_studi)){ const o=document.createElement('option'); o.value="Semua Jurusan"; o.textContent="Semua Jurusan"; filterProdiSelect.appendChild(o); }
             filterAngkatanSelect.innerHTML = '<option value="">Semua Angkatan</option>'; Array.from(uniqueAngkatan).sort((a,b)=>b.localeCompare(a,undefined,{numeric:true})).forEach(angkatan => { const option = document.createElement('option'); option.value = angkatan; option.textContent = angkatan; filterAngkatanSelect.appendChild(option); });
-            if(allTarifs.some(t => !t.angkatan)){ const o=document.createElement('option'); o.value="Semua Angkatan"; o.textContent="Semua Angkatan"; filterAngkatanSelect.appendChild(o); }
         }
 
         // -------------------------------------
@@ -343,13 +320,37 @@ document.addEventListener('DOMContentLoaded', function() {
         // -------------------------------------
         // EVENT LISTENERS (Dengan SweetAlert)
         // -------------------------------------
+        // Add null checks before adding event listeners
+        if (!tarifTableBody) {
+            console.error('tarifTableBody not found');
+            return;
+        }
+        if (!filterNamaSelect || !filterProdiSelect || !filterAngkatanSelect) {
+            console.error('Filter elements not found');
+            return;
+        }
+        if (!tarifModal || !modalTitle || !tarifForm || !tarifIdInput) {
+            console.error('Modal elements not found');
+            return;
+        }
+
         filterNamaSelect.addEventListener('change', applyFilters);
         filterProdiSelect.addEventListener('change', applyFilters);
         filterAngkatanSelect.addEventListener('change', applyFilters);
 
-        document.getElementById('addTarifBtn').addEventListener('click', () => openModal('add'));
-        document.getElementById('cancelBtn').addEventListener('click', closeModal);
-        tarifModal.querySelector('.close-button').addEventListener('click', closeModal);
+        const addTarifBtn = document.getElementById('addTarifBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const closeButton = tarifModal.querySelector('.close-button');
+
+        if (addTarifBtn) {
+            addTarifBtn.addEventListener('click', () => openModal('add'));
+        }
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', closeModal);
+        }
+        if (closeButton) {
+            closeButton.addEventListener('click', closeModal);
+        }
         window.addEventListener('click', (event) => { if (event.target == tarifModal) closeModal(); });
 
         function attachModalListeners() {
@@ -366,7 +367,8 @@ document.addEventListener('DOMContentLoaded', function() {
         function formatNominalOnBlur() { formatNumberInput(this); }
 
         // Listener Tabel (Edit & Delete) - !! GANTI KE SWEETALERT !!
-        tarifTableBody.addEventListener('click', function(event) {
+        if (tarifTableBody) {
+            tarifTableBody.addEventListener('click', function(event) {
             const button = event.target.closest('button'); if (!button) return;
             const tarifId = button.dataset.id;
 
@@ -414,6 +416,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
         });
+        }
 
         // Listener Form Submit Modal - !! GANTI KE SWEETALERT !!
         tarifForm.addEventListener('submit', function(event) {
@@ -441,7 +444,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            const submitButton = this.querySelector('button[type="submit"]'); const originalText = submitButton.textContent; submitButton.textContent = 'Menyimpan...'; submitButton.disabled = true;
+            const submitButton = this.querySelector('button[type="submit"]');
+            setButtonLoading(submitButton, true, 'Menyimpan...');
 
             apiRequest(url, method, formData).then(response => {
                 // !! GANTI ALERT SUKSES !!
@@ -489,7 +493,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             })
             .finally(() => {
-                submitButton.textContent = originalText; submitButton.disabled = false;
+                setButtonLoading(submitButton, false);
             });
         });
 
@@ -497,6 +501,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // MUAT DATA AWAL (Dengan SweetAlert Error)
         // -------------------------------------
         function loadTarifs() {
+            if (!tarifTableBody) {
+                console.error('tarifTableBody not found in loadTarifs');
+                return;
+            }
             tarifTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-gray-500">Memuat data...</td></tr>';
             const listUrl = "{{ route('admin.tarif.index') }}";
             apiRequest(listUrl).then(response => {
@@ -516,7 +524,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     title: 'Gagal Memuat Data',
                     text: `Gagal memuat daftar tarif: ${error.message}`
                 });
-                tarifTableBody.innerHTML = `<tr><td colspan="5" class="text-center py-10 text-red-500">Gagal memuat data. Silakan refresh halaman.</td></tr>`;
+                if (tarifTableBody) {
+                    tarifTableBody.innerHTML = `<tr><td colspan="5" class="text-center py-10 text-red-500">Gagal memuat data. Silakan refresh halaman.</td></tr>`;
+                }
             }); // <--- Kurung kurawal penutup untuk .catch
         } // <--- Kurung kurawal penutup untuk function loadTarifs
 
