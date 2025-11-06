@@ -12,8 +12,12 @@
 @section('content')
 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
 
-    <div class="flex justify-between items-center mb-4">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <h1 class="text-2xl font-semibold text-gray-800">Manajemen User</h1>
+        <button id="openAddKasirBtn" class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-gradient-to-r from-success-600 to-success-700 text-white text-sm font-semibold hover:from-success-700 hover:to-success-800 shadow-md hover:shadow-lg transition-all duration-200">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Tambah Kasir
+        </button>
     </div>
 
     {{-- Flash banner dihilangkan karena sudah digantikan SweetAlert global --}}
@@ -73,7 +77,7 @@
                             @endphp
                             <tr>
                                 <td colspan="5" class="px-6 py-12">
-                                    <x-empty-state 
+                                    <x-empty-state
                                         title="Belum ada data staff"
                                         message="Belum ada data staff (Kasir/Admin). Silakan daftarkan staff baru."
                                         :icon="$emptyIcon" />
@@ -135,7 +139,7 @@
                             @endphp
                             <tr>
                                 <td colspan="5" class="px-6 py-12">
-                                    <x-empty-state 
+                                    <x-empty-state
                                         title="Belum ada data mahasiswa"
                                         message="Belum ada data mahasiswa. Silakan import atau tambahkan mahasiswa baru."
                                         :icon="$emptyIconMahasiswa" />
@@ -148,12 +152,133 @@
         </div>
     </div>
 </div>
+
+{{-- Modal Tambah Kasir Baru --}}
+<div id="addKasirModal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+    <div id="addKasirBackdrop" class="absolute inset-0 bg-gray-900/60"></div>
+    <div class="relative flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-800">Registrasi Kasir Baru</h3>
+                <button type="button" id="closeAddKasirModal" class="text-gray-400 hover:text-gray-600 transition-colors" aria-label="Tutup">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <form id="addKasirForm" class="px-6 py-5 space-y-4">
+                <div>
+                    <label for="kasir_nama" class="block text-sm font-medium text-gray-700">Nama Lengkap</label>
+                    <input type="text" id="kasir_nama" name="nama_lengkap" required class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="kasir_email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="kasir_email" name="email" required class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="kasir_username" class="block text-sm font-medium text-gray-700">Username</label>
+                    <input type="text" id="kasir_username" name="username" required class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" id="cancelAddKasirBtn" class="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">Batal</button>
+                    <button type="submit" class="inline-flex items-center px-4 py-2 rounded-lg bg-gradient-to-r from-success-600 to-success-700 text-white text-sm font-semibold hover:from-success-700 hover:to-success-800 shadow-md hover:shadow-lg transition-all duration-200">
+                        Simpan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection
 
 
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function(){
+        const apiRequest = (window.App && window.App.apiRequest) ? window.App.apiRequest : null;
+        if (!apiRequest) {
+            console.error('apiRequest util tidak tersedia. Pastikan utils/api.js telah dimuat.');
+        }
+
+        // Helper untuk menampilkan error validasi
+        function displayValidationErrors(errors) {
+            let errorContent = document.createElement('div');
+            const p = document.createElement('p');
+            p.textContent = 'Input tidak valid:';
+            errorContent.appendChild(p);
+            const ul = document.createElement('ul');
+            ul.className = 'list-disc list-inside text-left mt-2';
+            Object.values(errors || {}).forEach(errArr => {
+                const li = document.createElement('li');
+                li.textContent = Array.isArray(errArr) ? errArr.join(', ') : errArr;
+                ul.appendChild(li);
+            });
+            errorContent.appendChild(ul);
+            Swal.fire({ icon: 'error', title: 'Gagal', html: errorContent });
+        }
+
+        // --- Modal Tambah Kasir ---
+        const addKasirModal = document.getElementById('addKasirModal');
+        const addKasirBackdrop = document.getElementById('addKasirBackdrop');
+        const openAddKasirBtn = document.getElementById('openAddKasirBtn');
+        const closeAddKasirModal = document.getElementById('closeAddKasirModal');
+        const cancelAddKasirBtn = document.getElementById('cancelAddKasirBtn');
+        const addKasirForm = document.getElementById('addKasirForm');
+
+        function openModal() {
+            if (!addKasirModal) return;
+            addKasirModal.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeModal() {
+            if (!addKasirModal) return;
+            addKasirModal.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+            if (addKasirForm) addKasirForm.reset();
+        }
+
+        openAddKasirBtn?.addEventListener('click', openModal);
+        closeAddKasirModal?.addEventListener('click', closeModal);
+        cancelAddKasirBtn?.addEventListener('click', closeModal);
+        addKasirBackdrop?.addEventListener('click', closeModal);
+
+        if (addKasirForm && apiRequest) {
+            addKasirForm.addEventListener('submit', function(event){
+                event.preventDefault();
+                const submitButton = addKasirForm.querySelector('button[type="submit"]');
+                const originalButtonText = submitButton.innerHTML;
+                submitButton.innerHTML = 'Menyimpan...';
+                submitButton.disabled = true;
+
+                const data = {
+                    nama_lengkap: document.getElementById('kasir_nama')?.value,
+                    email: document.getElementById('kasir_email')?.value,
+                    username: document.getElementById('kasir_username')?.value,
+                };
+
+                apiRequest("{{ route('admin.users.kasir.register') }}", 'POST', data)
+                    .then(response => {
+                        if (response.success) {
+                            closeModal();
+                            Swal.fire({ icon: 'success', title: 'Kasir Terdaftar!', text: response.message || 'Kasir baru berhasil didaftarkan.', timer: 1800, showConfirmButton: false });
+                            setTimeout(() => window.location.reload(), 2000);
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Gagal', text: response.message || 'Terjadi kesalahan.' });
+                        }
+                    })
+                    .catch(err => {
+                        if (err.status === 422 && err.errors) {
+                            displayValidationErrors(err.errors);
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Oops!', text: err.message || 'Terjadi kesalahan koneksi atau server.' });
+                        }
+                    })
+                    .finally(() => {
+                        submitButton.innerHTML = originalButtonText;
+                        submitButton.disabled = false;
+                    });
+            });
+        }
+
         function attachFilter(inputId, tableSelector){
             const input = document.getElementById(inputId);
             const table = document.querySelector(tableSelector);

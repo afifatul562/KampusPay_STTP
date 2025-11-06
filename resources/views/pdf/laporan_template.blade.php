@@ -52,47 +52,48 @@
             </tr>
         </table>
     </header>
-    <h1>LAPORAN {{ strtoupper($jenis) }}</h1>
+    @if($jenis === 'mahasiswa')
+        <h1>DATA MAHASISWA</h1>
+    @else
+        <h1>LAPORAN {{ strtoupper($jenis) }}</h1>
+    @endif
     <h2>Periode: {{ $periodeFormatted }}</h2>
 
     @if($jenis === 'mahasiswa')
-        {{-- Logika Laporan Mahasiswa (Tetap Sama) --}}
+        {{-- Logika Laporan Mahasiswa (Data Mahasiswa berdasarkan Angkatan) --}}
         @php $mahasiswaCount = 0; @endphp
-        @forelse($data as $semester => $mahasiswaGroup)
-            <h3 class="semester-header">Semester {{ $semester ?? 'Tidak Diketahui' }}</h3>
+        @if($data && count($data) > 0)
             <table>
                 <thead>
                     <tr>
                         <th style="width: 5%;">No</th>
-                        <th style="width: 15%;">NPM</th>
-                        <th style="width: 30%;">Nama Lengkap</th>
-                        <th style="width: 25%;">Program Studi</th>
+                        <th style="width: 12%;">NPM</th>
+                        <th style="width: 25%;">Nama Lengkap</th>
+                        <th style="width: 20%;">Email</th>
+                        <th style="width: 20%;">Program Studi</th>
                         <th style="width: 10%;" class="text-center">Angkatan</th>
-                        <th style="width: 15%;" class="text-center">Status</th>
+                        <th style="width: 8%;" class="text-center">Status</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($mahasiswaGroup as $index => $mhs)
+                    @foreach($data as $index => $mhs)
                         @php $mahasiswaCount++; @endphp
                         <tr>
                             <td>{{ $index + 1 }}</td>
                             <td>{{ $mhs->npm ?? '-' }}</td>
                             <td>{{ $mhs->user->nama_lengkap ?? '-' }}</td>
+                            <td>{{ $mhs->user->email ?? '-' }}</td>
                             <td>{{ $mhs->program_studi ?? '-' }}</td>
                             <td class="text-center">{{ $mhs->angkatan ?? '-' }}</td>
                             <td class="text-center">{{ $mhs->status ?? '-' }}</td>
                         </tr>
-                    @empty
-                        <tr><td colspan="6" class="text-center">Tidak ada data mahasiswa untuk semester ini.</td></tr>
-                    @endforelse
+                    @endforeach
                 </tbody>
             </table>
-        @empty
-            <p style="text-align: center; margin-top: 20px;">Tidak ada data mahasiswa ditemukan.</p>
-        @endforelse
-         @if($mahasiswaCount > 0)
             <p style="margin-top: 15px;"><strong>Total Mahasiswa: {{ $mahasiswaCount }}</strong></p>
-         @endif
+        @else
+            <p style="text-align: center; margin-top: 20px;">Tidak ada data mahasiswa ditemukan untuk angkatan {{ $periodeFormatted }}.</p>
+        @endif
 
     @elseif($jenis === 'pembayaran')
         {{-- ====================================================== --}}

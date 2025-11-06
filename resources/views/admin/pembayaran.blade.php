@@ -15,7 +15,7 @@
         ['label' => 'Dashboard', 'url' => route('admin.dashboard')],
         ['label' => 'Manajemen Pembayaran']
     ]" />
-    
+
     <x-page-header
         title="Manajemen Pembayaran"
         subtitle="Kelola pembayaran dan tagihan mahasiswa"
@@ -31,6 +31,18 @@
     {{-- Filter Dropdowns --}}
     <x-card title="Filter">
         <div class="flex flex-col sm:flex-row gap-4">
+            {{-- Filter Pencarian Nama Mahasiswa --}}
+            <div class="flex-1">
+                <label for="filterNamaMahasiswa" class="block text-sm font-medium text-gray-700 mb-1">Cari Nama Mahasiswa</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                    <input type="text" id="filterNamaMahasiswa" placeholder="Cari nama atau NPM..." class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                </div>
+            </div>
             {{-- Filter Status --}}
             <div class="flex-1">
                 <label for="filterStatus" class="block text-sm font-medium text-gray-700 mb-1">Status Pembayaran</label>
@@ -38,6 +50,10 @@
                     <option value="">Semua Status</option>
                     <option value="Lunas">Lunas</option>
                     <option value="Belum Dibayarkan">Belum Dibayarkan</option>
+                    <option value="Menunggu Pembayaran Tunai">Menunggu Pembayaran Tunai</option>
+                    <option value="Menunggu Verifikasi Transfer">Menunggu Verifikasi Transfer</option>
+                    <option value="Ditolak">Ditolak</option>
+                    <option value="Dibatalkan">Dibatalkan</option>
                 </select>
             </div>
             {{-- Filter Jenis Tagihan --}}
@@ -164,7 +180,8 @@
         let allTarifsData = []; // Pindah ke scope atas
         const filterStatusSelect = document.getElementById('filterStatus');
         const filterJenisSelect = document.getElementById('filterJenis');
-        let currentFilters = { status: '', jenis: '' };
+        const filterNamaMahasiswaInput = document.getElementById('filterNamaMahasiswa');
+        let currentFilters = { status: '', jenis: '', namaMahasiswa: '' };
 
         // ===========================================
         // !! Inisialisasi Cleave.js (Format Angka) !!
@@ -333,7 +350,7 @@
             }
             paymentTableBody.innerHTML = '';
             if (!dataToRender || dataToRender.length === 0) {
-                 const isFiltering = currentFilters.status || currentFilters.jenis;
+                 const isFiltering = currentFilters.status || currentFilters.jenis || currentFilters.namaMahasiswa;
                  renderEmptyState(paymentTableBody, {
                      colspan: 7,
                      title: isFiltering ? 'Tidak ada data' : 'Belum ada data tagihan',
@@ -433,14 +450,37 @@
          function applyFilters() {
              currentFilters.status = filterStatusSelect.value;
              currentFilters.jenis = filterJenisSelect.value;
+             currentFilters.namaMahasiswa = filterNamaMahasiswaInput.value.toLowerCase().trim();
              const filteredData = allTagihanData.filter(tagihan => {
                  let statusMatch = true;
                  if (currentFilters.status) {
-                     let statusAsli = tagihan.status === 'Belum Lunas' ? 'Belum Dibayarkan' : tagihan.status;
-                     statusMatch = statusAsli === currentFilters.status;
+                     // Handle status khusus "Dibatalkan" yang berasal dari pembayaran.status_dibatalkan
+                     if (currentFilters.status === 'Dibatalkan') {
+                         const pembayaran = tagihan.pembayaran;
+                         statusMatch = pembayaran && pembayaran.status_dibatalkan === true;
+                     } else {
+                         // Handle status normal dari tagihan.status
+                         // Penting: Jika pembayaran dibatalkan, status yang ditampilkan adalah "Dibatalkan",
+                         // jadi kita harus exclude tagihan yang dibatalkan ketika filter status bukan "Dibatalkan"
+                         const pembayaran = tagihan.pembayaran;
+                         const isDibatalkan = pembayaran && pembayaran.status_dibatalkan === true;
+
+                         if (isDibatalkan) {
+                             // Jika pembayaran dibatalkan, status yang ditampilkan adalah "Dibatalkan",
+                             // jadi tidak cocok dengan filter status lainnya
+                             statusMatch = false;
+                         } else {
+                             // Status normal dari tagihan.status
+                             let statusAsli = tagihan.status === 'Belum Lunas' ? 'Belum Dibayarkan' : tagihan.status;
+                             statusMatch = statusAsli === currentFilters.status;
+                         }
+                     }
                  }
                  const jenisMatch = !currentFilters.jenis || (tagihan.tarif && tagihan.tarif.nama_pembayaran === currentFilters.jenis);
-                 return statusMatch && jenisMatch;
+                 const namaMatch = !currentFilters.namaMahasiswa ||
+                     (tagihan.mahasiswa?.user?.nama_lengkap?.toLowerCase().includes(currentFilters.namaMahasiswa) ||
+                      tagihan.mahasiswa?.npm?.toLowerCase().includes(currentFilters.namaMahasiswa));
+                 return statusMatch && jenisMatch && namaMatch;
              });
              renderTable(filteredData);
          }
@@ -798,7 +838,7 @@
         if (!tagihanModal || !modalTitle || !tagihanForm || !tagihanIdInput) {
             console.error('Modal elements not found');
         }
-        if (!filterStatusSelect || !filterJenisSelect) {
+        if (!filterStatusSelect || !filterJenisSelect || !filterNamaMahasiswaInput) {
             console.error('Filter elements not found');
         }
 
@@ -931,6 +971,16 @@
          }
          if (filterJenisSelect) {
              filterJenisSelect.addEventListener('change', applyFilters);
+         }
+         if (filterNamaMahasiswaInput) {
+             // Gunakan debounce untuk performa yang lebih baik
+             let debounceTimer;
+             filterNamaMahasiswaInput.addEventListener('input', function() {
+                 clearTimeout(debounceTimer);
+                 debounceTimer = setTimeout(() => {
+                     applyFilters();
+                 }, 300);
+             });
          }
 
         // -------------------------------------

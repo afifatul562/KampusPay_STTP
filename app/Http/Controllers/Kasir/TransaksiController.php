@@ -50,6 +50,18 @@ class TransaksiController extends Controller
             $jenisTarif = collect(); // Berikan collection kosong jika gagal
         }
 
+        try {
+            $metodePembayaranList = Pembayaran::where('diverifikasi_oleh', $kasirId)
+                ->select('metode_pembayaran')
+                ->whereNotNull('metode_pembayaran')
+                ->distinct()
+                ->orderBy('metode_pembayaran')
+                ->pluck('metode_pembayaran');
+        } catch (\Exception $e) {
+            Log::error('Gagal mengambil metode pembayaran: ' . $e->getMessage());
+            $metodePembayaranList = collect();
+        }
+
 
         // 2. Mulai query pembayaran
         $query = Pembayaran::with('tagihan.mahasiswa.user', 'tagihan.tarif', 'konfirmasi')
@@ -71,6 +83,22 @@ class TransaksiController extends Controller
             $query->whereHas('tagihan.tarif', function ($q) use ($jenis) {
                 $q->where('nama_pembayaran', $jenis);
             });
+        }
+
+        // Filter nama mahasiswa
+        if ($request->filled('nama_mahasiswa')) {
+            $namaMahasiswa = $request->nama_mahasiswa;
+            Log::info('Menerapkan filter: nama_mahasiswa like %' . $namaMahasiswa . '%');
+            $query->whereHas('tagihan.mahasiswa.user', function ($q) use ($namaMahasiswa) {
+                $q->where('nama_lengkap', 'like', '%' . $namaMahasiswa . '%');
+            });
+        }
+
+        // Filter metode pembayaran
+        if ($request->filled('metode_pembayaran')) {
+            $metode = $request->metode_pembayaran;
+            Log::info('Menerapkan filter: metode_pembayaran = ' . $metode);
+            $query->whereRaw('LOWER(metode_pembayaran) = ?', [strtolower($metode)]);
         }
 
         // ============================================
@@ -117,6 +145,7 @@ class TransaksiController extends Controller
         return view('kasir.transaksi', [
             'transaksi' => $transaksi,
             'jenisTarif' => $jenisTarif,
+            'metodePembayaranList' => $metodePembayaranList,
         ]);
     }
 

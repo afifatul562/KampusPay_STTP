@@ -9,7 +9,7 @@
             ['label' => 'Dashboard', 'url' => route('kasir.dashboard')],
             ['label' => 'Proses Pembayaran Tunai']
         ]" />
-        
+
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
         <a href="{{ route('kasir.transaksi.index', ['filter' => 'hari_ini']) }}" aria-label="Lihat transaksi hari ini"
            class="group relative bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-md border border-gray-200 flex items-start gap-5 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 overflow-hidden">
@@ -72,6 +72,14 @@
                     Pilih tagihan terlebih dahulu
                 </div>
             </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                <h3 class="text-lg font-semibold mb-1 text-gray-800">4. Kwitansi Pembayaran</h3>
+                <p class="text-sm text-gray-500 mb-4">Cetak kwitansi setelah pembayaran tunai berhasil diproses.</p>
+                <div id="receipt-container" class="text-gray-400 text-center py-5 border-2 border-dashed rounded-lg">
+                    Belum ada pembayaran tunai yang diproses.
+                </div>
+            </div>
         </div>
     </div>
 @endsection
@@ -84,6 +92,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const mahasiswaInfoDiv = document.getElementById('mahasiswa-info');
     const tagihanListDiv = document.getElementById('tagihan-list');
     const paymentFormContainer = document.getElementById('payment-form-container');
+    const receiptContainer = document.getElementById('receipt-container');
+
+    const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
+    const receiptDefaultHtml = '<div class="text-gray-400 text-center py-5 border-2 border-dashed rounded-lg">Belum ada pembayaran tunai yang diproses.</div>';
+
+    function resetReceiptContainer() {
+        if (receiptContainer) {
+            receiptContainer.innerHTML = receiptDefaultHtml;
+        }
+    }
+
+    resetReceiptContainer();
 
     // ==========================================================
     // !! FUNGSI API REQUEST DENGAN SWEETALERT UNTUK ERROR SESI !!
@@ -161,12 +181,17 @@ document.addEventListener('DOMContentLoaded', function() {
          }
     }
 
-    async function searchMahasiswa() {
+    async function searchMahasiswa(options = {}) {
+        const { resetReceipt = true } = options;
         const npm = npmInput.value.trim();
         if (!npm) {
             // !! GANTI ALERT !!
             Swal.fire({ icon: 'warning', title: 'Input Kosong', text: 'Harap masukkan NPM mahasiswa.' });
             return;
+        }
+
+        if (resetReceipt) {
+            resetReceiptContainer();
         }
 
         const originalButtonHTML = searchBtn.innerHTML; // Simpan HTML asli (termasuk SVG)
@@ -266,7 +291,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const container = document.createElement('div');
         container.className = 'space-y-3';
-        const rupiahFormat = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
 
         tagihan.forEach(item => {
             const label = document.createElement('label');
@@ -293,7 +317,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const jumlahP = document.createElement('p');
             jumlahP.className = 'text-gray-600';
-            jumlahP.textContent = rupiahFormat.format(item.jumlah_tagihan);
+            jumlahP.textContent = currencyFormatter.format(item.jumlah_tagihan);
 
             // Tambahkan badge jika status "Menunggu Pembayaran Tunai"
             if (isWaitingCash) {
@@ -323,7 +347,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="space-y-4 text-left">
                     <div>
                         <p class="text-sm text-gray-600">Total Pembayaran</p>
-                        <p class="text-2xl font-bold text-blue-600">${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalAmount)}</p>
+                        <p class="text-2xl font-bold text-blue-600">${currencyFormatter.format(totalAmount)}</p>
                     </div>
                     <form id="process-payment-form">
                         <div>
@@ -363,9 +387,10 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             if (response.success) {
                 // !! GANTI ALERT !!
+                displayReceipt(response.data || null);
                 Swal.fire({ icon: 'success', title: 'Berhasil!', text: response.message || 'Pembayaran berhasil diproses.', timer: 1500, showConfirmButton: false });
                 updateDashboardStats(); // Update statistik
-                searchMahasiswa(); // Refresh data mahasiswa & tagihan
+                await searchMahasiswa({ resetReceipt: false }); // Refresh data tanpa menghapus kwitansi
             } else {
                 // !! GANTI ALERT !!
                  Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal memproses pembayaran: ' + (response.message || 'Error tidak diketahui.') });
@@ -383,9 +408,89 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function displayReceipt(data) {
+        if (!receiptContainer) {
+            return;
+        }
+
+        if (!data || !Array.isArray(data.pembayaran) || data.pembayaran.length === 0) {
+            resetReceiptContainer();
+            return;
+        }
+
+        const mahasiswa = data.mahasiswa || {};
+        const kasir = data.kasir || {};
+        const pembayaranList = data.pembayaran;
+        const totalBayar = data.total_bayar || pembayaranList.reduce((sum, item) => sum + (item.jumlah || 0), 0);
+        const tanggalBayar = data.tanggal_bayar || '-';
+
+        let itemsHtml = '';
+        pembayaranList.forEach((item, index) => {
+            const kode = item.kode_pembayaran || '-';
+            const namaTagihan = item.nama_tagihan || `Tagihan ${index + 1}`;
+            const jumlah = currencyFormatter.format(item.jumlah || 0);
+            const kwitansiUrl = item.kwitansi_url || '#';
+
+            itemsHtml += `
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border border-gray-200 rounded-lg p-3">
+                    <div>
+                        <p class="font-medium text-gray-800">${namaTagihan}</p>
+                        <p class="text-xs text-gray-500">Kode: ${kode}</p>
+                    </div>
+                    <div class="flex items-center gap-3 sm:gap-4">
+                        <span class="font-semibold text-gray-700">${jumlah}</span>
+                        <a href="${kwitansiUrl}" target="_blank" rel="noopener" class="inline-flex items-center px-3 py-1.5 rounded-lg bg-gradient-to-r from-primary-100 to-primary-200 text-primary-700 text-xs font-semibold hover:from-primary-200 hover:to-primary-300 shadow-sm hover:shadow-md transition-all duration-200">
+                            Cetak Kwitansi
+                        </a>
+                    </div>
+                </div>`;
+        });
+
+        const totalFormatted = currencyFormatter.format(totalBayar || 0);
+
+        const multiple = pembayaranList.length > 1;
+
+        receiptContainer.innerHTML = `
+            <div class="space-y-4 text-left">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Nama Mahasiswa</p>
+                        <p class="text-sm font-semibold text-gray-800">${mahasiswa.nama || '-'}</p>
+                        <p class="text-xs text-gray-500 mt-2">NPM: <span class="font-medium text-gray-700">${mahasiswa.npm || '-'}</span></p>
+                        <p class="text-xs text-gray-500">Program Studi: <span class="font-medium text-gray-700">${mahasiswa.prodi || '-'}</span></p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Kasir</p>
+                        <p class="text-sm font-semibold text-gray-800">${kasir.nama || '-'}</p>
+                        <p class="text-xs text-gray-500 mt-2">Tanggal Bayar</p>
+                        <p class="text-sm font-medium text-gray-700">${tanggalBayar}</p>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    ${itemsHtml}
+                </div>
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-gray-200 pt-4">
+                    <span class="text-sm font-semibold text-gray-700">Total Pembayaran Tunai</span>
+                    <span class="text-xl font-bold text-blue-600">${totalFormatted}</span>
+                </div>
+                ${multiple ? '<button id="printAllReceipts" class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-gradient-to-r from-primary-600 to-primary-700 text-white text-sm font-semibold hover:from-primary-700 hover:to-primary-800 shadow-md hover:shadow-lg transition-all duration-200">Cetak Semua Kwitansi</button>' : ''}
+            </div>`;
+
+        const printAllBtn = receiptContainer.querySelector('#printAllReceipts');
+        if (printAllBtn) {
+            printAllBtn.addEventListener('click', () => {
+                pembayaranList.forEach(item => {
+                    if (item.kwitansi_url) {
+                        window.open(item.kwitansi_url, '_blank', 'noopener');
+                    }
+                });
+            });
+        }
+    }
+
     // --- EVENT LISTENERS ---
     updateDashboardStats(); // Muat statistik awal
-    searchBtn.addEventListener('click', searchMahasiswa);
+    searchBtn.addEventListener('click', () => searchMahasiswa());
     npmInput.addEventListener('keypress', e => { if (e.key === 'Enter') searchMahasiswa(); });
     // Gunakan event delegation untuk checkbox tagihan
     tagihanListDiv.addEventListener('change', e => { if (e.target.matches('input[name="tagihan"]')) { updatePaymentForm(); } });

@@ -66,6 +66,20 @@ class TransaksiKasirExport implements FromQuery, WithHeadings, WithMapping, Shou
             });
         }
 
+        if (!empty($this->filters['nama_mahasiswa'])) {
+            $nama = $this->filters['nama_mahasiswa'];
+            Log::info('Export filter: nama_mahasiswa like %' . $nama . '%');
+            $query->whereHas('tagihan.mahasiswa.user', function ($q) use ($nama) {
+                $q->where('nama_lengkap', 'like', '%' . $nama . '%');
+            });
+        }
+
+        if (!empty($this->filters['metode_pembayaran'])) {
+            $metode = $this->filters['metode_pembayaran'];
+            Log::info('Export filter: metode_pembayaran = ' . $metode);
+            $query->whereRaw('LOWER(metode_pembayaran) = ?', [strtolower($metode)]);
+        }
+
         // Filter 'start_date'
         if (!empty($this->filters['start_date'])) {
             try {

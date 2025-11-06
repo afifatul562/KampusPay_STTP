@@ -117,17 +117,14 @@
             letter-spacing: .6px;
         }
 
-        .details-table,
-        .summary-table {
+        .details-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 6px;
+            margin: 0 auto 6px;
         }
 
         .details-table th,
-        .details-table td,
-        .summary-table th,
-        .summary-table td {
+        .details-table td {
             border: 1px solid #000;
             padding: 7px 9px;
             font-size: 12px;
@@ -140,39 +137,38 @@
             text-align: left;
         }
 
-        .summary-table th {
-            background: var(--soft);
-            text-align: left;
-        }
-
         .amount {
             font-weight: 700;
             text-align: right;
             font-size: 13px;
         }
 
-        /* ===== BADGE STATUS ===== */
-        .badge {
-            display: inline-block;
-            font-size: 10px;
-            padding: 2px 8px;
-            border-radius: 8px;
+        /* ===== WATERMARK ===== */
+        .watermark {
+            position: fixed;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-20deg);
+            font-size: 80px;
             font-weight: 700;
-            border: 1px solid #000;
+            color: rgba(22, 101, 52, 0.12);
+            text-transform: uppercase;
+            pointer-events: none;
+            z-index: 0;
+            white-space: nowrap;
         }
 
-        .badge-green { background: #DCFCE7; color: #166534; }
-        .badge-red { background: #FEE2E2; color: #991B1B; }
-
+        /* ===== BADGE STATUS ===== */
         /* ===== TANDA TANGAN ===== */
         .signature {
             margin-top: 28px;
+            width: 100%;
             display: flex;
-            justify-content: flex-end;
         }
 
         .signature .block {
-            width: 240px;
+            margin-left: auto;
+            max-width: 260px;
             text-align: center;
         }
 
@@ -193,6 +189,62 @@
     </style>
 </head>
 <body>
+    @php
+        if (!function_exists('penyebut_indonesia')) {
+            function penyebut_indonesia($number)
+            {
+                $number = abs($number);
+                $words = ["", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas"];
+                $temp = "";
+
+                if ($number < 12) {
+                    $temp = " " . $words[$number];
+                } elseif ($number < 20) {
+                    $temp = penyebut_indonesia($number - 10) . " Belas";
+                } elseif ($number < 100) {
+                    $temp = penyebut_indonesia($number / 10) . " Puluh" . penyebut_indonesia($number % 10);
+                } elseif ($number < 200) {
+                    $temp = " Seratus" . penyebut_indonesia($number - 100);
+                } elseif ($number < 1000) {
+                    $temp = penyebut_indonesia($number / 100) . " Ratus" . penyebut_indonesia($number % 100);
+                } elseif ($number < 2000) {
+                    $temp = " Seribu" . penyebut_indonesia($number - 1000);
+                } elseif ($number < 1000000) {
+                    $temp = penyebut_indonesia($number / 1000) . " Ribu" . penyebut_indonesia($number % 1000);
+                } elseif ($number < 1000000000) {
+                    $temp = penyebut_indonesia($number / 1000000) . " Juta" . penyebut_indonesia($number % 1000000);
+                } elseif ($number < 1000000000000) {
+                    $temp = penyebut_indonesia($number / 1000000000) . " Miliar" . penyebut_indonesia(fmod($number, 1000000000));
+                } elseif ($number < 1000000000000000) {
+                    $temp = penyebut_indonesia($number / 1000000000000) . " Triliun" . penyebut_indonesia(fmod($number, 1000000000000));
+                }
+
+                return $temp;
+            }
+
+            function terbilang_indonesia($number)
+            {
+                if ($number == 0) {
+                    return 'Nol';
+                }
+
+                $result = trim(penyebut_indonesia($number));
+                $result = preg_replace('/\s+/', ' ', $result);
+                return ucwords(strtolower($result));
+            }
+        }
+
+        $jumlahPembayaran = $pembayaran->tagihan->jumlah_tagihan ?? 0;
+        $terbilangPembayaran = terbilang_indonesia($jumlahPembayaran) . ' Rupiah';
+        $metodePembayaran = $pembayaran->metode_pembayaran ?? 'Tunai';
+        if (stripos($metodePembayaran, 'tunai') !== false) {
+            $metodeLabel = 'Tunai';
+        } elseif (stripos($metodePembayaran, 'transfer') !== false) {
+            $metodeLabel = 'Transfer';
+        } else {
+            $metodeLabel = ucwords(strtolower($metodePembayaran));
+        }
+    @endphp
     <!-- ===== KOP SURAT ===== -->
     <header>
         <table class="kop-surat">
@@ -212,29 +264,21 @@
         </table>
     </header>
 
+    <div class="watermark">LUNAS</div>
+
     <!-- ===== ISI KWITANSI ===== -->
     <div class="header-kwitansi">
         <h2>BUKTI PEMBAYARAN</h2>
         <table class="meta-table">
             <tr>
                 <td class="meta-left">No. Transaksi: <strong>{{ $pembayaran->pembayaran_id }}</strong></td>
-                <td class="meta-center">
-                    @php
-                        $status = 'Lunas';
-                        $badgeClass = 'badge-green';
-                        if ($pembayaran->status_dibatalkan ?? false) {
-                            $status = 'Dibatalkan';
-                            $badgeClass = 'badge-red';
-                        }
-                    @endphp
-                    <span class="badge {{ $badgeClass }}">{{ $status }}</span>
-                </td>
+                <td class="meta-center">Metode Pembayaran: <strong>{{ $metodeLabel }}</strong></td>
                 <td class="meta-right">Tanggal: <strong>{{ $pembayaran->created_at->format('d/m/Y') }}</strong></td>
             </tr>
         </table>
     </div>
 
-    <div class="content">
+    <div class="content" style="position: relative; z-index: 1;">
         <div class="section-title">Identitas Mahasiswa</div>
         <table class="details-table">
             <tr><th>Nama Mahasiswa</th><td>{{ $pembayaran->tagihan->mahasiswa->user->nama_lengkap }}</td></tr>
@@ -244,16 +288,24 @@
 
         <div class="section-title">Rincian Pembayaran</div>
         <table class="details-table">
-            <tr><th>Jenis Pembayaran</th><td>{{ $pembayaran->tagihan->tarif->nama_pembayaran }}</td></tr>
-            <tr><th>Kode Pembayaran</th><td>{{ $pembayaran->tagihan->kode_pembayaran }}</td></tr>
-            <tr><th>Jumlah Pembayaran</th><td class="amount">Rp {{ number_format($pembayaran->tagihan->jumlah_tagihan, 0, ',', '.') }}</td></tr>
-            <tr><th>Metode Pembayaran</th><td>{{ $pembayaran->metode_pembayaran }}</td></tr>
+            <tr>
+                <th>Jenis Pembayaran</th>
+                <td>{{ $pembayaran->tagihan->tarif->nama_pembayaran }}</td>
+            </tr>
+            <tr>
+                <th>Kode Pembayaran</th>
+                <td>{{ $pembayaran->tagihan->kode_pembayaran }}</td>
+            </tr>
+            <tr>
+                <th>Jumlah Pembayaran</th>
+                <td class="amount">Rp {{ number_format($pembayaran->tagihan->jumlah_tagihan, 0, ',', '.') }}</td>
+            </tr>
+            <tr>
+                <th>Terbilang Pembayaran</th>
+                <td style="font-style: italic;">{{ $terbilangPembayaran }}</td>
+            </tr>
         </table>
 
-        <div class="section-title">Ringkasan</div>
-        <table class="summary-table" style="width:60%;">
-            <tr><th>Total Pembayaran</th><td class="amount">Rp {{ number_format($pembayaran->tagihan->jumlah_tagihan, 0, ',', '.') }}</td></tr>
-        </table>
     </div>
 
     <div class="signature">

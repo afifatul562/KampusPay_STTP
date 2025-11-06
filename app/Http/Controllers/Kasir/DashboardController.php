@@ -118,14 +118,40 @@ class DashboardController extends Controller
             'metode_pembayaran' => 'required|string|in:Tunai,Transfer Bank Nagari,Transfer', // Ditambah 'Transfer'
         ]);
 
+        $tagihanCollection = Tagihan::with(['mahasiswa.user', 'tarif'])
+            ->whereIn('tagihan_id', $validated['tagihan_ids'])
+            ->get();
+
+        if ($tagihanCollection->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tagihan tidak ditemukan.'
+            ], 404);
+        }
+
+        // Pastikan semua tagihan milik mahasiswa yang sama
+        if ($tagihanCollection->pluck('mahasiswa_id')->unique()->count() > 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pilih tagihan dari mahasiswa yang sama untuk satu transaksi tunai.'
+            ], 422);
+        }
+
+        $mahasiswa = optional($tagihanCollection->first()->mahasiswa);
+        $kasir = Auth::user();
+        $kasirId = $kasir->id;
+        $tanggalBayar = now();
+        $receiptItems = [];
+
         try {
-            DB::transaction(function () use ($validated) {
+            DB::transaction(function () use ($validated, $tagihanCollection, &$receiptItems, $kasirId, $tanggalBayar) {
                 foreach ($validated['tagihan_ids'] as $tagihanId) {
-                    $tagihan = Tagihan::find($tagihanId);
+                    $tagihan = $tagihanCollection->firstWhere('tagihan_id', $tagihanId);
+                    if (!$tagihan) {
+                        throw new \RuntimeException('Tagihan tidak ditemukan saat proses pembayaran.');
+                    }
 
                     // --- DITAMBAHKAN: LOGIKA "OTOMATIS HILANG" (REVISI KASUS DINDA) ---
-                    // Sebelum bayar tunai, kita cari dan batalkan semua
-                    // konfirmasi transfer yang 'Menunggu Verifikasi' untuk tagihan ini.
                     KonfirmasiPembayaran::where('tagihan_id', $tagihan->tagihan_id)
                         ->where('status_verifikasi', 'Menunggu Verifikasi')
                         ->update([
@@ -134,18 +160,26 @@ class DashboardController extends Controller
                     // --- SELESAI LOGIKA "OTOMATIS HILANG" ---
 
                     // 1. Buat record pembayaran tunai baru
-                    Pembayaran::create([
+                    $pembayaran = Pembayaran::create([
                         'tagihan_id'        => $tagihan->tagihan_id,
-                        'diverifikasi_oleh' => Auth::id(),
-                        'tanggal_bayar'     => now(),
-                        'metode_pembayaran' => $validated['metode_pembayaran'], // Ini akan 'Tunai'
-                        'status_pembayaran' => 'LUNAS', // Langsung Lunas
+                        'diverifikasi_oleh' => $kasirId,
+                        'tanggal_bayar'     => $tanggalBayar,
+                        'metode_pembayaran' => $validated['metode_pembayaran'],
+                        'status_pembayaran' => 'LUNAS',
                         'jumlah_bayar'      => $tagihan->jumlah_tagihan,
                     ]);
 
                     // 2. Update status tagihan utamanya
                     $tagihan->status = 'Lunas';
                     $tagihan->save();
+
+                    $receiptItems[] = [
+                        'pembayaran_id'   => $pembayaran->pembayaran_id,
+                        'kode_pembayaran' => $tagihan->kode_pembayaran ?? $tagihan->kode ?? ('TAG-' . $tagihan->tagihan_id),
+                        'nama_tagihan'    => $tagihan->tarif->nama_pembayaran ?? 'Pembayaran',
+                        'jumlah'          => $tagihan->jumlah_tagihan,
+                        'kwitansi_url'    => route('kasir.kwitansi.download', ['pembayaran' => $pembayaran->pembayaran_id]),
+                    ];
                 }
             });
         } catch (\Exception $e) {
@@ -156,9 +190,24 @@ class DashboardController extends Controller
             ], 500);
         }
 
+        $totalBayar = $tagihanCollection->sum('jumlah_tagihan');
+
         return response()->json([
             'success' => true,
-            'message' => 'Pembayaran berhasil diproses.'
+            'message' => 'Pembayaran berhasil diproses.',
+            'data' => [
+                'mahasiswa' => [
+                    'nama' => $mahasiswa->user->nama_lengkap ?? null,
+                    'npm'  => $mahasiswa->npm ?? null,
+                    'prodi'=> $mahasiswa->program_studi ?? null,
+                ],
+                'kasir' => [
+                    'nama' => $kasir->nama_lengkap ?? $kasir->username,
+                ],
+                'tanggal_bayar' => $tanggalBayar->isoFormat('D MMMM YYYY HH:mm'),
+                'total_bayar'   => $totalBayar,
+                'pembayaran'    => $receiptItems,
+            ]
         ]);
     }
 

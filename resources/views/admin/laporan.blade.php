@@ -24,7 +24,7 @@
                 <label for="jenis_laporan" class="block text-sm font-medium text-gray-700">Jenis Laporan</label>
                 <select id="jenis_laporan" name="jenis_laporan" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
                     <option value="" disabled selected>Pilih Jenis Laporan</option>
-                    <option value="mahasiswa">Laporan Mahasiswa</option>
+                    <option value="mahasiswa">Data Mahasiswa</option>
                     <option value="pembayaran">Laporan Pembayaran</option>
                 </select>
             </div>
@@ -229,12 +229,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const headerRow = document.createElement('tr');
             if (type === 'mahasiswa') {
-                headers = ['NPM', 'Nama Lengkap', 'Program Studi', 'Angkatan', 'Semester', 'Status'];
+                headers = ['NPM', 'Nama Lengkap', 'Email', 'Program Studi', 'Angkatan', 'Status'];
                 headerRow.appendChild(createHeaderCell('NPM'));
                 headerRow.appendChild(createHeaderCell('Nama Lengkap'));
+                headerRow.appendChild(createHeaderCell('Email'));
                 headerRow.appendChild(createHeaderCell('Program Studi'));
                 headerRow.appendChild(createHeaderCell('Angkatan'));
-                headerRow.appendChild(createHeaderCell('Semester'));
                 headerRow.appendChild(createHeaderCell('Status'));
             } else if (type === 'pembayaran') {
                 headers = ['Kode Pembayaran', 'Mahasiswa', 'Jenis Tagihan', 'Jumlah', 'Status', 'Tgl Bayar'];
@@ -249,8 +249,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const rupiahFormat = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
 
-            if (type === 'mahasiswa' && typeof data === 'object' && !Array.isArray(data)) {
-                // Data Mahasiswa (Grouped by Semester)
+            if (type === 'mahasiswa' && Array.isArray(data)) {
+                // Data Mahasiswa (Flat Array - tidak perlu grouping berdasarkan semester)
+                data.forEach((item, index) => {
+                    const dataRow = document.createElement('tr');
+                    dataRow.appendChild(createDataCell(item.npm));
+                    dataRow.appendChild(createDataCell(item.user?.nama_lengkap));
+                    dataRow.appendChild(createDataCell(item.user?.email));
+                    dataRow.appendChild(createDataCell(item.program_studi));
+                    dataRow.appendChild(createDataCell(item.angkatan));
+                    dataRow.appendChild(createStatusCell(item.status || '-', item.status === 'Aktif'));
+                    tbody.appendChild(dataRow);
+                });
+            } else if (type === 'mahasiswa' && typeof data === 'object' && !Array.isArray(data)) {
+                // Fallback untuk format lama (jika masih ada data grouped by semester)
                 Object.entries(data).sort(([semA], [semB]) => semA - semB).forEach(([semester, mahasiswaGroup]) => {
                     const semesterRow = document.createElement('tr');
                     const semesterCell = document.createElement('td');
@@ -264,9 +276,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         const dataRow = document.createElement('tr');
                         dataRow.appendChild(createDataCell(item.npm));
                         dataRow.appendChild(createDataCell(item.user?.nama_lengkap));
+                        dataRow.appendChild(createDataCell(item.user?.email));
                         dataRow.appendChild(createDataCell(item.program_studi));
                         dataRow.appendChild(createDataCell(item.angkatan));
-                        dataRow.appendChild(createDataCell(item.semester_aktif, false, ['text-center']));
                         dataRow.appendChild(createStatusCell(item.status || '-', item.status === 'Aktif'));
                         tbody.appendChild(dataRow);
                     });

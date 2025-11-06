@@ -47,14 +47,14 @@ class ReportController extends Controller
     {
         $data = null;
         if ($jenis === 'mahasiswa') {
-            // Laporan mahasiswa biasanya tidak difilter per bulan, ambil semua
+            // Filter mahasiswa berdasarkan angkatan (tahun yang dipilih)
             $mahasiswaList = MahasiswaDetail::with('user')
-                            ->orderBy('semester_aktif', 'asc')
+                            ->where('angkatan', $tahun)
                             ->orderBy('npm', 'asc')
                             ->get();
-            // Kelompokkan berdasarkan semester_aktif
-            $data = $mahasiswaList->groupBy('semester_aktif');
-            Log::info('Mengambil data laporan mahasiswa: ' . $mahasiswaList->count() . ' record.');
+            // Kembalikan sebagai array biasa (tidak perlu grouping berdasarkan semester)
+            $data = $mahasiswaList;
+            Log::info('Mengambil data laporan mahasiswa angkatan ' . $tahun . ': ' . $mahasiswaList->count() . ' record.');
 
         } elseif ($jenis === 'pembayaran') {
             $data = Tagihan::with(['mahasiswa.user', 'tarif', 'pembayaran.userKasir' => fn($q)=>$q->select('id','nama_lengkap')]) // Eager load kasir

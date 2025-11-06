@@ -21,7 +21,7 @@
         ['label' => 'Dashboard', 'url' => route('admin.dashboard')],
         ['label' => 'Manajemen Mahasiswa']
     ]" />
-    
+
     <x-page-header
         title="Manajemen Mahasiswa"
         subtitle="Kelola data mahasiswa"
@@ -58,6 +58,8 @@
                 selectedMhs: {},
                 selectedAngkatan: '',
                 angkatanList: [],
+                selectedProgramStudi: '',
+                programStudiList: [],
 
                 init() {
                     this.loadMahasiswa();
@@ -112,13 +114,18 @@
                             this.allMahasiswa = data.data || []; // Handle jika data kosong
                             this.filteredMahasiswa = this.allMahasiswa;
                             const angkatanSet = new Set();
+                            const programStudiSet = new Set();
                             this.allMahasiswa.forEach(mhs => {
                                 if (mhs.npm && mhs.npm.length >= 2) {
                                     const angkatan = mhs.npm.substring(0, 2);
                                     if (!isNaN(angkatan)) { angkatanSet.add(angkatan); }
                                 }
+                                if (mhs.program_studi) {
+                                    programStudiSet.add(mhs.program_studi);
+                                }
                             });
                             this.angkatanList = Array.from(angkatanSet).sort().reverse();
+                            this.programStudiList = Array.from(programStudiSet).sort();
                         })
                         .catch(error => {
                             console.error('Error fetching mahasiswa list:', error);
@@ -135,12 +142,14 @@
                 filterMahasiswa() {
                     const query = this.searchQuery.toLowerCase();
                     const angkatan = this.selectedAngkatan;
+                    const programStudi = this.selectedProgramStudi;
                     this.filteredMahasiswa = this.allMahasiswa.filter(mhs => {
                         const nama = mhs.user?.nama_lengkap?.toLowerCase() || '';
                         const npm = mhs.npm?.toLowerCase() || '';
                         const searchMatch = nama.includes(query) || npm.includes(query);
                         const angkatanMatch = (angkatan === '') || (mhs.npm && mhs.npm.startsWith(angkatan));
-                        return searchMatch && angkatanMatch;
+                        const programStudiMatch = (programStudi === '') || (mhs.program_studi === programStudi);
+                        return searchMatch && angkatanMatch && programStudiMatch;
                     });
                 },
 
@@ -231,6 +240,17 @@
                         <svg class="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
                     </div>
                 </div>
+                <div class="relative w-full sm:w-auto">
+                    <select x-model="selectedProgramStudi" @change="filterMahasiswa" class="block w-full sm:w-56 appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:text-sm">
+                        <option value="">Semua Program Studi</option>
+                        <template x-for="prodi in programStudiList" :key="prodi">
+                            <option :value="prodi" x-text="prodi"></option>
+                        </template>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                        <svg class="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                    </div>
+                </div>
             </div>
         </x-card>
 
@@ -255,8 +275,8 @@
                             <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                             </svg>
-                            <h3 class="mt-2 text-sm font-medium text-gray-900" x-text="(searchQuery || selectedAngkatan) ? 'Tidak ada data' : 'Belum ada data mahasiswa'"></h3>
-                            <p class="mt-1 text-sm text-gray-500" x-text="(searchQuery || selectedAngkatan) ? 'Tidak ada mahasiswa yang cocok dengan filter yang dipilih.' : 'Silakan import atau tambahkan mahasiswa baru untuk memulai.'"></p>
+                            <h3 class="mt-2 text-sm font-medium text-gray-900" x-text="(searchQuery || selectedAngkatan || selectedProgramStudi) ? 'Tidak ada data' : 'Belum ada data mahasiswa'"></h3>
+                            <p class="mt-1 text-sm text-gray-500" x-text="(searchQuery || selectedAngkatan || selectedProgramStudi) ? 'Tidak ada mahasiswa yang cocok dengan filter yang dipilih.' : 'Silakan import atau tambahkan mahasiswa baru untuk memulai.'"></p>
                         </div>
                     </td>
                 </tr>

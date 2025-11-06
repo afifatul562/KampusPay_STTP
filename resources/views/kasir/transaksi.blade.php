@@ -15,7 +15,7 @@
         ['label' => 'Dashboard', 'url' => route('kasir.dashboard')],
         ['label' => 'Riwayat Transaksi']
     ]" />
-    
+
     {{-- Header Section menggunakan komponen reusable --}}
     <x-page-header
         title="Riwayat Transaksi"
@@ -36,7 +36,15 @@
     {{-- Filter Section menggunakan komponen Card --}}
     <x-card title="Filter Transaksi">
         <form action="{{ route('kasir.transaksi.index') }}" method="GET" aria-label="Form filter transaksi" id="kasirFilterForm">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+
+                {{-- Filter Nama Mahasiswa --}}
+                <div>
+                    <label for="nama_mahasiswa" class="text-sm font-medium text-gray-700">Nama Mahasiswa</label>
+                    <input type="text" name="nama_mahasiswa" id="nama_mahasiswa" value="{{ request('nama_mahasiswa') }}" placeholder="Cari nama mahasiswa"
+                           class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                </div>
+
                 {{-- Filter Rentang Tanggal --}}
                 <div>
                     <label for="start_date_display" class="text-sm font-medium text-gray-700">Dari Tanggal</label>
@@ -65,6 +73,19 @@
                     </select>
                 </div>
 
+                {{-- Filter Metode Pembayaran --}}
+                <div>
+                    <label for="metode_pembayaran" class="text-sm font-medium text-gray-700">Metode Pembayaran</label>
+                    <select name="metode_pembayaran" id="metode_pembayaran"
+                            class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                        <option value="">Semua Metode</option>
+                        @foreach ($metodePembayaranList as $metode)
+                            @php $selected = strtolower(request('metode_pembayaran')) === strtolower($metode); @endphp
+                            <option value="{{ $metode }}" {{ $selected ? 'selected' : '' }}>{{ ucfirst($metode) }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
                 {{-- Tombol Filter menggunakan komponen reusable --}}
                 <div class="flex items-end gap-2">
                     <x-gradient-button type="submit" variant="primary" size="md" class="w-full">
@@ -89,23 +110,24 @@
                         {{ \Carbon\Carbon::parse($item->tanggal_bayar)->isoFormat('D MMM YYYY, HH:mm') }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="font-medium text-gray-900">{{ $item->tagihan->mahasiswa->user->nama_lengkap ?? 'N/A' }}</div>
-                        <div class="text-gray-500">{{ $item->tagihan->mahasiswa->npm ?? 'N/A' }}</div>
+                        <div class="font-medium text-gray-900">{{ data_get($item, 'tagihan.mahasiswa.user.nama_lengkap', 'N/A') }}</div>
+                        <div class="text-gray-500">{{ data_get($item, 'tagihan.mahasiswa.npm', 'N/A') }}</div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ $item->tagihan->tarif->nama_pembayaran ?? 'N/A' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ data_get($item, 'tagihan.tarif.nama_pembayaran', 'N/A') }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-right font-medium text-gray-800">
-                        Rp {{ number_format($item->tagihan->jumlah_tagihan ?? 0, 0, ',', '.') }}
+                        Rp {{ number_format(data_get($item, 'tagihan.jumlah_tagihan', 0), 0, ',', '.') }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-center">
                         @php
                             $isCancelled = (bool) ($item->status_dibatalkan ?? false);
+                            $metodeLower = \Illuminate\Support\Str::lower($item->metode_pembayaran ?? '');
                         @endphp
                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $isCancelled ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800' }}">
                             {{ $isCancelled ? 'Dibatalkan' : ($item->metode_pembayaran ?? '-') }}
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-center">
-                        @if (strtolower($item->metode_pembayaran) === 'transfer' && $item->konfirmasi && $item->konfirmasi->file_bukti_pembayaran)
+                        @if ($metodeLower === 'transfer' && $item->konfirmasi && $item->konfirmasi->file_bukti_pembayaran)
                             <a href="{{ asset('storage/' . $item->konfirmasi->file_bukti_pembayaran) }}" target="_blank" class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200">Lihat Bukti</a>
                         @else
                             <span class="text-gray-400 text-xs">-</span>
@@ -116,7 +138,7 @@
                             @if (!$item->status_dibatalkan && isset($item->pembayaran_id))
                                 <a href="{{ route('kasir.kwitansi.download', ['pembayaran' => $item->pembayaran_id]) }}" class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-primary-100 to-primary-200 text-primary-700 hover:from-primary-200 hover:to-primary-300 shadow-sm hover:shadow-md transition-all duration-200">Kwitansi</a>
                             @endif
-                            @if (!$item->status_dibatalkan && strtolower($item->metode_pembayaran) === 'transfer')
+                            @if (!$item->status_dibatalkan && $metodeLower === 'transfer')
                                 <button type="button" data-cancel-url="{{ route('kasir.transaksi.cancel', $item->pembayaran_id) }}" class="btn-cancel inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-danger-100 to-danger-200 text-danger-700 hover:from-danger-200 hover:to-danger-300 shadow-sm hover:shadow-md transition-all duration-200">Batalkan</button>
                             @endif
                         </div>

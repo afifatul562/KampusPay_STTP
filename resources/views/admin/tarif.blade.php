@@ -255,8 +255,24 @@ document.addEventListener('DOMContentLoaded', function() {
             currentFilters.nama = filterNamaSelect.value; currentFilters.prodi = filterProdiSelect.value; currentFilters.angkatan = filterAngkatanSelect.value;
             const filteredData = allTarifs.filter(tarif => {
                 const namaMatch = !currentFilters.nama || tarif.nama_pembayaran === currentFilters.nama;
-                const prodiMatch = currentFilters.prodi === "" || tarif.program_studi === currentFilters.prodi;
-                const angkatanMatch = currentFilters.angkatan === "" || tarif.angkatan === currentFilters.angkatan;
+                // Filter prodi:
+                // - Jika filter kosong → tampilkan semua
+                // - Jika filter dipilih → tampilkan tarif yang program_studi cocok ATAU tarif yang berlaku untuk semua prodi (program_studi null/kosong)
+                let prodiMatch = true;
+                if (currentFilters.prodi !== "") {
+                    // Filter prodi dipilih, tampilkan yang cocok atau yang berlaku untuk semua prodi
+                    const isBerlakuSemuaProdi = !tarif.program_studi || tarif.program_studi === null || tarif.program_studi === "";
+                    prodiMatch = tarif.program_studi === currentFilters.prodi || isBerlakuSemuaProdi;
+                }
+                // Filter angkatan:
+                // - Jika filter kosong → tampilkan semua
+                // - Jika filter dipilih → tampilkan tarif yang angkatan cocok ATAU tarif yang berlaku untuk semua angkatan (angkatan null/kosong)
+                let angkatanMatch = true;
+                if (currentFilters.angkatan !== "") {
+                    // Filter angkatan dipilih, tampilkan yang cocok atau yang berlaku untuk semua angkatan
+                    const isBerlakuSemuaAngkatan = !tarif.angkatan || tarif.angkatan === null || tarif.angkatan === "";
+                    angkatanMatch = tarif.angkatan === currentFilters.angkatan || isBerlakuSemuaAngkatan;
+                }
                 return namaMatch && prodiMatch && angkatanMatch;
             });
             renderTable(filteredData);

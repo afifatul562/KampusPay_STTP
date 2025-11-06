@@ -13,7 +13,7 @@
                 {{-- Pengaturan Dasar Aplikasi --}}
                 <div>
                     <label for="app_name" class="block text-sm font-medium text-gray-700">Nama Aplikasi</label>
-                    <input type="text" id="app_name" name="app_name" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <input type="text" id="app_name" name="app_name" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-gray-100 cursor-not-allowed" readonly disabled aria-readonly="true">
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -60,29 +60,6 @@
                     <div class="flex justify-between"><span class="text-gray-600">Database Driver:</span><strong id="database-driver" class="font-mono text-gray-800 bg-gray-200 px-2 py-0.5 rounded">...</strong></div>
                     <div class="flex justify-between"><span class="text-gray-600">Waktu Server:</span><strong id="server-time" class="font-mono text-gray-800 bg-gray-200 px-2 py-0.5 rounded">...</strong></div>
                 </div>
-            </div>
-
-            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-                <h3 class="text-xl font-semibold mb-4 text-gray-800">👔 Registrasi Kasir Baru</h3>
-                <form id="kasirForm" class="space-y-4">
-                    <div>
-                        <label for="kasir_nama" class="block text-sm font-medium text-gray-700">Nama Lengkap</label>
-                        <input type="text" id="kasir_nama" name="nama_lengkap" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label for="kasir_email" class="block text-sm font-medium text-gray-700">Email</label>
-                        <input type="email" id="kasir_email" name="email" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label for="kasir_username" class="block text-sm font-medium text-gray-700">Username</label>
-                        <input type="text" id="kasir_username" name="username" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                    </div>
-                    <div class="pt-2">
-                        <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-success-600 to-success-700 hover:from-success-700 hover:to-success-800 shadow-md hover:shadow-lg transition-all duration-200">
-                            Daftarkan Kasir
-                        </button>
-                    </div>
-                </form>
             </div>
         </div>
     </div>
@@ -158,11 +135,7 @@ document.addEventListener('DOMContentLoaded', function() {
             apiRequest(url, 'POST', data)
                 .then(response => {
                     Swal.fire({ icon: 'success', title: 'Berhasil!', text: response.message || 'Pengaturan berhasil disimpan.', timer: 1500, showConfirmButton: false });
-                    // Update nama aplikasi di sidebar secara live
-                    try {
-                        const newName = document.getElementById('app_name').value || 'Aplikasi';
-                        document.querySelectorAll('[data-app-name]')?.forEach(el => { el.textContent = newName; });
-                    } catch (e) { /* ignore */ }
+                    // Nama aplikasi tidak perlu diupdate karena field sudah disabled
                 })
                 .catch(err => {
                     if (err.status === 422 && err.errors) {
@@ -175,41 +148,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     submitButton.innerHTML = originalButtonText; submitButton.disabled = false;
                 });
         });
-
-        // --- LOGIKA UNTUK REGISTRASI KASIR ---
-        const kasirForm = document.getElementById('kasirForm');
-        if(kasirForm) {
-            kasirForm.addEventListener('submit', function(event) {
-                event.preventDefault();
-                const url = "{{ route('admin.users.kasir.register') }}";
-                // Kirim sebagai JSON, bukan FormData, karena controller tidak menangani file
-                const data = {
-                    nama_lengkap: document.getElementById('kasir_nama').value,
-                    email: document.getElementById('kasir_email').value,
-                    username: document.getElementById('kasir_username').value,
-                };
-
-                const button = this.querySelector('button[type="submit"]'); const originalButtonText = "Daftarkan Kasir"; button.innerHTML = `Mendaftarkan...`; button.disabled = true;
-
-                apiRequest(url, 'POST', data).then(response => { // Kirim 'data' (JSON)
-                    if (response.success) {
-                        Swal.fire({ icon: 'success', title: 'Kasir Terdaftar!', text: response.message || 'Kasir baru berhasil didaftarkan.', timer: 2000, showConfirmButton: false });
-                        this.reset(); // Reset form
-                    } else {
-                        // Jika success false tapi bukan 422 (jarang terjadi jika backend benar)
-                        Swal.fire({ icon: 'error', title: 'Gagal Mendaftarkan', text: response.message || 'Terjadi kesalahan.' });
-                    }
-                }).catch(err => {
-                     if (err.status === 422 && err.errors) {
-                         displayValidationErrors(err.errors); // Panggil helper
-                    } else {
-                         Swal.fire({ icon: 'error', title: 'Oops!', text: err.message || 'Terjadi kesalahan koneksi atau server.' });
-                    }
-                }).finally(() => {
-                    button.innerHTML = originalButtonText; button.disabled = false;
-                });
-            });
-        }
 
         // --- PANGGIL FUNGSI SAAT HALAMAN DIMUAT ---
         loadSystemInfo();
