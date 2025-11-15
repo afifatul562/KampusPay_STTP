@@ -94,11 +94,23 @@ class MahasiswaController extends Controller
     {
         Log::info('Memulai proses impor CSV mahasiswa.');
 
+        // Validasi file
         $request->validate([
-            'file_csv' => 'required|mimes:csv,txt'
+            'file_csv' => 'required|file|max:10240' // max 10MB
+        ], [
+            'file_csv.required' => 'File CSV harus dipilih.',
+            'file_csv.file' => 'File yang diunggah tidak valid.',
+            'file_csv.max' => 'Ukuran file maksimal 10MB.'
         ]);
 
         $file = $request->file('file_csv');
+
+        // Validasi ekstensi file secara manual (lebih fleksibel)
+        $extension = strtolower($file->getClientOriginalExtension());
+        if (!in_array($extension, ['csv', 'txt'])) {
+            Log::error('Format file tidak valid: ' . $extension);
+            return redirect()->route('admin.mahasiswa')->with('error', 'File harus berformat CSV (.csv) atau TXT (.txt).');
+        }
         $path = $file->getRealPath();
         Log::info('File CSV diterima: ' . $file->getClientOriginalName() . ' di path: ' . $path);
 
@@ -132,9 +144,20 @@ class MahasiswaController extends Controller
         try {
             // 1. Ambil semua data yang ada ke memori SEBELUM loop
             // Kita pakai array_flip untuk pencarian O(1) yang super cepat
+            // Pastikan mengambil semua data tanpa filter apapun
             $existingEmails = array_flip(User::pluck('email')->toArray());
             $existingUsernames = array_flip(User::pluck('username')->toArray());
             $existingNpms = array_flip(MahasiswaDetail::pluck('npm')->toArray());
+
+            // Log untuk debug - tampilkan beberapa contoh NPM yang ada
+            Log::info('Data existing yang diambil untuk validasi:');
+            Log::info('Total emails: ' . count($existingEmails));
+            Log::info('Total usernames: ' . count($existingUsernames));
+            Log::info('Total NPMs: ' . count($existingNpms));
+
+            // Log beberapa contoh NPM untuk verifikasi
+            $sampleNpms = array_slice(array_keys($existingNpms), 0, 5);
+            Log::info('Contoh NPM yang ada di database: ' . implode(', ', $sampleNpms));
         } catch (\Exception $e) {
             Log::error('Gagal mengambil data awal untuk validasi impor: ' . $e->getMessage());
             fclose($handle);
@@ -182,14 +205,27 @@ class MahasiswaController extends Controller
                     // ==================================================
                     // !! PERBAIKAN: Cek duplikat di memori (bukan DB) !!
                     // ==================================================
+                    // Cek duplikat di database yang sudah ada (sebelum import)
                     if (isset($existingEmails[$email])) {
-                        throw new \Exception("Email '{$email}' sudah terdaftar.");
+                        // Cek detail di database untuk informasi lebih lengkap
+                        $existingUser = User::where('email', $email)->first();
+                        $detailInfo = $existingUser ? " (User ID: {$existingUser->id}, Nama: {$existingUser->nama_lengkap})" : "";
+                        Log::warning("Baris {$lineNumber}: Email '{$email}' sudah ada di database{$detailInfo}");
+                        throw new \Exception("Email '{$email}' sudah terdaftar di database{$detailInfo}.");
                     }
                     if (isset($existingUsernames[$npm])) {
-                        throw new \Exception("NPM '{$npm}' sudah terdaftar sebagai username.");
+                        // Cek detail di database untuk informasi lebih lengkap
+                        $existingUser = User::where('username', $npm)->first();
+                        $detailInfo = $existingUser ? " (User ID: {$existingUser->id}, Nama: {$existingUser->nama_lengkap})" : "";
+                        Log::warning("Baris {$lineNumber}: NPM '{$npm}' sudah ada sebagai username di database{$detailInfo}");
+                        throw new \Exception("NPM '{$npm}' sudah terdaftar sebagai username di database{$detailInfo}.");
                     }
                     if (isset($existingNpms[$npm])) {
-                        throw new \Exception("NPM '{$npm}' sudah terdaftar di detail mahasiswa.");
+                        // Cek detail di database untuk informasi lebih lengkap
+                        $existingMhs = MahasiswaDetail::where('npm', $npm)->with('user')->first();
+                        $detailInfo = $existingMhs && $existingMhs->user ? " (Mahasiswa ID: {$existingMhs->mahasiswa_id}, Nama: {$existingMhs->user->nama_lengkap})" : "";
+                        Log::warning("Baris {$lineNumber}: NPM '{$npm}' sudah ada di detail mahasiswa{$detailInfo}");
+                        throw new \Exception("NPM '{$npm}' sudah terdaftar di detail mahasiswa{$detailInfo}.");
                     }
 
                     // --- Simpan ke Database ---
@@ -244,12 +280,15 @@ class MahasiswaController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Impor CSV Gagal Total: ' . $e->getMessage()); // Log Error Global
+            Log::info('Jumlah error detail yang dikumpulkan: ' . count($errors ?? [])); // Debug: cek jumlah error
 
             // Siapkan pesan error untuk ditampilkan
             $errorMessage = 'Gagal melakukan impor: ' . $e->getMessage();
 
             // Siapkan session khusus untuk detail error per baris
-            if (!empty($errors)) {
+            // Pastikan $errors didefinisikan dan tidak kosong
+            if (isset($errors) && !empty($errors) && is_array($errors)) {
+                Log::info('Mengirim ' . count($errors) . ' error detail ke session'); // Debug
                 // Kita tidak tambahkan $errors ke $errorMessage utama agar tidak terlalu panjang
                 // Kita kirim via session terpisah
                 return redirect()->route('admin.mahasiswa')
@@ -257,6 +296,7 @@ class MahasiswaController extends Controller
                                  ->with('import_errors', $errors);
             }
 
+            Log::info('Tidak ada error detail, hanya mengirim pesan error utama'); // Debug
             return redirect()->route('admin.mahasiswa')->with('error', $errorMessage);
 
         } finally {

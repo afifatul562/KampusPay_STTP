@@ -2,6 +2,7 @@
 @extends('layouts.app')
 
 @section('title', 'Manajemen User')
+@section('page-title', 'Manajemen User')
 
 {{-- 1. PASTIKAN SEMUA LINK CSS MENGGUNAKAN "https://" --}}
 @push('styles')

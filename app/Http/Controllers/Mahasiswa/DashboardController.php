@@ -13,7 +13,8 @@ class DashboardController extends Controller
     public function index()
     {
         // Ambil user yang sedang login beserta detail mahasiswanya
-        $user = User::with('mahasiswaDetail.tagihan.tarif')->find(Auth::id());
+        // Load relasi konfirmasi untuk menampilkan alasan penolakan
+        $user = User::with('mahasiswaDetail.tagihan.tarif', 'mahasiswaDetail.tagihan.konfirmasi')->find(Auth::id());
 
         if (!$user->mahasiswaDetail) {
             abort(404, 'Detail mahasiswa tidak ditemukan.');
@@ -22,17 +23,22 @@ class DashboardController extends Controller
         $allTagihan = $user->mahasiswaDetail->tagihan;
 
         // 1. Data untuk Kartu Statistik
-        $totalTunggakan = $allTagihan->where('status', 'Belum Lunas')->sum('jumlah_tagihan');
-        $jumlahTunggakan = $allTagihan->where('status', 'Belum Lunas')->count();
+        // Tagihan aktif termasuk yang "Belum Lunas" dan "Ditolak" (karena perlu dibayar ulang)
+        $tagihanBelumLunas = $allTagihan->where('status', 'Belum Lunas');
+        $tagihanDitolak = $allTagihan->where('status', 'Ditolak');
+        $totalTunggakan = $tagihanBelumLunas->sum('jumlah_tagihan') + $tagihanDitolak->sum('jumlah_tagihan');
+        $jumlahTunggakan = $tagihanBelumLunas->count() + $tagihanDitolak->count();
         $totalTerbayar = $allTagihan->where('status', 'Lunas')->sum('jumlah_tagihan');
 
         // 2. Data untuk Notifikasi Jatuh Tempo
-        $tagihanJatuhTempo = $allTagihan->where('status', 'Belum Lunas')
+        // Termasuk tagihan yang ditolak dalam perhitungan jatuh tempo
+        $tagihanJatuhTempo = $allTagihan->whereIn('status', ['Belum Lunas', 'Ditolak'])
                                        ->where('tanggal_jatuh_tempo', '<', Carbon::now())
                                        ->count();
 
-        // 3. Ambil hanya tagihan yang belum lunas untuk ditampilkan di daftar
-        $tagihanAktif = $allTagihan->where('status', 'Belum Lunas')
+        // 3. Ambil tagihan yang belum lunas atau ditolak untuk ditampilkan di daftar
+        // Tagihan ditolak perlu ditampilkan karena mahasiswa perlu membayar ulang
+        $tagihanAktif = $allTagihan->whereIn('status', ['Belum Lunas', 'Ditolak'])
                                    ->sortBy('tanggal_jatuh_tempo');
 
         return view('mahasiswa.dashboard', [

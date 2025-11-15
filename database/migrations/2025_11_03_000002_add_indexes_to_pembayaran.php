@@ -27,17 +27,25 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('pembayaran', function (Blueprint $table) {
-            $table->dropIndex('pembayaran_konfirmasi_id_index');
-            $table->dropIndex('pembayaran_diverifikasi_oleh_index');
+            if ($this->hasIndex('pembayaran', 'pembayaran_konfirmasi_id_index')) {
+                $table->dropIndex('pembayaran_konfirmasi_id_index');
+            }
+            if ($this->hasIndex('pembayaran', 'pembayaran_diverifikasi_oleh_index')) {
+                $table->dropIndex('pembayaran_diverifikasi_oleh_index');
+            }
         });
     }
 
     private function hasIndex(string $table, string $indexName): bool
     {
         $connection = Schema::getConnection();
-        $schemaManager = $connection->getDoctrineSchemaManager();
-        $indexes = $schemaManager->listTableIndexes($connection->getTablePrefix() . $table);
-        return array_key_exists($indexName, $indexes);
+        $tableName = $connection->getTablePrefix() . $table;
+        $indexes = $connection->select(
+            'SHOW INDEX FROM `' . $tableName . '` WHERE Key_name = ?',
+            [$indexName]
+        );
+
+        return ! empty($indexes);
     }
 };
 

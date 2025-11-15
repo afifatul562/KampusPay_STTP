@@ -12,6 +12,7 @@ use Illuminate\Database\QueryException; // <-- Tambahkan ini
 
 class SettingController extends Controller
 {
+    private const DEFAULT_APP_NAME = 'KampusPay';
     /**
      * Mengambil semua data pengaturan dari database
      */
@@ -20,6 +21,8 @@ class SettingController extends Controller
         try {
             // Ambil settings menggunakan cache helper untuk efisiensi
             $settings = Setting::getCachedMap();
+
+            $settings['app_name'] = self::DEFAULT_APP_NAME;
 
             // Tambahkan computed defaults jika belum ada: academic_year & semester
             if (!isset($settings['academic_year']) || !isset($settings['semester'])) {
@@ -42,7 +45,6 @@ class SettingController extends Controller
     {
         try {
             $validatedData = $request->validate([
-                'app_name' => 'required|string|max:255',
                 // academic_year & semester dihitung otomatis
                 'academic_year' => 'nullable|string|max:255',
                 'semester' => 'nullable|string|max:255',
@@ -58,7 +60,12 @@ class SettingController extends Controller
                 $validatedData['academic_year'] = $computedYear;
                 $validatedData['semester'] = $computedSemester;
 
-                foreach ($validatedData as $key => $value) {
+                $settingsToPersist = array_merge(
+                    ['app_name' => self::DEFAULT_APP_NAME],
+                    $validatedData
+                );
+
+                foreach ($settingsToPersist as $key => $value) {
                     Setting::updateOrCreate(
                         ['key' => $key],
                         // Simpan null jika value kosong untuk data bank

@@ -4,7 +4,7 @@
             <img src="{{ asset('images/logo_kampus.png') }}" alt="Logo Kampus" class="h-10 w-auto rounded-full ring-2 ring-white/20">
             <div class="absolute -top-1 -right-1 w-3 h-3 bg-success-500 rounded-full border-2 border-gray-800"></div>
         </div>
-        <span class="text-white text-lg font-bold" data-app-name="1">{{ \App\Models\Setting::getCachedMap()['app_name'] ?? config('app.name') }}</span>
+        <span class="text-white text-lg font-bold" data-app-name="1">{{ config('app.name', 'KampusPay') }}</span>
     </div>
 </div>
 <nav class="mt-2 px-2 py-4" role="navigation" aria-label="Navigasi Admin">

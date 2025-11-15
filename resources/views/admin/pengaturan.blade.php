@@ -13,7 +13,7 @@
                 {{-- Pengaturan Dasar Aplikasi --}}
                 <div>
                     <label for="app_name" class="block text-sm font-medium text-gray-700">Nama Aplikasi</label>
-                    <input type="text" id="app_name" name="app_name" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-gray-100 cursor-not-allowed" readonly disabled aria-readonly="true">
+                    <input type="text" id="app_name" name="app_name" value="{{ config('app.name', 'KampusPay') }}" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-gray-100 cursor-not-allowed" readonly disabled aria-readonly="true">
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', function() {
             apiRequest("{{ route('admin.settings.system.show') }}").then(response => {
                 // Akses via response.data (sesuai controller baru)
                 const data = response.data;
-                document.getElementById('app_name').value = data.app_name || '';
+                document.getElementById('app_name').value = data.app_name || "{{ config('app.name', 'KampusPay') }}";
                 document.getElementById('academic_year').value = data.academic_year || '';
                 document.getElementById('semester').value = data.semester || '';
                 document.getElementById('bank_name').value = data.bank_name || '';

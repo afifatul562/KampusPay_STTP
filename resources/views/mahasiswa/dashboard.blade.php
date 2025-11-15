@@ -78,31 +78,46 @@
         </div>
         <div class="divide-y divide-gray-200">
             @forelse ($tagihanAktif as $tagihan)
-            <div class="p-6 grid grid-cols-1 md:grid-cols-6 gap-4 items-center hover:bg-gray-50 transition-colors">
+            <div class="p-6 grid grid-cols-1 md:grid-cols-6 gap-4 items-center hover:bg-gray-50 transition-colors {{ $tagihan->status == 'Ditolak' ? 'border-l-4 border-orange-500' : '' }}">
                 <div class="md:col-span-3 flex items-center gap-4">
                     <div class="hidden sm:block">
                         <div class="bg-gray-100 p-3 rounded-full">
                             <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                         </div>
                     </div>
-                    <div>
-                        <h4 class="font-semibold text-gray-800">{{ $tagihan->tarif->nama_pembayaran }}</h4>
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <h4 class="font-semibold text-gray-800">{{ $tagihan->tarif->nama_pembayaran }}</h4>
+                            @if($tagihan->status == 'Ditolak')
+                                <span class="text-xs font-semibold px-2 py-1 rounded-full bg-orange-100 text-orange-800">
+                                    Ditolak
+                                </span>
+                            @endif
+                        </div>
                         <p class="text-sm text-gray-600">Jatuh Tempo:
                             <span class="font-medium {{ \Carbon\Carbon::parse($tagihan->tanggal_jatuh_tempo)->isPast() ? 'text-red-500' : 'text-gray-500' }}">
                                 {{ \Carbon\Carbon::parse($tagihan->tanggal_jatuh_tempo)->isoFormat('D MMMM YYYY') }}
                             </span>
                         </p>
+                        <p class="text-xs text-gray-400 mt-1 font-mono">Kode: {{ $tagihan->kode_pembayaran }}</p>
+                        @if($tagihan->status == 'Ditolak' && $tagihan->konfirmasi && $tagihan->konfirmasi->alasan_ditolak)
+                            <div class="mt-2 p-2 bg-orange-50 border-l-4 border-orange-400 text-orange-700 rounded text-xs">
+                                <p class="font-semibold">Alasan Ditolak:</p>
+                                <p>{{ $tagihan->konfirmasi->alasan_ditolak }}</p>
+                            </div>
+                        @endif
                     </div>
                 </div>
-                <div class="md:col-span-3 text-left md:text-right">
+                <div class="md:col-span-2 text-left md:text-right">
                     <p class="text-sm text-gray-500">Jumlah Tagihan</p>
                     <p class="text-lg font-bold text-orange-500">Rp. {{ number_format($tagihan->jumlah_tagihan, 0, ',', '.') }}</p>
                 </div>
-                {{-- <div class="md:col-span-1 text-left md:text-right">
-                     <a href="{{ route('mahasiswa.pembayaran.show', $tagihan->tagihan_id) }}" class="inline-block w-full md:w-auto px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 text-center">
-                        Bayar
+                <div class="md:col-span-1 text-left md:text-right">
+                    <a href="{{ route('mahasiswa.pembayaran.pilih-metode', $tagihan->tagihan_id) }}" class="inline-block w-full md:w-auto px-4 py-2 rounded-lg bg-gradient-to-r from-primary-600 to-primary-700 text-white text-sm font-semibold hover:from-primary-700 hover:to-primary-800 text-center shadow-md hover:shadow-lg transition-all duration-200">
+                        {{ $tagihan->status == 'Ditolak' ? 'Bayar Ulang' : 'Bayar' }}
+                        <svg class="w-4 h-4 inline ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
                     </a>
-                </div> --}}
+                </div>
             </div>
             @empty
                 @php

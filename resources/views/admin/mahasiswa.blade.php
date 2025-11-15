@@ -16,7 +16,7 @@
     </svg>';
 @endphp
 
-<div class="space-y-6">
+<div x-data="mahasiswaPage()" class="space-y-6">
     <x-breadcrumbs :items="[
         ['label' => 'Dashboard', 'url' => route('admin.dashboard')],
         ['label' => 'Manajemen Mahasiswa']
@@ -28,7 +28,7 @@
         :icon="$headerIcon">
         <x-slot:actions>
             <div class="flex items-center gap-2">
-                <button @click="importModalOpen = true" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-success-600 to-success-700 hover:from-success-700 hover:to-success-800 shadow-md hover:shadow-lg transition-all duration-200">
+                <button @click="importModalOpen = true" type="button" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-success-600 to-success-700 hover:from-success-700 hover:to-success-800 shadow-md hover:shadow-lg transition-all duration-200">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                     Import CSV
                 </button>
@@ -211,14 +211,47 @@
                                 });
                         }
                     });
+                },
+
+                submitImportForm(event) {
+                    const form = event.target;
+                    const fileInput = form.querySelector('#file_csv');
+
+                    // Validasi file
+                    if (!fileInput.files || !fileInput.files[0]) {
+                        event.preventDefault();
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'File Belum Dipilih',
+                            text: 'Silakan pilih file CSV terlebih dahulu.'
+                        });
+                        return false;
+                    }
+
+                    // Validasi ekstensi file
+                    const fileName = fileInput.files[0].name;
+                    if (!fileName.toLowerCase().endsWith('.csv')) {
+                        event.preventDefault();
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Format File Salah',
+                            text: 'File harus berformat CSV (.csv)'
+                        });
+                        return false;
+                    }
+
+                    // Set loading state
+                    this.modalLoading = true;
+
+                    // Biarkan form submit secara normal (tidak prevent default)
+                    // Form akan redirect setelah submit, dan session message akan ditampilkan
+                    return true;
                 }
             };
         }
     </script>
 
-    {{-- DIV UTAMA ALPINE.JS --}}
-    <div x-data="mahasiswaPage()">
-        {{-- Filter --}}
+    {{-- Filter --}}
         <x-card title="Filter">
             <div class="flex flex-col sm:flex-row items-center gap-4">
                 <div class="relative w-full sm:w-auto flex-grow">
@@ -339,13 +372,33 @@
             </div>
         </div>
 
-        {{-- MODAL IMPORT CSV (Tidak berubah) --}}
-        <div x-show="importModalOpen" @keydown.escape.window="importModalOpen = false" x-cloak class="fixed inset-0 z-50 overflow-y-auto">
-            {{-- ... (HTML Modal Import tetap sama) ... --}}
+        {{-- MODAL IMPORT CSV --}}
+        <div x-show="importModalOpen" @keydown.escape.window="importModalOpen = false" x-cloak
+             x-transition:enter="ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 z-50 overflow-y-auto">
             <div class="flex items-center justify-center min-h-screen p-4">
-                <div @click="importModalOpen = false" class="fixed inset-0 bg-gray-500 bg-opacity-75"></div>
-                <div class="relative bg-white rounded-lg shadow-xl transform sm:max-w-lg w-full">
-                    <form action="{{ route('admin.mahasiswa.import') }}" method="POST" enctype="multipart/form-data">
+                <div @click="importModalOpen = false"
+                     x-transition:enter="ease-out duration-300"
+                     x-transition:enter-start="opacity-0"
+                     x-transition:enter-end="opacity-100"
+                     x-transition:leave="ease-in duration-200"
+                     x-transition:leave-start="opacity-100"
+                     x-transition:leave-end="opacity-0"
+                     class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+                <div @click.away="importModalOpen = false"
+                     x-transition:enter="ease-out duration-300"
+                     x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                     x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                     x-transition:leave="ease-in duration-200"
+                     x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                     x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                     class="relative bg-white rounded-lg shadow-xl transform transition-all sm:max-w-lg w-full">
+                    <form action="{{ route('admin.mahasiswa.import') }}" method="POST" enctype="multipart/form-data" @submit="submitImportForm($event)">
                         @csrf
                         <div class="bg-white px-6 pt-5 pb-4">
                             <h3 class="text-lg leading-6 font-medium text-gray-900">Import Mahasiswa dari CSV</h3>
@@ -355,18 +408,31 @@
                                 <p class="text-sm text-gray-600 mt-2">Program Studi, Angkatan, dan Semester akan diisi otomatis berdasarkan NPM.</p>
                                 <div class="mt-4">
                                     <label for="file_csv" class="block text-sm font-medium text-gray-700">Pilih File CSV</label>
-                                    <input type="file" name="file_csv" id="file_csv" accept=".csv" required class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                    <input type="file" name="file_csv" id="file_csv" accept=".csv" required
+                                           class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                                 </div>
                             </div>
                         </div>
                         <div class="bg-gray-50 px-6 py-3 flex justify-end gap-3">
-                            <button @click="importModalOpen = false" type="button" class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">Batal</button>
-                            <button type="submit" class="px-4 py-2 bg-green-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-green-700">Upload & Import</button>
+                            <button @click="importModalOpen = false" type="button"
+                                    class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">Batal</button>
+                            <button type="submit"
+                                    :disabled="modalLoading"
+                                    class="px-4 py-2 bg-green-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span x-show="!modalLoading">Upload & Import</span>
+                                <span x-show="modalLoading" class="flex items-center">
+                                    <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Memproses...
+                                </span>
+                            </button>
                         </div>
                     </form>
                 </div>
+            </div>
         </div>
-    </div>
 </div>
 @endsection
 
@@ -374,51 +440,92 @@
 {{-- !! SCRIPT BARU UNTUK MENANGANI NOTIFIKASI SESSION DENGAN SWEETALERT !! --}}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Cek jika ada session 'success' dari server (misal: setelah import/create/update)
+        // Fungsi helper untuk menampilkan notifikasi dengan fallback
+        function showNotification(type, title, message, errors = null) {
+            // Tunggu sampai SweetAlert2 dimuat, atau gunakan fallback
+            function tryShowSwal() {
+                if (typeof Swal !== 'undefined' && Swal.fire) {
+                    if (errors && errors.length > 0) {
+                        // Buat elemen untuk error detail
+                        const mainMessageEl = document.createElement('p');
+                        mainMessageEl.textContent = message;
+
+                        const finalHtmlContent = document.createElement('div');
+                        finalHtmlContent.appendChild(mainMessageEl);
+
+                        const errorList = document.createElement('ul');
+                        errorList.className = 'list-disc list-inside text-left text-sm mt-2 max-h-40 overflow-y-auto';
+
+                        errors.forEach(errText => {
+                            const li = document.createElement('li');
+                            li.textContent = errText;
+                            errorList.appendChild(li);
+                        });
+
+                        finalHtmlContent.appendChild(errorList);
+
+                        Swal.fire({
+                            icon: type,
+                            title: title,
+                            html: finalHtmlContent
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: type,
+                            title: title,
+                            text: message,
+                            timer: type === 'success' ? 2000 : undefined,
+                            showConfirmButton: type !== 'success'
+                        });
+                    }
+                } else {
+                    // Fallback ke alert jika SweetAlert2 belum dimuat
+                    setTimeout(tryShowSwal, 100);
+                }
+            }
+
+            // Coba langsung, jika gagal tunggu 100ms dan coba lagi (maksimal 10 kali = 1 detik)
+            let attempts = 0;
+            const maxAttempts = 10;
+
+            function attemptShow() {
+                if (typeof Swal !== 'undefined' && Swal.fire) {
+                    tryShowSwal();
+                } else if (attempts < maxAttempts) {
+                    attempts++;
+                    setTimeout(attemptShow, 100);
+                } else {
+                    // Fallback ke alert native jika SweetAlert2 tidak bisa dimuat
+                    let alertMessage = title + '\n\n' + message;
+                    if (errors && errors.length > 0) {
+                        alertMessage += '\n\nDetail Kesalahan:\n' + errors.join('\n');
+                    }
+                    alert(alertMessage);
+                }
+            }
+
+            attemptShow();
+        }
+
+        // Cek jika ada session 'success' dari server
         @if (session('success'))
-            Swal.fire({
-                icon: 'success',
-                title: 'Berhasil!',
-                text: '{{ session('success') }}',
-                timer: 2000, // Tutup otomatis setelah 2 detik
-                showConfirmButton: false
-            });
+            showNotification('success', 'Berhasil!', @json(session('success')));
         @endif
 
         // Cek jika ada session 'error' dari server (misal: setelah import gagal)
         @if (session('error'))
-    let mainErrorMessage = @json(Str::before(session('error'), "\n\nDetail Kesalahan"));
+            @php
+                $mainErrorMessage = session('error');
+                $importErrors = session('import_errors', []);
+            @endphp
 
-    // Buat elemen 'p' untuk pesan utama
-    const mainMessageEl = document.createElement('p');
-    mainMessageEl.textContent = mainErrorMessage; // Aman
-
-    // Buat 'div' untuk menampung semua HTML
-    const finalHtmlContent = document.createElement('div');
-    finalHtmlContent.appendChild(mainMessageEl);
-
-    @if (session('import_errors'))
-                let errors = @json(session('import_errors'));
-
-                // Buat 'ul' untuk list error
-                const errorList = document.createElement('ul');
-                errorList.className = 'list-disc list-inside text-left text-sm mt-2 max-h-40 overflow-y-auto';
-
-                // Loop dan buat <li> menggunakan .textContent (INI BAGIAN AMANNYA)
-                errors.forEach(errText => {
-                    const li = document.createElement('li');
-                    li.textContent = errText; // <--- Ini adalah perbaikan yang TEPAT
-                    errorList.appendChild(li);
-                });
-
-                finalHtmlContent.appendChild(errorList); // Tambahkan list ke div utama
+            @if (!empty($importErrors) && is_array($importErrors) && count($importErrors) > 0)
+                console.log('Import errors found:', @json($importErrors));
+                showNotification('error', 'Gagal!', @json($mainErrorMessage), @json($importErrors));
+            @else
+                console.log('No import errors detail found');
+                showNotification('error', 'Gagal!', @json($mainErrorMessage));
             @endif
-
-            Swal.fire({
-                icon: 'error',
-                title: 'Gagal!',
-                html: finalHtmlContent // Masukkan Node DOM yang sudah aman ke SweetAlert
-            });
         @endif
     });
 </script>

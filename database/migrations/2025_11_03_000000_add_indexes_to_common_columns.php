@@ -38,22 +38,34 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('tagihan', function (Blueprint $table) {
-            $table->dropIndex('tagihan_status_index');
-            $table->dropIndex('tagihan_mahasiswa_id_index');
-            $table->dropIndex('tagihan_tanggal_jatuh_tempo_index');
+            if ($this->hasIndex('tagihan', 'tagihan_status_index')) {
+                $table->dropIndex('tagihan_status_index');
+            }
+            if ($this->hasIndex('tagihan', 'tagihan_mahasiswa_id_index')) {
+                $table->dropIndex('tagihan_mahasiswa_id_index');
+            }
+            if ($this->hasIndex('tagihan', 'tagihan_tanggal_jatuh_tempo_index')) {
+                $table->dropIndex('tagihan_tanggal_jatuh_tempo_index');
+            }
         });
 
         Schema::table('pembayaran', function (Blueprint $table) {
-            $table->dropIndex('pembayaran_tanggal_bayar_index');
+            if ($this->hasIndex('pembayaran', 'pembayaran_tanggal_bayar_index')) {
+                $table->dropIndex('pembayaran_tanggal_bayar_index');
+            }
         });
     }
 
     private function hasIndex(string $table, string $indexName): bool
     {
         $connection = Schema::getConnection();
-        $schemaManager = $connection->getDoctrineSchemaManager();
-        $indexes = $schemaManager->listTableIndexes($connection->getTablePrefix() . $table);
-        return array_key_exists($indexName, $indexes);
+        $tableName = $connection->getTablePrefix() . $table;
+        $indexes = $connection->select(
+            'SHOW INDEX FROM `' . $tableName . '` WHERE Key_name = ?',
+            [$indexName]
+        );
+
+        return ! empty($indexes);
     }
 };
 
