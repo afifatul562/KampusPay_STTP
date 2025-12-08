@@ -78,6 +78,7 @@
             <thead>
                 <tr>
                     <th>No.</th>
+                    <th>Kode Pembayaran</th>
                     <th>Tanggal Bayar</th>
                     <th>Jenis Pembayaran</th>
                     <th>Metode</th>
@@ -87,25 +88,33 @@
             </thead>
             <tbody>
                 @forelse($histori as $index => $item)
+                    @php
+                        $jumlahBayar = $item->jumlah_bayar ?? $item->tagihan->jumlah_tagihan ?? 0;
+                    @endphp
                     <tr>
                         <td class="text-center">{{ $index + 1 }}</td>
+                        <td>{{ $item->tagihan->kode_pembayaran ?? '-' }}</td>
                         <td>{{ \Carbon\Carbon::parse($item->tanggal_bayar)->isoFormat('D MMM Y, HH:mm') }}</td>
-                        <td>{{ $item->tagihan->tarif->nama_pembayaran ?? 'N/A' }}</td>
+                        <td>{{ $item->tagihan->tarif->nama_pembayaran ?? 'N/A' }}
+                            @if($item->is_cicilan)
+                                <span style="font-size: 10px; color: #7c3aed;">(Cicilan)</span>
+                            @endif
+                        </td>
                         <td>{{ $item->metode_pembayaran }}</td>
-                        <td class="text-right">Rp {{ number_format($item->tagihan->jumlah_tagihan ?? 0, 0, ',', '.') }}</td>
+                        <td class="text-right">Rp {{ number_format($jumlahBayar, 0, ',', '.') }}</td>
                         <td>{{ $item->userKasir->nama_lengkap ?? 'N/A' }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="text-center" style="padding: 20px;">Tidak ada riwayat pembayaran pada periode ini.</td>
+                        <td colspan="7" class="text-center" style="padding: 20px;">Tidak ada riwayat pembayaran pada periode ini.</td>
                     </tr>
                 @endforelse
             </tbody>
             @if($histori->isNotEmpty())
             <tfoot>
                 <tr>
-                    <td colspan="4" class="text-right"><strong>TOTAL PERIODE INI</strong></td>
-                    <td class="text-right"><strong>Rp {{ number_format($histori->sum(function($p){ return $p->tagihan->jumlah_tagihan ?? 0; }), 0, ',', '.') }}</strong></td>
+                    <td colspan="5" class="text-right"><strong>TOTAL PERIODE INI</strong></td>
+                    <td class="text-right"><strong>Rp {{ number_format($histori->sum(function($p){ return $p->jumlah_bayar ?? $p->tagihan->jumlah_tagihan ?? 0; }), 0, ',', '.') }}</strong></td>
                     <td></td> {{-- Kolom Kasir dikosongkan --}}
                 </tr>
             </tfoot>

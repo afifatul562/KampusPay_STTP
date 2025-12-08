@@ -142,7 +142,7 @@ class TransaksiKasirExport implements FromQuery, WithHeadings, WithMapping, Shou
             optional(optional($tagihan->mahasiswa)->user)->nama_lengkap ?? 'N/A',
             optional($tagihan->mahasiswa)->npm ?? 'N/A',
             optional($tagihan->tarif)->nama_pembayaran ?? 'N/A',
-            optional($tagihan)->jumlah_tagihan ?? 0,
+            $pembayaran->jumlah_bayar ?? optional($tagihan)->jumlah_tagihan ?? 0,
             $pembayaran->metode_pembayaran,
             optional($tagihan)->kode_pembayaran ?? 'N/A',
             $pembayaran->pembayaran_id,

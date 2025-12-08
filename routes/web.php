@@ -104,6 +104,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/pembayaran', [MahasiswaPembayaranController::class, 'index'])->name('pembayaran.index');
         Route::get('/pembayaran/{tagihan}/pilih-metode', [MahasiswaPembayaranController::class, 'pilihMetode'])->name('pembayaran.pilih-metode');
         Route::post('/pembayaran/{tagihan}/proses-metode', [MahasiswaPembayaranController::class, 'prosesMetode'])->name('pembayaran.proses-metode');
+        Route::get('/pembayaran/{tagihan}/cicil', [MahasiswaPembayaranController::class, 'cicil'])->name('pembayaran.cicil');
+        Route::post('/pembayaran/{tagihan}/cicil/transfer', [MahasiswaPembayaranController::class, 'storeCicilTransfer'])->name('pembayaran.cicil.transfer');
         Route::get('/pembayaran/{tagihan}', [MahasiswaPembayaranController::class, 'show'])->name('pembayaran.show');
         Route::post('/pembayaran/{tagihan}/konfirmasi', [MahasiswaPembayaranController::class, 'storeKonfirmasi'])->name('pembayaran.konfirmasi.store');
         Route::get('/riwayat', [MahasiswaRiwayatController::class, 'index'])->name('riwayat.index');

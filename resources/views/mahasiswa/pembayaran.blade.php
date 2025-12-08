@@ -9,7 +9,7 @@
         ['label' => 'Dashboard', 'url' => route('mahasiswa.dashboard')],
         ['label' => 'Daftar Tagihan Pembayaran']
     ]" />
-    
+
     {{-- Notifikasi Sukses/Error --}}
     @if (session('success'))
         <div class="flex items-center p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-100 border-l-4 border-green-500" role="alert">
@@ -130,6 +130,13 @@
                     {{-- Jumlah --}}
                     <div class="md:col-span-1 text-left md:text-right">
                         <p class="text-lg font-bold text-gray-800">Rp. {{ number_format($item->jumlah_tagihan, 0, ',', '.') }}</p>
+                        @if($item->total_angsuran > 0)
+                            @php
+                                $sisaPokok = $item->sisa_pokok ?? $item->jumlah_tagihan;
+                            @endphp
+                            <p class="text-xs text-green-600 mt-1">Dibayar: Rp. {{ number_format($item->total_angsuran, 0, ',', '.') }}</p>
+                            <p class="text-xs text-orange-600 font-semibold mt-1">Sisa: Rp. {{ number_format($sisaPokok, 0, ',', '.') }}</p>
+                        @endif
                     </div>
 
                     {{-- Status --}}
@@ -206,7 +213,7 @@
                 @php
                     $emptyIcon = '<svg class="mx-auto h-12 w-12 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
                 @endphp
-                <x-empty-state 
+                <x-empty-state
                     title="Tidak ada tagihan"
                     message="Selamat! Tidak ada tagihan untuk ditampilkan."
                     :icon="$emptyIcon" />

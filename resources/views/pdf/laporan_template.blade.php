@@ -123,26 +123,68 @@
                 @endphp
 
                 @if(isset($groupedData['Belum Lunas']) && $groupedData['Belum Lunas']->isNotEmpty())
-                    <tr class="group-header">
-                        <td colspan="7"><strong>Belum Dibayarkan</strong></td>
-                    </tr>
-                    @foreach ($groupedData['Belum Lunas'] as $tagihan)
-                        @php $totalBelumLunas += $tagihan->jumlah_tagihan; @endphp
-                        <tr>
-                            <td>{{ $rowNumber++ }}</td>
-                            <td>{{ $tagihan->kode_pembayaran ?? '-' }}</td>
-                            <td>
-                                {{ $tagihan->mahasiswa->user->nama_lengkap ?? 'N/A' }}<br>
-                                <small>{{ $tagihan->mahasiswa->npm ?? 'N/A' }}</small>
-                            </td>
-                            <td>{{ $tagihan->tarif->nama_pembayaran ?? 'N/A' }}</td>
-                            <td class="text-right">Rp {{ number_format($tagihan->jumlah_tagihan, 0, ',', '.') }}</td>
-                            <td class="text-center">
-                                <span class="badge badge-belum">Belum Dibayarkan</span>
-                            </td>
-                            <td>-</td>
+                    @php
+                        // Pisahkan tagihan yang belum dibayar sama sekali dengan yang sudah ada cicilan
+                        $belumDibayar = $groupedData['Belum Lunas']->filter(function($tagihan) {
+                            $pembayaranAll = $tagihan->pembayaranAll ?? collect();
+                            return $pembayaranAll->isEmpty() || ($tagihan->total_angsuran ?? 0) == 0;
+                        });
+                        $belumLunas = $groupedData['Belum Lunas']->filter(function($tagihan) {
+                            $pembayaranAll = $tagihan->pembayaranAll ?? collect();
+                            return $pembayaranAll->isNotEmpty() && ($tagihan->total_angsuran ?? 0) > 0;
+                        });
+                    @endphp
+
+                    @if($belumDibayar->isNotEmpty())
+                        <tr class="group-header">
+                            <td colspan="7"><strong>Belum Dibayarkan</strong></td>
                         </tr>
-                    @endforeach
+                        @foreach ($belumDibayar as $tagihan)
+                            @php $totalBelumLunas += $tagihan->jumlah_tagihan; @endphp
+                            <tr>
+                                <td>{{ $rowNumber++ }}</td>
+                                <td>{{ $tagihan->kode_pembayaran ?? '-' }}</td>
+                                <td>
+                                    {{ $tagihan->mahasiswa->user->nama_lengkap ?? 'N/A' }}<br>
+                                    <small>{{ $tagihan->mahasiswa->npm ?? 'N/A' }}</small>
+                                </td>
+                                <td>{{ $tagihan->tarif->nama_pembayaran ?? 'N/A' }}</td>
+                                <td class="text-right">Rp {{ number_format($tagihan->jumlah_tagihan, 0, ',', '.') }}</td>
+                                <td class="text-center">
+                                    <span class="badge badge-belum">Belum Dibayarkan</span>
+                                </td>
+                                <td>-</td>
+                            </tr>
+                        @endforeach
+                    @endif
+
+                    @if($belumLunas->isNotEmpty())
+                        <tr class="group-header">
+                            <td colspan="7"><strong>Belum Lunas</strong></td>
+                        </tr>
+                        @foreach ($belumLunas as $tagihan)
+                            @php 
+                                $totalBelumLunas += $tagihan->jumlah_tagihan;
+                                $pembayaranAll = $tagihan->pembayaranAll ?? collect();
+                                $pembayaranTerakhir = $pembayaranAll->sortByDesc('tanggal_bayar')->first();
+                                $tglBayar = $pembayaranTerakhir ? \Carbon\Carbon::parse($pembayaranTerakhir->tanggal_bayar)->isoFormat('DD MMM YYYY') : '-';
+                            @endphp
+                            <tr>
+                                <td>{{ $rowNumber++ }}</td>
+                                <td>{{ $tagihan->kode_pembayaran ?? '-' }}</td>
+                                <td>
+                                    {{ $tagihan->mahasiswa->user->nama_lengkap ?? 'N/A' }}<br>
+                                    <small>{{ $tagihan->mahasiswa->npm ?? 'N/A' }}</small>
+                                </td>
+                                <td>{{ $tagihan->tarif->nama_pembayaran ?? 'N/A' }}</td>
+                                <td class="text-right">Rp {{ number_format($tagihan->jumlah_tagihan, 0, ',', '.') }}</td>
+                                <td class="text-center">
+                                    <span class="badge badge-belum">Belum Lunas</span>
+                                </td>
+                                <td>{{ $tglBayar }}</td>
+                            </tr>
+                        @endforeach
+                    @endif
                 @endif
 
                 @if(isset($groupedData['Lunas']) && $groupedData['Lunas']->isNotEmpty())

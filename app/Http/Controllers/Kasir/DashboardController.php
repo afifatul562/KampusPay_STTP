@@ -116,6 +116,9 @@ class DashboardController extends Controller
             // DIUBAH: Izinkan bayar semua tagihan yg statusnya BUKAN 'Lunas'
             'tagihan_ids.*' => ['required', 'integer', Rule::exists('tagihan', 'tagihan_id')->whereNot('status', 'Lunas')],
             'metode_pembayaran' => 'required|string|in:Tunai,Transfer Bank Nagari,Transfer', // Ditambah 'Transfer'
+            'cicilan' => 'sometimes|array', // Array dengan key tagihan_id => jumlah_bayar
+            'cicilan.*.jumlah_bayar' => 'required_with:cicilan|numeric|min:1',
+            'cicilan.*.is_cicilan' => 'sometimes|boolean',
         ]);
 
         $tagihanCollection = Tagihan::with(['mahasiswa.user', 'tarif'])
@@ -140,11 +143,13 @@ class DashboardController extends Controller
         $mahasiswa = optional($tagihanCollection->first()->mahasiswa);
         $kasir = Auth::user();
         $kasirId = $kasir->id;
-        $tanggalBayar = now();
+        // Simpan waktu UTC untuk database, tapi siapkan versi lokal untuk tampilan
+        $tanggalBayarUtc = now();
+        $tanggalBayarDisplay = $tanggalBayarUtc->clone()->setTimezone(config('app.timezone'));
         $receiptItems = [];
 
         try {
-            DB::transaction(function () use ($validated, $tagihanCollection, &$receiptItems, $kasirId, $tanggalBayar) {
+            DB::transaction(function () use ($validated, $tagihanCollection, &$receiptItems, $kasirId, $tanggalBayarUtc) {
                 foreach ($validated['tagihan_ids'] as $tagihanId) {
                     $tagihan = $tagihanCollection->firstWhere('tagihan_id', $tagihanId);
                     if (!$tagihan) {
@@ -159,25 +164,50 @@ class DashboardController extends Controller
                         ]);
                     // --- SELESAI LOGIKA "OTOMATIS HILANG" ---
 
+                    // Cek apakah ini cicilan
+                    $cicilanData = $validated['cicilan'][$tagihanId] ?? null;
+                    $isCicilan = $cicilanData && isset($cicilanData['is_cicilan']) && $cicilanData['is_cicilan'];
+                    $jumlahBayar = $cicilanData && isset($cicilanData['jumlah_bayar'])
+                        ? $cicilanData['jumlah_bayar']
+                        : $tagihan->jumlah_tagihan;
+
+                    // Validasi cicilan
+                    if ($isCicilan) {
+                        $sisaPokok = $tagihan->sisa_pokok ?? $tagihan->jumlah_tagihan;
+                        $minBayar = min(50000, $sisaPokok); // Minimal 50k kecuali sisa < 50k
+                        if ($jumlahBayar > $sisaPokok) {
+                            throw new \RuntimeException("Jumlah pembayaran melebihi sisa pokok untuk tagihan {$tagihan->kode_pembayaran}.");
+                        }
+                        if ($jumlahBayar < $minBayar && $sisaPokok >= 50000) {
+                            throw new \RuntimeException("Minimal pembayaran cicilan adalah Rp 50.000 untuk tagihan {$tagihan->kode_pembayaran}.");
+                        }
+                        if ($jumlahBayar <= 0) {
+                            throw new \RuntimeException("Jumlah pembayaran harus lebih dari 0 untuk tagihan {$tagihan->kode_pembayaran}.");
+                        }
+                    } else {
+                        // Jika bukan cicilan, pastikan jumlah_bayar = jumlah_tagihan (lunas)
+                        $jumlahBayar = $tagihan->jumlah_tagihan;
+                    }
+
                     // 1. Buat record pembayaran tunai baru
                     $pembayaran = Pembayaran::create([
                         'tagihan_id'        => $tagihan->tagihan_id,
                         'diverifikasi_oleh' => $kasirId,
-                        'tanggal_bayar'     => $tanggalBayar,
+                        'tanggal_bayar'     => $tanggalBayarUtc,
                         'metode_pembayaran' => $validated['metode_pembayaran'],
                         'status_pembayaran' => 'LUNAS',
-                        'jumlah_bayar'      => $tagihan->jumlah_tagihan,
+                        'jumlah_bayar'      => $jumlahBayar,
+                        'is_cicilan'        => $isCicilan,
                     ]);
 
-                    // 2. Update status tagihan utamanya
-                    $tagihan->status = 'Lunas';
-                    $tagihan->save();
+                    // 2. Update total_angsuran dan sisa_pokok
+                    $tagihan->updateAngsuran();
 
                     $receiptItems[] = [
                         'pembayaran_id'   => $pembayaran->pembayaran_id,
                         'kode_pembayaran' => $tagihan->kode_pembayaran ?? $tagihan->kode ?? ('TAG-' . $tagihan->tagihan_id),
                         'nama_tagihan'    => $tagihan->tarif->nama_pembayaran ?? 'Pembayaran',
-                        'jumlah'          => $tagihan->jumlah_tagihan,
+                        'jumlah'          => $jumlahBayar,
                         'kwitansi_url'    => route('kasir.kwitansi.download', ['pembayaran' => $pembayaran->pembayaran_id]),
                     ];
                 }
@@ -190,7 +220,7 @@ class DashboardController extends Controller
             ], 500);
         }
 
-        $totalBayar = $tagihanCollection->sum('jumlah_tagihan');
+        $totalBayar = $receiptItems ? collect($receiptItems)->sum('jumlah') : 0;
 
         return response()->json([
             'success' => true,
@@ -204,7 +234,7 @@ class DashboardController extends Controller
                 'kasir' => [
                     'nama' => $kasir->nama_lengkap ?? $kasir->username,
                 ],
-                'tanggal_bayar' => $tanggalBayar->isoFormat('D MMMM YYYY HH:mm'),
+                'tanggal_bayar' => $tanggalBayarDisplay->isoFormat('D MMMM YYYY HH:mm'),
                 'total_bayar'   => $totalBayar,
                 'pembayaran'    => $receiptItems,
             ]
@@ -227,7 +257,7 @@ class DashboardController extends Controller
         $transaksiCount = $paymentsToday->count();
 
         $totalPenerimaan = $paymentsToday->sum(function($pembayaran) {
-            return $pembayaran->tagihan->jumlah_tagihan ?? 0;
+            return $pembayaran->jumlah_bayar ?? 0;
         });
 
         // DIUBAH: Query ini dibuat lebih aman.

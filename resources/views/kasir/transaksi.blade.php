@@ -115,7 +115,24 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ data_get($item, 'tagihan.tarif.nama_pembayaran', 'N/A') }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-right font-medium text-gray-800">
-                        Rp {{ number_format(data_get($item, 'tagihan.jumlah_tagihan', 0), 0, ',', '.') }}
+                        @php
+                            // Prioritas: jumlah_bayar dari pembayaran, jika null baru pakai jumlah_tagihan
+                            $jumlahBayar = $item->jumlah_bayar;
+                            if ($jumlahBayar === null || $jumlahBayar === 0) {
+                                $jumlahBayar = data_get($item, 'tagihan.jumlah_tagihan', 0);
+                            }
+                        @endphp
+                        <div>Rp {{ number_format($jumlahBayar, 0, ',', '.') }}</div>
+                        @if($item->is_cicilan)
+                            <div class="text-xs text-purple-600 font-semibold mt-1">Cicilan</div>
+                            @php
+                                $totalTagihan = data_get($item, 'tagihan.jumlah_tagihan', 0);
+                                $sisaPokok = data_get($item, 'tagihan.sisa_pokok', $totalTagihan);
+                            @endphp
+                            @if($sisaPokok > 0)
+                                <div class="text-xs text-orange-600 mt-1">Sisa: Rp {{ number_format($sisaPokok, 0, ',', '.') }}</div>
+                            @endif
+                        @endif
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-center">
                         @php

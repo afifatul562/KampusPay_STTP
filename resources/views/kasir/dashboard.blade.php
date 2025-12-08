@@ -273,6 +273,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // ============================================
     // !! FUNGSI INI DITULIS ULANG AGAR AMAN DARI XSS !!
     // ============================================
+    function isWajibLunas(tagihanItem) {
+        const nama = (tagihanItem.tarif?.nama_pembayaran || '').toLowerCase();
+        return nama.includes('uang kemahasiswaan') || nama.includes('ujian akhir') || nama.includes('uas');
+    }
+
     function displayTagihan(tagihan) {
         tagihanListDiv.innerHTML = ''; // Kosongkan
 
@@ -296,14 +301,27 @@ document.addEventListener('DOMContentLoaded', function() {
             const label = document.createElement('label');
             // Tambahkan border biru jika status "Menunggu Pembayaran Tunai"
             const isWaitingCash = item.status === 'Menunggu Pembayaran Tunai';
-            label.className = `flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors ${isWaitingCash ? 'border-blue-300 bg-blue-50' : ''}`;
+            const isPendingTransfer = item.status === 'Menunggu Verifikasi Transfer';
+            label.className = `flex items-center p-3 border rounded-lg ${isPendingTransfer ? 'bg-gray-50 border-gray-300 cursor-not-allowed opacity-70' : 'hover:bg-gray-50 cursor-pointer transition-colors'} ${isWaitingCash ? 'border-blue-300 bg-blue-50' : ''}`;
+
+            const sisaPokok = item.sisa_pokok ?? item.jumlah_tagihan;
+            const totalAngsuran = item.total_angsuran ?? 0;
+            const wajibLunas = isWajibLunas(item);
+            const allowCicil = !wajibLunas && sisaPokok > 0;
+            const minBayar = Math.min(50000, sisaPokok); // minimal 50k kecuali sisa < 50k
 
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.className = 'h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500';
             checkbox.name = 'tagihan';
             checkbox.value = item.tagihan_id;
-            checkbox.dataset.amount = item.jumlah_tagihan;
+            // Default amount = sisa pokok
+            checkbox.dataset.amount = sisaPokok;
+            checkbox.dataset.sisaPokok = sisaPokok;
+            checkbox.dataset.wajibLunas = wajibLunas ? '1' : '0';
+            if (isPendingTransfer) {
+                checkbox.disabled = true; // Jangan diproses tunai saat ada transfer pending
+            }
 
             const textDiv = document.createElement('div');
             textDiv.className = 'ml-3 text-sm flex-grow';
@@ -313,23 +331,72 @@ document.addEventListener('DOMContentLoaded', function() {
             namaP.textContent = item.tarif?.nama_pembayaran ?? 'N/A'; // AMAN
 
             const detailDiv = document.createElement('div');
-            detailDiv.className = 'flex items-center gap-2 mt-1';
+            detailDiv.className = 'flex items-center gap-2 mt-1 flex-wrap';
 
             const jumlahP = document.createElement('p');
             jumlahP.className = 'text-gray-600';
-            jumlahP.textContent = currencyFormatter.format(item.jumlah_tagihan);
+            jumlahP.textContent = `Tagihan: ${currencyFormatter.format(item.jumlah_tagihan)}`;
+            detailDiv.appendChild(jumlahP);
 
-            // Tambahkan badge jika status "Menunggu Pembayaran Tunai"
+            if (totalAngsuran > 0) {
+                const sudahBayar = document.createElement('span');
+                sudahBayar.className = 'text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full border border-green-200';
+                sudahBayar.textContent = `Sudah dibayar: ${currencyFormatter.format(totalAngsuran)}`;
+                detailDiv.appendChild(sudahBayar);
+            }
+
+            const sisaSpan = document.createElement('span');
+            sisaSpan.className = 'text-xs text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full border border-orange-200';
+            sisaSpan.textContent = `Sisa: ${currencyFormatter.format(sisaPokok)}`;
+            detailDiv.appendChild(sisaSpan);
+
+            if (wajibLunas) {
+                const wajibBadge = document.createElement('span');
+                wajibBadge.className = 'text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200';
+                wajibBadge.textContent = 'Wajib Lunas';
+                detailDiv.appendChild(wajibBadge);
+            }
+
+            // Badge waiting cash
             if (isWaitingCash) {
                 const badge = document.createElement('span');
                 badge.className = 'px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-700 border border-blue-300';
                 badge.textContent = '✓ Menunggu Bayar Tunai';
                 detailDiv.appendChild(badge);
             }
+            if (isPendingTransfer) {
+                const badge = document.createElement('span');
+                badge.className = 'px-2 py-0.5 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-700 border border-yellow-300';
+                badge.textContent = 'Menunggu Verifikasi Transfer';
+                detailDiv.appendChild(badge);
+            }
 
-            detailDiv.appendChild(jumlahP);
             textDiv.appendChild(namaP);
             textDiv.appendChild(detailDiv);
+
+            if (allowCicil && !isPendingTransfer) {
+                const inputWrap = document.createElement('div');
+                inputWrap.className = 'mt-2';
+                const labelInput = document.createElement('label');
+                labelInput.className = 'block text-xs text-gray-500 mb-1';
+                labelInput.textContent = `Nominal bayar (min ${currencyFormatter.format(minBayar)}, max ${currencyFormatter.format(sisaPokok)})`;
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.min = minBayar;
+                input.max = sisaPokok;
+                input.step = 1000;
+                input.value = sisaPokok;
+                input.className = 'w-full md:w-64 px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500';
+                input.addEventListener('input', () => {
+                    const val = parseInt(input.value) || 0;
+                    checkbox.dataset.amount = val > 0 ? val : 0;
+                    updatePaymentForm();
+                });
+                inputWrap.appendChild(labelInput);
+                inputWrap.appendChild(input);
+                textDiv.appendChild(inputWrap);
+            }
+
             label.appendChild(checkbox);
             label.appendChild(textDiv);
             container.appendChild(label);
@@ -341,7 +408,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function updatePaymentForm() {
         const selectedCheckboxes = tagihanListDiv.querySelectorAll('input[name="tagihan"]:checked');
         let totalAmount = 0;
-        selectedCheckboxes.forEach(checkbox => totalAmount += parseFloat(checkbox.dataset.amount));
+        selectedCheckboxes.forEach(checkbox => totalAmount += parseFloat(checkbox.dataset.amount || 0));
         if (totalAmount > 0) {
             paymentFormContainer.innerHTML = `
                 <div class="space-y-4 text-left">
@@ -383,7 +450,8 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const response = await apiRequest("{{ route('kasir.process-payment') }}", 'POST', {
                 tagihan_ids: tagihanIds,
-                metode_pembayaran: 'Tunai'
+                metode_pembayaran: 'Tunai',
+                cicilan: buildCicilanPayload(selectedCheckboxes)
             });
             if (response.success) {
                 // !! GANTI ALERT !!
@@ -406,6 +474,23 @@ document.addEventListener('DOMContentLoaded', function() {
         } finally {
             setButtonLoading(submitButton, false);
         }
+    }
+
+    function buildCicilanPayload(selectedCheckboxes) {
+        const payload = {};
+        selectedCheckboxes.forEach(cb => {
+            const sisaPokok = parseInt(cb.dataset.sisaPokok || '0');
+            const amount = parseInt(cb.dataset.amount || '0');
+            const wajibLunas = cb.dataset.wajibLunas === '1';
+            const isCicilan = !wajibLunas && amount > 0 && amount < sisaPokok;
+            if (isCicilan) {
+                payload[cb.value] = {
+                    jumlah_bayar: amount,
+                    is_cicilan: true
+                };
+            }
+        });
+        return payload;
     }
 
     function displayReceipt(data) {

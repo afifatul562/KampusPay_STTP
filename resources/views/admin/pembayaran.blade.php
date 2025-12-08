@@ -379,7 +379,13 @@
 
                 const isLunas = tagihan.status === 'Lunas';
                 const pembayaran = tagihan.pembayaran;
-                let statusText = tagihan.status === 'Belum Lunas' ? 'Belum Dibayarkan' : tagihan.status;
+                const pembayaranAll = tagihan.pembayaran_all || tagihan.pembayaranAll || [];
+                const sudahAdaPembayaran = pembayaranAll.length > 0 || (pembayaran && !pembayaran.status_dibatalkan);
+                // Jika status "Belum Lunas" dan sudah ada pembayaran (cicilan), tampilkan "Belum Lunas"
+                // Jika status "Belum Lunas" dan belum ada pembayaran, tampilkan "Belum Dibayarkan"
+                let statusText = tagihan.status === 'Belum Lunas'
+                    ? (sudahAdaPembayaran ? 'Belum Lunas' : 'Belum Dibayarkan')
+                    : tagihan.status;
 
                 // 1. Kode Pembayaran
                 tr.appendChild(createCell(tagihan.kode_pembayaran, ['text-gray-700']));
@@ -471,7 +477,13 @@
                              statusMatch = false;
                          } else {
                              // Status normal dari tagihan.status
-                             let statusAsli = tagihan.status === 'Belum Lunas' ? 'Belum Dibayarkan' : tagihan.status;
+                             // Jika status "Belum Lunas" dan sudah ada pembayaran, gunakan "Belum Lunas"
+                             // Jika status "Belum Lunas" dan belum ada pembayaran, gunakan "Belum Dibayarkan"
+                             const pembayaranAll = tagihan.pembayaran_all || tagihan.pembayaranAll || [];
+                             const sudahAdaPembayaran = pembayaranAll.length > 0 || (tagihan.pembayaran && !tagihan.pembayaran.status_dibatalkan);
+                             let statusAsli = tagihan.status === 'Belum Lunas'
+                                 ? (sudahAdaPembayaran ? 'Belum Lunas' : 'Belum Dibayarkan')
+                                 : tagihan.status;
                              statusMatch = statusAsli === currentFilters.status;
                          }
                      }
@@ -678,7 +690,13 @@
         function openDetailModal(tagihanData) {
             detailTagihanContent.innerHTML = ''; // Kosongkan dulu
             const rupiahFormat = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
-            let statusText = tagihanData.status === 'Belum Lunas' ? 'Belum Dibayarkan' : tagihanData.status;
+            const pembayaranAll = tagihanData.pembayaran_all || tagihanData.pembayaranAll || [];
+            const sudahAdaPembayaran = pembayaranAll.length > 0 || (tagihanData.pembayaran && !tagihanData.pembayaran.status_dibatalkan);
+            // Jika status "Belum Lunas" dan sudah ada pembayaran (cicilan), tampilkan "Belum Lunas"
+            // Jika status "Belum Lunas" dan belum ada pembayaran, tampilkan "Belum Dibayarkan"
+            let statusText = tagihanData.status === 'Belum Lunas'
+                ? (sudahAdaPembayaran ? 'Belum Lunas' : 'Belum Dibayarkan')
+                : tagihanData.status;
             const isLunas = tagihanData.status === 'Lunas';
             const pembayaran = tagihanData.pembayaran;
             const isDibatalkan = pembayaran && pembayaran.status_dibatalkan;
@@ -762,7 +780,61 @@
                 addDetailRow('Tgl Bayar', '-');
             }
 
+            // Informasi cicilan jika ada
+            if (tagihanData.total_angsuran > 0) {
+                addDetailRow('Total Angsuran', rupiahFormat.format(tagihanData.total_angsuran || 0));
+                addDetailRow('Sisa Pokok', rupiahFormat.format(tagihanData.sisa_pokok || tagihanData.jumlah_tagihan));
+            }
+
             detailContainer.appendChild(detailGrid);
+
+            // Tampilkan riwayat pembayaran (termasuk cicilan) jika ada
+            // pembayaranAll sudah dideklarasikan di awal fungsi
+            if (pembayaranAll && pembayaranAll.length > 0) {
+                const riwayatDiv = document.createElement('div');
+                riwayatDiv.className = 'mt-6 border-t border-gray-200 pt-4';
+                riwayatDiv.innerHTML = `
+                    <h4 class="text-sm font-semibold text-gray-900 mb-3">Riwayat Pembayaran</h4>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Metode</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kasir</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                ${pembayaranAll
+                                    .filter(p => !p.status_dibatalkan) // Filter pembayaran yang tidak dibatalkan
+                                    .sort((a, b) => new Date(b.tanggal_bayar) - new Date(a.tanggal_bayar)) // Urutkan terbaru dulu
+                                    .map((p, idx) => {
+                                        const tglBayar = p.tanggal_bayar ? new Date(p.tanggal_bayar).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric'}) : '-';
+                                        const jumlahBayar = p.jumlah_bayar || tagihanData.jumlah_tagihan || 0;
+                                        const isCicilan = p.is_cicilan || false;
+                                        return `
+                                            <tr>
+                                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-700">${tglBayar}</td>
+                                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900 font-medium">
+                                                    ${rupiahFormat.format(jumlahBayar)}
+                                                    ${isCicilan ? '<span class="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Cicilan</span>' : ''}
+                                                </td>
+                                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-700">${p.metode_pembayaran || '-'}</td>
+                                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-700">${p.user_kasir?.nama_lengkap || '-'}</td>
+                                                <td class="px-4 py-2 whitespace-nowrap text-sm">
+                                                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">Berhasil</span>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                detailContainer.appendChild(riwayatDiv);
+            }
 
             // Tampilkan informasi pembatalan jika ada (HANYA SEKALI, di luar grid)
             if (pembayaran && isDibatalkan && pembayaran.alasan_pembatalan) {

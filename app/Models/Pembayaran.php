@@ -19,6 +19,8 @@ class Pembayaran extends Model
         'diverifikasi_oleh',
         'tanggal_bayar',
         'metode_pembayaran',
+        'jumlah_bayar',
+        'is_cicilan',
         'alasan_ditolak',
         'alasan_pembatalan',
         'status_dibatalkan',

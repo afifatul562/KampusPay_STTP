@@ -234,8 +234,9 @@
             }
         }
 
-        $jumlahPembayaran = $pembayaran->tagihan->jumlah_tagihan ?? 0;
-        $terbilangPembayaran = terbilang_indonesia($jumlahPembayaran) . ' Rupiah';
+        $dibayar = $pembayaran->jumlah_bayar ?? ($pembayaran->tagihan->jumlah_tagihan ?? 0);
+        $sisaPokok = $pembayaran->tagihan->sisa_pokok ?? 0;
+        $terbilangPembayaran = terbilang_indonesia($dibayar) . ' Rupiah';
         $metodePembayaran = $pembayaran->metode_pembayaran ?? 'Tunai';
         if (stripos($metodePembayaran, 'tunai') !== false) {
             $metodeLabel = 'Tunai';
@@ -244,6 +245,8 @@
         } else {
             $metodeLabel = ucwords(strtolower($metodePembayaran));
         }
+        $isLunas = ($sisaPokok <= 0);
+        $watermarkText = $isLunas ? 'LUNAS' : 'CICILAN';
     @endphp
     <!-- ===== KOP SURAT ===== -->
     <header>
@@ -264,7 +267,7 @@
         </table>
     </header>
 
-    <div class="watermark">LUNAS</div>
+    <div class="watermark">{{ $watermarkText }}</div>
 
     <!-- ===== ISI KWITANSI ===== -->
     <div class="header-kwitansi">
@@ -273,7 +276,7 @@
             <tr>
                 <td class="meta-left">No. Transaksi: <strong>{{ $pembayaran->pembayaran_id }}</strong></td>
                 <td class="meta-center">Metode Pembayaran: <strong>{{ $metodeLabel }}</strong></td>
-                <td class="meta-right">Tanggal: <strong>{{ $pembayaran->created_at->format('d/m/Y') }}</strong></td>
+                <td class="meta-right">Tanggal: <strong>{{ $pembayaran->created_at->timezone(config('app.timezone'))->format('d/m/Y') }}</strong></td>
             </tr>
         </table>
     </div>
@@ -297,20 +300,26 @@
                 <td>{{ $pembayaran->tagihan->kode_pembayaran }}</td>
             </tr>
             <tr>
-                <th>Jumlah Pembayaran</th>
-                <td class="amount">Rp {{ number_format($pembayaran->tagihan->jumlah_tagihan, 0, ',', '.') }}</td>
+                <th>Jumlah Dibayar</th>
+                <td class="amount">Rp {{ number_format($dibayar, 0, ',', '.') }}</td>
             </tr>
             <tr>
-                <th>Terbilang Pembayaran</th>
+                <th>Terbilang</th>
                 <td style="font-style: italic;">{{ $terbilangPembayaran }}</td>
             </tr>
+            @if(!$isLunas)
+            <tr>
+                <th>Sisa Pokok</th>
+                <td class="amount">Rp {{ number_format($sisaPokok, 0, ',', '.') }}</td>
+            </tr>
+            @endif
         </table>
 
     </div>
 
     <div class="signature">
         <div class="block">
-            <div class="role">Padang, {{ $pembayaran->created_at->format('d F Y') }}</div>
+            <div class="role">Padang, {{ $pembayaran->created_at->timezone(config('app.timezone'))->format('d F Y') }}</div>
             <div style="height: 60px;"></div>
             <div><strong>{{ optional($pembayaran->verifier)->nama_lengkap ?? 'Sistem' }}</strong></div>
         </div>

@@ -67,8 +67,13 @@
                         <p class="text-sm">Anda tidak memiliki tunggakan aktif.</p>
                     </div>
                 @else
+                    @php
+                        $totalTunggakan = $tunggakan->sum(function($tagihan) {
+                            return $tagihan->sisa_pokok ?? $tagihan->jumlah_tagihan;
+                        });
+                    @endphp
                     <div class="bg-red-100 text-red-800 p-4 rounded-lg">
-                        <p>Anda memiliki <strong>{{ $tunggakan->count() }} tunggakan</strong> dengan total <strong>Rp {{ number_format($tunggakan->sum('jumlah_tagihan'), 0, ',', '.') }}</strong>.</p>
+                        <p>Anda memiliki <strong>{{ $tunggakan->count() }} tunggakan</strong> dengan total <strong>Rp {{ number_format($totalTunggakan, 0, ',', '.') }}</strong>.</p>
                     </div>
                 @endif
             </div>

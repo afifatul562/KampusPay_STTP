@@ -17,6 +17,8 @@ class Tagihan extends Model
         'tarif_id',
         'kode_pembayaran',
         'jumlah_tagihan',
+        'total_angsuran',
+        'sisa_pokok',
         'tanggal_jatuh_tempo',
         'status'
     ];
@@ -43,5 +45,89 @@ class Tagihan extends Model
     public function pembayaran()
     {
         return $this->hasOne(Pembayaran::class, 'tagihan_id');
+    }
+
+    /**
+     * Relasi untuk semua pembayaran (termasuk cicilan)
+     */
+    public function pembayaranAll()
+    {
+        return $this->hasMany(Pembayaran::class, 'tagihan_id');
+    }
+
+    /**
+     * Relasi untuk pembayaran cicilan saja
+     */
+    public function pembayaranCicilan()
+    {
+        return $this->hasMany(Pembayaran::class, 'tagihan_id')
+            ->where('is_cicilan', true)
+            ->where('status_dibatalkan', false);
+    }
+
+    /**
+     * Cek apakah tagihan ini wajib lunas (tidak boleh dicicil)
+     */
+    public function isWajibLunas()
+    {
+        $namaPembayaran = strtolower($this->tarif->nama_pembayaran ?? '');
+        $wajibLunas = [
+            'uang kemahasiswaan',
+            'uang ujian akhir',
+            'ujian akhir semester',
+            'ujian akhir'
+        ];
+
+        foreach ($wajibLunas as $wajib) {
+            if (str_contains($namaPembayaran, $wajib)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Update total angsuran dan sisa pokok setelah pembayaran
+     */
+    public function updateAngsuran()
+    {
+        // Hitung total dari semua pembayaran yang tidak dibatalkan (termasuk cicilan dan lunas)
+        $totalAngsuran = $this->pembayaranAll()
+            ->where('status_dibatalkan', false)
+            ->sum('jumlah_bayar') ?? 0;
+
+        $this->total_angsuran = $totalAngsuran;
+        $this->sisa_pokok = max(0, $this->jumlah_tagihan - $totalAngsuran);
+
+        // Status penyesuaian otomatis
+        if ($this->sisa_pokok <= 0) {
+            // Lunas jika sudah tidak ada sisa
+            $this->status = 'Lunas';
+        } else {
+            // Jika masih ada sisa, pastikan status kembali ke 'Belum Lunas'
+            // kecuali jika status 'Ditolak' (biarkan ditolak sampai ada aksi ulang)
+            if ($this->status !== 'Ditolak') {
+                $this->status = 'Belum Lunas';
+            }
+        }
+
+        $this->save();
+    }
+
+    /**
+     * Cek apakah tagihan sudah lunas berdasarkan cicilan
+     */
+    public function isLunas()
+    {
+        return $this->sisa_pokok <= 0 || $this->status === 'Lunas';
+    }
+
+    /**
+     * Cek apakah tagihan menunggak (jatuh tempo lewat dan belum lunas)
+     */
+    public function isMenunggak()
+    {
+        return !$this->isLunas() && now()->greaterThan($this->tanggal_jatuh_tempo);
     }
 }

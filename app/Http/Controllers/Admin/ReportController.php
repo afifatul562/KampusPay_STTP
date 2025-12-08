@@ -57,7 +57,14 @@ class ReportController extends Controller
             Log::info('Mengambil data laporan mahasiswa angkatan ' . $tahun . ': ' . $mahasiswaList->count() . ' record.');
 
         } elseif ($jenis === 'pembayaran') {
-            $data = Tagihan::with(['mahasiswa.user', 'tarif', 'pembayaran.userKasir' => fn($q)=>$q->select('id','nama_lengkap')]) // Eager load kasir
+            $data = Tagihan::with([
+                    'mahasiswa.user',
+                    'tarif',
+                    'pembayaran.userKasir' => fn($q)=>$q->select('id','nama_lengkap'),
+                    'pembayaranAll' => function($q) {
+                        $q->where('status_dibatalkan', false);
+                    }
+                ]) // Eager load kasir dan semua pembayaran
                         ->whereYear('created_at', $tahun)
                         ->orderBy('created_at') // Urutkan tagihan
                         ->get();

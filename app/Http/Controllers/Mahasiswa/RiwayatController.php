@@ -13,13 +13,17 @@ class RiwayatController extends Controller
         // Ambil ID mahasiswa yang sedang login
         $mahasiswaId = Auth::user()->mahasiswaDetail->mahasiswa_id;
 
-        // Ambil semua tagihan yang statusnya 'Lunas'
-        $riwayat = \App\Models\Tagihan::with('tarif', 'pembayaran')
-            ->where('mahasiswa_id', $mahasiswaId)
-            ->where('status', 'Lunas')
-            ->latest() // Urutkan dari yang terbaru
+        // Ambil semua pembayaran (tunai/transfer), termasuk cicilan, yang tidak dibatalkan
+        $pembayaran = \App\Models\Pembayaran::with('tagihan.tarif', 'tagihan.mahasiswa', 'verifier')
+            ->whereHas('tagihan', function ($q) use ($mahasiswaId) {
+                $q->where('mahasiswa_id', $mahasiswaId);
+            })
+            ->where(function ($q) {
+                $q->whereNull('status_dibatalkan')->orWhere('status_dibatalkan', false);
+            })
+            ->latest('tanggal_bayar')
             ->paginate(10);
 
-        return view('mahasiswa.riwayat', compact('riwayat'));
+        return view('mahasiswa.riwayat', ['pembayaran' => $pembayaran]);
     }
 }

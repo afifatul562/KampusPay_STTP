@@ -18,9 +18,19 @@
                     <span class="font-semibold text-gray-900 text-right">{{ $tagihan->tarif->nama_pembayaran }}</span>
                 </div>
                 <div class="flex justify-between items-center">
-                    <span class="text-sm text-gray-500">Jumlah</span>
+                    <span class="text-sm text-gray-500">Jumlah Tagihan</span>
                     <span class="text-2xl font-bold text-blue-600">Rp. {{ number_format($tagihan->jumlah_tagihan, 0, ',', '.') }}</span>
                 </div>
+                @if($tagihan->total_angsuran > 0)
+                <div class="flex justify-between items-center">
+                    <span class="text-sm text-gray-500">Sudah Dibayar</span>
+                    <span class="font-semibold text-green-600">Rp. {{ number_format($tagihan->total_angsuran, 0, ',', '.') }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-sm text-gray-500">Sisa Pokok</span>
+                    <span class="font-semibold text-orange-600">Rp. {{ number_format($tagihan->sisa_pokok ?? $tagihan->jumlah_tagihan, 0, ',', '.') }}</span>
+                </div>
+                @endif
                 <div class="flex justify-between items-center">
                     <span class="text-sm text-gray-500">Jatuh Tempo</span>
                     <span class="font-medium text-gray-900">{{ \Carbon\Carbon::parse($tagihan->tanggal_jatuh_tempo)->isoFormat('D MMMM YYYY') }}</span>
@@ -34,19 +44,33 @@
                 <div class="p-6 space-y-4">
                     <p class="text-sm text-gray-600">Silakan pilih salah satu metode pembayaran yang Anda inginkan:</p>
 
-                    {{--
-                        PENTING:
-                        Kedua tombol ini adalah 'submit', tapi punya 'name' dan 'value'
-                        name="metode" value="transfer"
-                        name="metode" value="tunai"
-                        Controller akan membaca 'value' ini.
-                    --}}
+                    @php
+                        $isWajibLunas = $tagihan->isWajibLunas();
+                        $sisaPokok = $tagihan->sisa_pokok ?? $tagihan->jumlah_tagihan;
+                    @endphp
+
+                    @if(!$isWajibLunas)
+                    {{-- Pilihan 0: Cicil (hanya untuk tagihan yang boleh dicicil) --}}
+                    <button type="submit" name="metode" value="cicil"
+                            class="group w-full flex items-center justify-between p-4 border-2 border-purple-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200 shadow-sm hover:shadow-md">
+                        <div class="text-left">
+                            <p class="font-semibold text-gray-800 group-hover:text-purple-700">Bayar Cicilan</p>
+                            <p class="text-sm text-gray-500">Bayar sebagian tagihan sesuai kemampuan Anda.</p>
+                            @if($tagihan->total_angsuran > 0)
+                            <p class="text-xs text-purple-600 mt-1">Sisa: Rp. {{ number_format($sisaPokok, 0, ',', '.') }}</p>
+                            @endif
+                        </div>
+                        <div class="bg-gradient-to-br from-purple-100 to-purple-200 p-3 rounded-lg group-hover:from-purple-200 group-hover:to-purple-300 transition-all duration-200">
+                            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        </div>
+                    </button>
+                    @endif
 
                     {{-- Pilihan 1: Transfer --}}
                     <button type="submit" name="metode" value="transfer"
                             class="group w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all duration-200 shadow-sm hover:shadow-md">
                         <div class="text-left">
-                            <p class="font-semibold text-gray-800 group-hover:text-primary-700">Bayar via Transfer Bank</p>
+                            <p class="font-semibold text-gray-800 group-hover:text-primary-700">Bayar {{ $isWajibLunas ? 'Penuh' : 'Lunas' }} via Transfer Bank</p>
                             <p class="text-sm text-gray-500">Upload bukti transfer untuk diverifikasi oleh kasir.</p>
                         </div>
                         <div class="bg-gradient-to-br from-primary-100 to-primary-200 p-3 rounded-lg group-hover:from-primary-200 group-hover:to-primary-300 transition-all duration-200">
@@ -58,7 +82,7 @@
                     <button type="submit" name="metode" value="tunai"
                             class="group w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:border-success-500 hover:bg-success-50 focus:outline-none focus:ring-2 focus:ring-success-500 transition-all duration-200 shadow-sm hover:shadow-md">
                         <div class="text-left">
-                            <p class="font-semibold text-gray-800 group-hover:text-success-700">Bayar Tunai di Kasir</p>
+                            <p class="font-semibold text-gray-800 group-hover:text-success-700">Bayar {{ $isWajibLunas ? 'Penuh' : 'Lunas' }} Tunai di Kasir</p>
                             <p class="text-sm text-gray-500">Pilih ini dan datang ke kasir untuk pembayaran tunai.</p>
                         </div>
                         <div class="bg-gradient-to-br from-success-100 to-success-200 p-3 rounded-lg group-hover:from-success-200 group-hover:to-success-300 transition-all duration-200">

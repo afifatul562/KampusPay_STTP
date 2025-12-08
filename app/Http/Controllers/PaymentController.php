@@ -21,14 +21,29 @@ use Illuminate\Support\Str;
 class PaymentController extends Controller
 {
     /**
-     * Menampilkan semua data pembayaran (mungkin tidak dipakai di halaman tagihan admin).
+     * Menampilkan semua data pembayaran (termasuk cicilan) untuk admin.
      */
     public function index()
     {
-        $payments = Pembayaran::with('tagihan.mahasiswa.user', 'tagihan.tarif', 'verifier')
-            ->latest('tanggal_bayar')
-            ->get();
-        return response()->json($payments);
+        try {
+            $payments = Pembayaran::with([
+                    'tagihan.mahasiswa.user',
+                    'tagihan.tarif',
+                    'userKasir' => function ($query) {
+                        $query->select('id', 'nama_lengkap');
+                    }
+                ])
+                ->where(function($q) {
+                    $q->whereNull('status_dibatalkan')
+                      ->orWhere('status_dibatalkan', false);
+                })
+                ->latest('tanggal_bayar')
+                ->get();
+            return response()->json(['data' => $payments]);
+        } catch (\Exception $e) {
+            Log::error('Gagal mengambil data pembayaran: ' . $e->getMessage());
+            return response()->json(['message' => 'Gagal mengambil data pembayaran.'], 500);
+        }
     }
 
      /**
@@ -43,6 +58,9 @@ class PaymentController extends Controller
                      'tarif',
                      'pembayaran.userKasir' => function ($query) { // Eager load kasir melalui pembayaran
                          $query->select('id', 'nama_lengkap'); // Hanya ambil kolom yg perlu
+                     },
+                     'pembayaranAll.userKasir' => function ($query) { // Eager load semua pembayaran (termasuk cicilan)
+                         $query->select('id', 'nama_lengkap');
                      }
                  ])
                  ->latest('created_at') // Urutkan berdasarkan tagihan terbaru
@@ -77,7 +95,10 @@ class PaymentController extends Controller
             $tagihan = Tagihan::with([
                 'mahasiswa.user',
                 'tarif',
-                'pembayaran.userKasir' => fn($q)=>$q->select('id','nama_lengkap')
+                'pembayaran.userKasir' => fn($q)=>$q->select('id','nama_lengkap'),
+                'pembayaranAll.userKasir' => function($q) {
+                    $q->select('id','nama_lengkap');
+                }
                 ])
                 ->findOrFail($id);
 

@@ -15,7 +15,9 @@ class KonfirmasiPembayaran extends Model
         'tagihan_id',
         'file_bukti_pembayaran',
         'status_verifikasi',
-        'alasan_ditolak'
+        'alasan_ditolak',
+        'is_cicilan',
+        'jumlah_bayar'
     ];
 
     public function tagihan()

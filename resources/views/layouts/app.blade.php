@@ -10,6 +10,12 @@
         @endif
     @endauth
     <title>@yield('title', 'KampusPay STTP')</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ asset('images/logo_kampus.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ asset('images/logo_kampus.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/logo_kampus.png') }}">
+    
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])

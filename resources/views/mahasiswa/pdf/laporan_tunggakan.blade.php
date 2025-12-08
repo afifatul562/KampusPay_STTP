@@ -94,7 +94,16 @@
                         <td class="{{ \Carbon\Carbon::parse($item->tanggal_jatuh_tempo)->isPast() ? 'overdue' : '' }}">
                             {{ \Carbon\Carbon::parse($item->tanggal_jatuh_tempo)->isoFormat('D MMM Y') }}
                         </td>
-                        <td class="text-right">Rp {{ number_format($item->jumlah_tagihan, 0, ',', '.') }}</td>
+                        @php
+                            $sisa = $item->sisa_pokok ?? $item->jumlah_tagihan;
+                            $dibayar = $item->total_angsuran ?? 0;
+                        @endphp
+                        <td class="text-right">
+                            Rp {{ number_format($sisa, 0, ',', '.') }}
+                            @if($dibayar > 0)
+                                <div style="font-size:10px;color:#166534;">Sudah dibayar: Rp {{ number_format($dibayar, 0, ',', '.') }}</div>
+                            @endif
+                        </td>
                         <td>{{ $item->status }}</td>
                     </tr>
                 @empty
@@ -107,7 +116,10 @@
             <tfoot>
                 <tr>
                     <td colspan="4" class="text-right"><strong>TOTAL TUNGGAKAN</strong></td>
-                    <td class="text-right"><strong>Rp {{ number_format($tunggakan->sum('jumlah_tagihan'), 0, ',', '.') }}</strong></td>
+                    @php
+                        $totalSisa = $tunggakan->sum(function($t){ return $t->sisa_pokok ?? $t->jumlah_tagihan; });
+                    @endphp
+                    <td class="text-right"><strong>Rp {{ number_format($totalSisa, 0, ',', '.') }}</strong></td>
                     <td></td> {{-- Kolom status kosong --}}
                 </tr>
             </tfoot>
