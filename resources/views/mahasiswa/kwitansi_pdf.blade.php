@@ -319,9 +319,10 @@
 
     <div class="signature">
         <div class="block">
-            <div class="role">Padang, {{ $pembayaran->created_at->timezone(config('app.timezone'))->format('d F Y') }}</div>
+            <div class="role">Payakumbuh, {{ $pembayaran->created_at->timezone(config('app.timezone'))->format('d F Y') }}</div>
             <div style="height: 60px;"></div>
             <div><strong>{{ optional($pembayaran->verifier)->nama_lengkap ?? 'Sistem' }}</strong></div>
+            <div class="role">Kasir</div>
         </div>
     </div>
 

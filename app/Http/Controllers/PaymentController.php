@@ -5,6 +5,7 @@ namespace App\Http\Controllers; // Pastikan namespace ini benar
 use Illuminate\Http\Request;
 use App\Models\Tagihan;
 use App\Models\KonfirmasiPembayaran;
+use App\Models\AktivasiStatus;
 use App\Models\Pembayaran;
 use App\Models\User;
 use App\Models\TarifMaster;
@@ -135,6 +136,31 @@ class PaymentController extends Controller
             'tanggal_jatuh_tempo' => 'required|date|after_or_equal:today',
         ]);
 
+        $currentSemester = config('academic.current_semester');
+
+        // 1.b: Cek status aktivasi semester
+        $aktivasi = AktivasiStatus::where('mahasiswa_id', $validatedData['mahasiswa_id'])
+            ->where('semester_label', $currentSemester)
+            ->latest()
+            ->first();
+
+        $tarifBssName = config('academic.bss_tarif_name', 'Administrasi BSS');
+        $tarifBss = \App\Models\TarifMaster::firstOrCreate(
+            ['nama_pembayaran' => $tarifBssName],
+            ['nominal' => config('academic.bss_amount')]
+        );
+
+        $isBssTarif = ((int)$tarifBss->tarif_id === (int)$validatedData['tarif_id']);
+
+        if ($aktivasi && $aktivasi->status === 'bss' && !$isBssTarif) {
+            return response()->json(['message' => 'Mahasiswa status BSS. Hanya tagihan BSS yang diperbolehkan.'], 403);
+        }
+
+        if ($aktivasi && $aktivasi->status === 'bss' && $isBssTarif) {
+            // Paksa nominal BSS dari konfigurasi
+            $validatedData['jumlah_tagihan'] = config('academic.bss_amount');
+        }
+
         // 2. Cek duplikat yang tidak dibatalkan (baik yang Lunas maupun belum)
         //    Admin TIDAK boleh membuat tagihan sejenis lagi jika pernah dibuat,
         //    kecuali tagihan sebelumnya dibatalkan secara resmi.
@@ -154,6 +180,8 @@ class PaymentController extends Controller
 
         // 4. Tambahkan status
         $validatedData['status'] = 'Belum Lunas';
+        $validatedData['semester_label'] = $currentSemester;
+        $validatedData['is_bss'] = $aktivasi && $aktivasi->status === 'bss' && $isBssTarif;
 
         try {
             // 5. Buat tagihan
@@ -263,7 +291,7 @@ class PaymentController extends Controller
         $tagihan = Tagihan::find($id);
 
         if (!$tagihan) { Log::error("Hapus gagal: Tagihan ID {$id} tidak ditemukan."); return response()->json(['message' => 'Tagihan tidak ditemukan.'], 404); }
-        
+
         // Otorisasi hapus tagihan
         $this->authorize('delete', $tagihan);
          if ($tagihan->status === 'Lunas') { Log::warning("Hapus ditolak: Tagihan ID {$id} sudah lunas."); return response()->json(['message' => 'Tagihan yang sudah lunas tidak dapat dihapus.'], 403); }

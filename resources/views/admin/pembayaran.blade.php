@@ -1,7 +1,20 @@
 @extends('layouts.app')
 
-@section('title', 'Admin - Manajemen Pembayaran')
-@section('page-title', 'Manajemen Pembayaran')
+@php
+    $rolePrefix = $rolePrefix ?? 'admin';
+    $roleLabel = $rolePrefix === 'kasir' ? 'Kasir' : 'Admin';
+    $isKasirPage = $rolePrefix === 'kasir';
+    $dashboardRouteName = $rolePrefix . '.dashboard';
+    $tagihanIndexRouteName = $rolePrefix . '.tagihan.index';
+    $mahasiswaIndexRouteName = $rolePrefix . '.mahasiswa.index';
+    $tarifIndexRouteName = $rolePrefix . '.tarif.index';
+    $createTagihanRouteName = $rolePrefix . '.payments.tagihan.create';
+    $apiTagihanBase = url("api/{$rolePrefix}/tagihan");
+    $apiAktivasiNotif = $isKasirPage ? route('kasir.aktivasi.notifications') : null;
+@endphp
+
+@section('title', $roleLabel . ' - Manajemen Tagihan')
+@section('page-title', 'Manajemen Tagihan')
 
 @section('content')
 @php
@@ -12,8 +25,8 @@
 
 <div class="space-y-6">
     <x-breadcrumbs :items="[
-        ['label' => 'Dashboard', 'url' => route('admin.dashboard')],
-        ['label' => 'Manajemen Pembayaran']
+        ['label' => 'Dashboard', 'url' => route($dashboardRouteName)],
+        ['label' => 'Manajemen Tagihan']
     ]" />
 
     <x-page-header
@@ -25,6 +38,21 @@
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
                 Buat Tagihan Baru
             </x-gradient-button>
+            @if($isKasirPage)
+            <button id="notifAktivasiBtn" type="button" class="relative inline-flex items-center px-3 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500">
+                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                <span id="notifAktivasiBadge" class="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-primary-100 text-primary-700">0</span>
+            </button>
+            <div id="notifAktivasiDropdown" class="hidden absolute right-4 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                <div class="p-3 border-b border-gray-100 flex items-center justify-between">
+                    <span class="font-semibold text-gray-800 text-sm">Notifikasi Aktivasi</span>
+                    <button id="closeNotifAktivasi" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+                </div>
+                <div id="notifAktivasiList" class="max-h-80 overflow-y-auto divide-y divide-gray-100">
+                    <div class="p-4 text-sm text-gray-500">Memuat...</div>
+                </div>
+            </div>
+            @endif
         </x-slot:actions>
     </x-page-header>
 
@@ -150,6 +178,9 @@
     document.addEventListener('DOMContentLoaded', function() {
         // --- Bagian Umum ---
         const apiToken = document.querySelector('meta[name="api-token"]')?.getAttribute('content');
+        const apiTagihanBase = "{{ $apiTagihanBase }}";
+        const isKasir = "{{ $isKasirPage ? '1' : '0' }}" === '1';
+        const apiAktivasiNotif = "{{ $apiAktivasiNotif ?? '' }}";
         // Find tbody by finding the table with aria-label and then its tbody
         const paymentTable = document.querySelector('table[aria-label="Tabel pembayaran dan tagihan"]');
         const paymentTableBody = paymentTable ? paymentTable.querySelector('tbody') : null;
@@ -160,6 +191,11 @@
         const tagihanForm = document.getElementById('tagihanForm');
         const tagihanIdInput = document.getElementById('tagihanId');
         const addTagihanBtn = document.getElementById('addTagihanBtn');
+        const notifAktivasiBtn = document.getElementById('notifAktivasiBtn');
+        const notifAktivasiBadge = document.getElementById('notifAktivasiBadge');
+        const notifAktivasiDropdown = document.getElementById('notifAktivasiDropdown');
+        const notifAktivasiList = document.getElementById('notifAktivasiList');
+        const closeNotifAktivasi = document.getElementById('closeNotifAktivasi');
         const closeModalButton = tagihanModal.querySelector('.close-button');
         const cancelBtn = document.getElementById('cancelBtn');
         const angkatanFilterSelect = document.getElementById('angkatan_filter');
@@ -182,6 +218,8 @@
         const filterJenisSelect = document.getElementById('filterJenis');
         const filterNamaMahasiswaInput = document.getElementById('filterNamaMahasiswa');
         let currentFilters = { status: '', jenis: '', namaMahasiswa: '' };
+        let aktivasiNotifs = [];
+        let notifTimer = null;
 
         // ===========================================
         // !! Inisialisasi Cleave.js (Format Angka) !!
@@ -338,6 +376,50 @@
             if (input === undefined || input === null) return '';
             const onlyDigits = String(input).replace(/[^\d-]/g, '');
             return onlyDigits ? Number(onlyDigits) : '';
+        }
+
+        // -------------------------------------
+        // NOTIFIKASI AKTIVASI (KASIR)
+        // -------------------------------------
+        async function loadAktivasiNotifs() {
+            if (!isKasir || !apiAktivasiNotif) return;
+            try {
+                const data = await apiRequest(apiAktivasiNotif);
+                aktivasiNotifs = data.data || [];
+                renderAktivasiNotifs();
+            } catch (e) {
+                console.warn('Gagal memuat notifikasi aktivasi', e);
+            }
+        }
+
+        function renderAktivasiNotifs() {
+            if (!notifAktivasiList || !notifAktivasiBadge) return;
+            if (!aktivasiNotifs.length) {
+                notifAktivasiList.innerHTML = '<div class="p-4 text-sm text-gray-500">Belum ada notifikasi.</div>';
+                notifAktivasiBadge.textContent = '0';
+                return;
+            }
+            notifAktivasiBadge.textContent = aktivasiNotifs.length;
+            notifAktivasiList.innerHTML = aktivasiNotifs.map(item => {
+                const statusLabel = item.status === 'aktif' ? 'Aktif' : 'BSS';
+                const badgeClass = item.status === 'aktif' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700';
+                const nama = item.mahasiswa?.user?.nama_lengkap || 'Mahasiswa';
+                const npm = item.mahasiswa?.npm || '';
+                const updated = item.updated_at ? new Date(item.updated_at).toLocaleString('id-ID') : '';
+                return `
+                    <div class="p-4 hover:bg-gray-50">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-sm font-semibold text-gray-800">${nama}</div>
+                                <div class="text-xs text-gray-500">${npm}</div>
+                            </div>
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}">${statusLabel}</span>
+                        </div>
+                        <div class="mt-2 text-xs text-gray-500">Semester: ${item.semester_label || '-'}</div>
+                        <div class="text-[11px] text-gray-400">${updated}</div>
+                    </div>
+                `;
+            }).join('');
         }
 
         // -------------------------------------
@@ -512,7 +594,7 @@
         // -------------------------------------
         function loadPayments() {
             renderTable([]);
-            const url = "{{ route('admin.tagihan.index') }}";
+            const url = "{{ route($tagihanIndexRouteName) }}";
             apiRequest(url).then(response => {
                 allTagihanData = response.data || response;
                 populateTableFilters();
@@ -530,8 +612,8 @@
         // --- Fungsi Modal & Form Handling (Diperbarui) ---
 
         async function populateFormDropdowns() {
-            const mahasiswaUrl = "{{ route('admin.mahasiswa.index') }}";
-            const tarifUrl = "{{ route('admin.tarif.index') }}";
+            const mahasiswaUrl = "{{ route($mahasiswaIndexRouteName) }}";
+            const tarifUrl = "{{ route($tarifIndexRouteName) }}";
             try {
                 const [mahasiswaResponse, tarifResponse] = await Promise.all([apiRequest(mahasiswaUrl), apiRequest(tarifUrl)]);
                 allMahasiswaData = mahasiswaResponse.data || mahasiswaResponse;
@@ -889,7 +971,7 @@
                 cancelButtonText: 'Batal'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    const deleteUrl = `{{ url('api/admin/tagihan') }}/${tagihanId}`;
+                    const deleteUrl = `${apiTagihanBase}/${tagihanId}`;
                     apiRequest(deleteUrl, 'DELETE').then(response => {
                         Swal.fire({ icon: 'success', title: 'Dihapus!', text: response.message || 'Tagihan berhasil dihapus.', timer: 1500, showConfirmButton: false });
                         loadPayments();
@@ -926,6 +1008,19 @@
         }
         if (tagihanModal) {
             window.addEventListener('click', (event) => { if (event.target == tagihanModal) { closeTagihanModal(); } });
+        }
+
+        // Notifikasi aktivasi
+        if (isKasir && notifAktivasiBtn && notifAktivasiDropdown) {
+            notifAktivasiBtn.addEventListener('click', () => {
+                notifAktivasiDropdown.classList.toggle('hidden');
+            });
+            closeNotifAktivasi?.addEventListener('click', () => notifAktivasiDropdown.classList.add('hidden'));
+            document.addEventListener('click', (e) => {
+                if (!notifAktivasiDropdown.contains(e.target) && e.target !== notifAktivasiBtn) {
+                    notifAktivasiDropdown.classList.add('hidden');
+                }
+            });
         }
         // Listener Dropdown di Modal
         if (angkatanFilterSelect) {
@@ -969,11 +1064,11 @@
             const namaTagihan = button.closest('tr')?.querySelector('td:nth-child(3)')?.textContent.trim() || `ID ${tagihanId}`;
 
             if (button.classList.contains('view-btn')) {
-                 const detailUrl = `{{ url('api/admin/tagihan') }}/${tagihanId}`;
+                 const detailUrl = `${apiTagihanBase}/${tagihanId}`;
                  apiRequest(detailUrl).then(response => openDetailModal(response.data || response))
                  .catch(err => { Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal memuat detail: ' + err.message }); });
             } else if (button.classList.contains('edit-btn')) {
-                 const detailUrl = `{{ url('api/admin/tagihan') }}/${tagihanId}`;
+                 const detailUrl = `${apiTagihanBase}/${tagihanId}`;
                  apiRequest(detailUrl).then(response => openTagihanModal('edit', response.data || response))
                  .catch(err => { Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal memuat data untuk edit: ' + err.message }); });
             } else if (button.classList.contains('delete-btn')) {
@@ -995,7 +1090,7 @@
             tagihanForm.addEventListener('submit', function(event) {
              event.preventDefault();
              const id = tagihanIdInput.value; const isEdit = !!id;
-             const url = isEdit ? `{{ url('api/admin/tagihan') }}/${id}` : "{{ route('admin.payments.tagihan.create') }}";
+             const url = isEdit ? `${apiTagihanBase}/${id}` : "{{ route($createTagihanRouteName) }}";
              const method = isEdit ? 'PUT' : 'POST';
             const formData = { mahasiswa_id: mahasiswaSelect.value, tarif_id: tarifSelect.value, jumlah_tagihan: parseRupiahToNumber(jumlahInput.value), tanggal_jatuh_tempo: toYmdFromDdMmYyyy(tglJatuhTempoInput.value), kode_pembayaran: kodeInput.value, };
 
@@ -1071,6 +1166,10 @@
         }
 
         loadPayments();
+        if (isKasir) {
+            loadAktivasiNotifs();
+            notifTimer = setInterval(loadAktivasiNotifs, 20000);
+        }
     });
 </script>
 @endpush

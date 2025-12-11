@@ -13,5 +13,11 @@ class Report extends Model
         'jenis_laporan',
         'periode',
         'file_name',
+        'user_id',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

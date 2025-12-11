@@ -20,6 +20,8 @@ class Tagihan extends Model
         'total_angsuran',
         'sisa_pokok',
         'tanggal_jatuh_tempo',
+        'semester_label',
+        'is_bss',
         'status'
     ];
 
@@ -105,10 +107,16 @@ class Tagihan extends Model
             // Lunas jika sudah tidak ada sisa
             $this->status = 'Lunas';
         } else {
-            // Jika masih ada sisa, pastikan status kembali ke 'Belum Lunas'
+            // Jika masih ada sisa, tentukan status berdasarkan total_angsuran
             // kecuali jika status 'Ditolak' (biarkan ditolak sampai ada aksi ulang)
             if ($this->status !== 'Ditolak') {
-                $this->status = 'Belum Lunas';
+                if ($totalAngsuran > 0) {
+                    // Sudah ada pembayaran tapi belum lunas
+                    $this->status = 'Belum Lunas';
+                } else {
+                    // Belum ada pembayaran sama sekali
+                    $this->status = 'Belum Dibayarkan';
+                }
             }
         }
 

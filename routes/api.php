@@ -12,6 +12,8 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\PaymentController; // <-- Pastikan ini diimport
 use App\Http\Controllers\Kasir\DashboardController as KasirDashboardController;
 use App\Http\Controllers\Kasir\VerifikasiController as KasirVerifikasiController;
+use App\Http\Controllers\Kasir\AktivasiKasirController;
+use App\Http\Controllers\Mahasiswa\AktivasiController as MahasiswaAktivasiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -88,10 +90,44 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/verifikasi/reject/{konfirmasi}', [KasirVerifikasiController::class, 'reject'])
             ->middleware('throttle:15,1')
             ->name('verifikasi.reject');
+
+        // Aktivasi mahasiswa
+        Route::get('/aktivasi/notifications', [AktivasiKasirController::class, 'index'])->name('aktivasi.notifications');
+        Route::post('/aktivasi/{aktivasi}/override', [AktivasiKasirController::class, 'override'])->name('aktivasi.override');
+        Route::post('/aktivasi/mahasiswa/{mahasiswa}', [AktivasiKasirController::class, 'createFromMahasiswa'])->name('aktivasi.createFromMahasiswa');
+
+        // Laporan Pembayaran
+        Route::get('/reports/preview', [\App\Http\Controllers\Kasir\LaporanController::class, 'previewPembayaran'])
+            ->middleware('throttle:20,1')
+            ->name('reports.preview');
+        Route::post('/reports/generate', [\App\Http\Controllers\Kasir\LaporanController::class, 'generatePembayaranPdf'])
+            ->middleware('throttle:10,1')
+            ->name('reports.generate');
+        // Laporan Tunggakan
+        Route::get('/reports/tunggakan/preview', [\App\Http\Controllers\Kasir\LaporanController::class, 'previewTunggakan'])
+            ->middleware('throttle:20,1')
+            ->name('reports.tunggakan.preview');
+        Route::post('/reports/tunggakan/generate', [\App\Http\Controllers\Kasir\LaporanController::class, 'generateTunggakanPdf'])
+            ->middleware('throttle:10,1')
+            ->name('reports.tunggakan.generate');
+        Route::get('/reports/riwayat', [\App\Http\Controllers\Kasir\LaporanController::class, 'indexRiwayat'])
+            ->name('reports.riwayat');
+        Route::get('/reports/{reportId}/download', [\App\Http\Controllers\Kasir\LaporanController::class, 'downloadRiwayat'])
+            ->name('reports.download');
+        Route::delete('/reports/{reportId}', [\App\Http\Controllers\Kasir\LaporanController::class, 'destroyRiwayat'])
+            ->name('reports.destroy');
+
+        // Tagihan & master data pendukung (kasir)
+        Route::get('/mahasiswa', [MahasiswaController::class, 'index'])->name('mahasiswa.index');
+        Route::get('/tarif', [TarifController::class, 'index'])->name('tarif.index');
+        Route::get('/tagihan', [PaymentController::class, 'indexTagihan'])->name('tagihan.index');
+        Route::get('/tagihan/{id}', [PaymentController::class, 'showTagihan'])->name('tagihan.show');
+        Route::post('/payments/tagihan', [PaymentController::class, 'createTagihan'])->name('payments.tagihan.create');
     });
 
     // --- RUTE KHUSUS UNTUK MAHASISWA ---
     Route::middleware('role:mahasiswa')->prefix('mahasiswa')->name('mahasiswa.')->group(function () {
-        // Contoh: Route::get('/tagihan-saya', [MahasiswaApiController::class, 'tagihanSaya']);
+        Route::get('/aktivasi', [MahasiswaAktivasiController::class, 'current'])->name('aktivasi.current');
+        Route::post('/aktivasi', [MahasiswaAktivasiController::class, 'store'])->name('aktivasi.store');
     });
 });

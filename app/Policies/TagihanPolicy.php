@@ -9,8 +9,8 @@ class TagihanPolicy
 {
     public function create(User $user): bool
     {
-        // Hanya admin yang boleh membuat tagihan
-        return $user->isAdmin();
+        // Admin dan kasir boleh membuat tagihan
+        return $user->isAdmin() || $user->isKasir();
     }
 
     public function view(User $user, Tagihan $tagihan): bool

@@ -77,6 +77,12 @@
                             </svg>
                             <span>Ubah Password</span>
                         </a>
+                        <a href="{{ route('mahasiswa.aktivasi') }}" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span>Aktivasi</span>
+                        </a>
                     @elseif(Auth::user()->isKasir())
                         <a href="{{ route('kasir.pengaturan.password') }}" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                             <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -88,7 +94,7 @@
                     <div class="border-t border-gray-100 my-1"></div>
                 @endif
 
-                <form method="POST" action="{{ route('logout') }}">
+                <form method="POST" action="{{ route('logout') }}" id="logout-form">
                     @csrf
                     <button type="submit" class="flex items-center gap-3 w-full text-left px-4 py-2.5 text-sm text-danger-600 hover:bg-danger-50 transition-colors">
                         <svg class="w-5 h-5 text-danger-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,6 +103,23 @@
                         <span>Logout</span>
                     </button>
                 </form>
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const logoutForm = document.getElementById('logout-form');
+                        if (logoutForm) {
+                            logoutForm.addEventListener('submit', function(e) {
+                                // Pastikan CSRF token ada
+                                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                                if (csrfToken) {
+                                    const csrfInput = logoutForm.querySelector('input[name="_token"]');
+                                    if (csrfInput) {
+                                        csrfInput.value = csrfToken;
+                                    }
+                                }
+                            });
+                        }
+                    });
+                </script>
             </div>
         </div>
     </div>

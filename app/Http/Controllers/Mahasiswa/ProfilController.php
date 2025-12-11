@@ -16,7 +16,11 @@ class ProfilController extends Controller
      */
     public function index()
     {
-        $user = User::with('mahasiswaDetail.tagihan')->find(Auth::id());
+        $user = User::with([
+            'mahasiswaDetail.tagihan.pembayaranAll' => function ($query) {
+                $query->where('status_dibatalkan', false);
+            }
+        ])->find(Auth::id());
 
         if (!$user->mahasiswaDetail) {
             abort(404, 'Detail mahasiswa tidak ditemukan.');
@@ -24,11 +28,42 @@ class ProfilController extends Controller
 
         $allTagihan = $user->mahasiswaDetail->tagihan;
 
-        // Hitung data untuk Ringkasan Keuangan
-        $totalTunggakan = $allTagihan->where('status', 'Belum Lunas')->sum('jumlah_tagihan');
-        $jumlahTunggakan = $allTagihan->where('status', 'Belum Lunas')->count();
-        $totalTerbayar = $allTagihan->where('status', 'Lunas')->sum('jumlah_tagihan');
-        $pembayaranSelesai = $allTagihan->where('status', 'Lunas')->count();
+        // Hitung data untuk Ringkasan Keuangan berbasis realisasi pembayaran (jumlah_bayar)
+        $totalTerbayar = $allTagihan->sum(function ($tagihan) {
+            $payments = $tagihan->relationLoaded('pembayaranAll') ? $tagihan->pembayaranAll : collect();
+            $dibayarByPayment = $payments->sum('jumlah_bayar');
+            $fallbackAngsuran = $tagihan->total_angsuran ?? 0;
+            return $dibayarByPayment > 0 ? $dibayarByPayment : $fallbackAngsuran;
+        });
+
+        $totalTunggakan = $allTagihan->sum(function ($tagihan) {
+            $payments = $tagihan->relationLoaded('pembayaranAll') ? $tagihan->pembayaranAll : collect();
+            $dibayarByPayment = $payments->sum('jumlah_bayar');
+            $fallbackAngsuran = $tagihan->total_angsuran ?? 0;
+            $dibayar = $dibayarByPayment > 0 ? $dibayarByPayment : $fallbackAngsuran;
+
+            $sisa = $tagihan->sisa_pokok;
+            if ($sisa === null) {
+                $sisa = ($tagihan->jumlah_tagihan ?? 0) - $dibayar;
+            }
+
+            return max($sisa, 0);
+        });
+
+        $jumlahTunggakan = $allTagihan->filter(function ($tagihan) {
+            $payments = $tagihan->relationLoaded('pembayaranAll') ? $tagihan->pembayaranAll : collect();
+            $dibayar = $payments->sum('jumlah_bayar');
+            if ($dibayar <= 0) {
+                $dibayar = $tagihan->total_angsuran ?? 0;
+            }
+            $sisa = $tagihan->sisa_pokok ?? (($tagihan->jumlah_tagihan ?? 0) - $dibayar);
+            return $sisa > 0;
+        })->count();
+
+        $pembayaranSelesai = $allTagihan->sum(function ($tagihan) {
+            $payments = $tagihan->relationLoaded('pembayaranAll') ? $tagihan->pembayaranAll : collect();
+            return $payments->count();
+        });
 
         // Kirim semua data ke view
         return view('mahasiswa.profil', [

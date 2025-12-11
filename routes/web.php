@@ -15,6 +15,7 @@ use App\Http\Controllers\Kasir\TransaksiController as KasirTransaksiController;
 use App\Http\Controllers\Kasir\LaporanController as KasirLaporanController;
 use App\Http\Controllers\Kasir\VerifikasiController as KasirVerifikasiController;
 use App\Http\Controllers\Kasir\PengaturanController as KasirPengaturanController;
+use App\Http\Controllers\Mahasiswa\AktivasiController as MahasiswaAktivasiController;
 use App\Http\Controllers\Mahasiswa\DashboardController as MahasiswaDashboardController;
 use App\Http\Controllers\Mahasiswa\PembayaranController as MahasiswaPembayaranController;
 use App\Http\Controllers\Mahasiswa\RiwayatController as MahasiswaRiwayatController;
@@ -85,6 +86,7 @@ Route::middleware('auth')->group(function () {
     // --- RUTE KASIR ---
     Route::middleware(\App\Http\Middleware\CheckRole::class . ':kasir')->prefix('kasir')->name('kasir.')->group(function () {
         Route::get('/dashboard', fn() => view('kasir.dashboard'))->name('dashboard');
+        Route::get('/tagihan', fn() => view('admin.pembayaran', ['rolePrefix' => 'kasir']))->name('tagihan');
         Route::get('/transaksi', [KasirTransaksiController::class, 'index'])->name('transaksi.index');
         Route::get('/transaksi/export', [KasirTransaksiController::class, 'export'])->name('transaksi.export');
         Route::post('/transaksi/{pembayaran}/cancel', [KasirTransaksiController::class, 'cancel'])->name('transaksi.cancel');
@@ -93,7 +95,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/laporan', [KasirLaporanController::class, 'index'])->name('laporan.index');
         Route::get('/laporan/export-csv', [KasirLaporanController::class, 'exportCsv'])->name('laporan.exportCsv');
         Route::get('/laporan/export-pdf', [KasirLaporanController::class, 'exportPdf'])->name('laporan.exportPdf');
+        Route::get('/reports/download/{reportId}', [KasirLaporanController::class, 'downloadRiwayat'])
+            ->middleware('throttle:30,1')
+            ->name('reports.download');
         Route::get('/verifikasi', [KasirVerifikasiController::class, 'index'])->name('verifikasi.index');
+        Route::get('/aktivasi', [\App\Http\Controllers\Kasir\AktivasiKasirController::class, 'show'])->name('aktivasi');
         Route::get('/pengaturan', [KasirPengaturanController::class, 'showPasswordForm'])->name('pengaturan.password');
         Route::put('/pengaturan', [KasirPengaturanController::class, 'updatePassword'])->name('pengaturan.updatePassword');
     });
@@ -114,6 +120,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/laporan', [MahasiswaLaporanController::class, 'index'])->name('laporan.index');
         Route::get('/laporan/histori/download', [MahasiswaLaporanController::class, 'downloadHistori'])->name('laporan.histori.download');
         Route::get('/laporan/tunggakan/download', [MahasiswaLaporanController::class, 'downloadTunggakan'])->name('laporan.tunggakan.download');
+
+        // Aktivasi per semester
+        Route::get('/aktivasi', [MahasiswaAktivasiController::class, 'show'])->name('aktivasi');
 
         // Rute Profil & Ubah Password yang baru (ini dipertahankan)
         Route::get('/profil', [MahasiswaProfilController::class, 'index'])->name('profil');
