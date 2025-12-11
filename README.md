@@ -6,8 +6,8 @@ Sistem pembayaran kampus berbasis web yang memungkinkan manajemen pembayaran tag
 
 KampusPay STTP adalah aplikasi web untuk mengelola pembayaran tagihan mahasiswa di kampus. Sistem ini memungkinkan:
 - Admin mengelola data mahasiswa, tarif, tagihan, dan laporan
-- Kasir memproses pembayaran tunai dan verifikasi transfer
-- Mahasiswa melihat tagihan, melakukan pembayaran (tunai/transfer), dan mengunduh kwitansi
+- Kasir membuat tagihan, memproses pembayaran tunai (full/cicilan), dan verifikasi transfer
+- Mahasiswa melihat tagihan, melakukan pembayaran (tunai/transfer/cicilan), dan mengunduh kwitansi
 
 ## ✨ Fitur Utama
 
@@ -15,26 +15,30 @@ KampusPay STTP adalah aplikasi web untuk mengelola pembayaran tagihan mahasiswa 
 - **Dashboard** - Overview statistik pembayaran dan registrasi
 - **Manajemen Mahasiswa** - CRUD data mahasiswa (Create, Read, Update, Delete) dengan import/export Excel
 - **Manajemen Tarif** - Kelola jenis pembayaran dan tarif
-- **Manajemen Tagihan** - Buat dan kelola tagihan mahasiswa
-- **Manajemen Pembayaran** - Lihat semua pembayaran yang telah diproses
-- **Laporan** - Generate laporan dengan format PDF/Excel
+- **Manajemen Tagihan** - Buat, edit, dan hapus tagihan mahasiswa
+- **Manajemen Pembayaran** - Lihat semua pembayaran yang telah diproses (termasuk cicilan)
+- **Laporan** - Generate laporan pembayaran, tunggakan, dan mahasiswa dengan format PDF/Excel
 - **Pengaturan Sistem** - Konfigurasi aplikasi (nama aplikasi, logo, dll)
 - **Manajemen User** - Kelola user admin dan kasir
 
 ### 💰 Kasir
 - **Dashboard** - Overview transaksi harian
-- **Transaksi** - Proses pembayaran tunai dan lihat riwayat transaksi
-- **Verifikasi Pembayaran** - Verifikasi pembayaran transfer dari mahasiswa
-- **Laporan** - Generate laporan transaksi dengan export CSV/PDF
+- **Manajemen Tagihan** - Buat dan lihat tagihan mahasiswa (tidak bisa edit/hapus)
+- **Transaksi** - Proses pembayaran tunai (full payment atau cicilan) dan lihat riwayat transaksi
+- **Verifikasi Pembayaran** - Verifikasi pembayaran transfer dari mahasiswa (full atau cicilan)
+- **Aktivasi Mahasiswa** - Kelola status aktivasi mahasiswa (Aktif/BSS) per semester
+- **Laporan** - Generate laporan pembayaran, tunggakan, dan bulanan dengan export CSV/PDF
 - **Pengaturan** - Ubah password
 
 ### 🎓 Mahasiswa
 - **Dashboard** - Overview tagihan dan status pembayaran
-- **Tagihan & Pembayaran** - Lihat tagihan dan pilih metode pembayaran (Tunai/Transfer)
-- **Upload Bukti Transfer** - Upload bukti pembayaran untuk verifikasi
-- **Riwayat Pembayaran** - Lihat riwayat pembayaran yang telah dilakukan
-- **Kwitansi** - Download kwitansi pembayaran dalam format PDF
-- **Laporan** - Download laporan histori dan tunggakan pembayaran
+- **Tagihan & Pembayaran** - Lihat tagihan dan pilih metode pembayaran (Tunai/Transfer/Cicilan)
+- **Pembayaran Cicilan** - Bayar tagihan secara cicilan dengan minimum Rp 50.000 (kecuali sisa < 50.000)
+- **Upload Bukti Transfer** - Upload bukti pembayaran untuk verifikasi (full atau cicilan)
+- **Riwayat Pembayaran** - Lihat riwayat pembayaran yang telah dilakukan (termasuk cicilan)
+- **Kwitansi** - Download kwitansi pembayaran dalam format PDF (menampilkan jumlah yang dibayar)
+- **Laporan** - Download laporan histori pembayaran dan tunggakan dalam format PDF
+- **Aktivasi Semester** - Pilih status aktivasi semester (Aktif/BSS) - hanya sekali, tidak bisa diubah
 - **Profil** - Lihat dan update profil
 - **Ubah Password** - Ganti password akun
 
@@ -143,9 +147,19 @@ Setelah menjalankan seeder, Anda dapat login dengan kredensial default:
 
 Aplikasi menggunakan sistem role-based access control dengan 3 role:
 
-1. **Admin** - Akses penuh ke semua fitur
-2. **Kasir** - Akses untuk memproses pembayaran dan verifikasi
-3. **Mahasiswa** - Akses terbatas untuk melihat tagihan dan melakukan pembayaran
+1. **Admin** - Akses penuh ke semua fitur (CRUD mahasiswa, tarif, tagihan, laporan, user)
+2. **Kasir** - Akses untuk membuat tagihan, memproses pembayaran (full/cicilan), verifikasi transfer, dan generate laporan
+3. **Mahasiswa** - Akses terbatas untuk melihat tagihan, melakukan pembayaran (full/cicilan), dan download laporan
+
+## 💳 Fitur Cicilan Pembayaran
+
+Sistem mendukung pembayaran tagihan secara cicilan dengan ketentuan:
+- **Minimum cicilan**: Rp 50.000 (kecuali sisa pokok < 50.000)
+- **Tagihan yang bisa dicicil**: Semua tagihan kecuali "Uang Kemahasiswaan" dan "Uang Ujian Akhir Semester" (wajib lunas)
+- **Tidak ada bunga atau biaya admin**
+- **Tidak perlu approval** untuk memilih opsi cicilan
+- **Tracking otomatis**: Sistem mencatat total angsuran, sisa pokok, dan jumlah pembayaran per cicilan
+- **Status tagihan**: Otomatis berubah dari "Belum Dibayarkan" → "Belum Lunas" → "Lunas"
 
 ## 📁 Struktur Project
 
