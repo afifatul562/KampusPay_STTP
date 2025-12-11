@@ -135,7 +135,7 @@ Setelah menjalankan seeder, Anda dapat login dengan kredensial default:
 
 ### Admin
 - **Username**: `admin`
-- **Password**: `password` (atau sesuai yang di-set di seeder)
+- **Password**: `password123` (atau sesuai yang di-set di seeder)
 
 ### Kasir
 - Buat akun kasir melalui menu Admin → Registrasi
@@ -238,7 +238,8 @@ Aplikasi ini menggunakan lisensi [MIT](https://opensource.org/licenses/MIT).
 
 ## 👥 Authors
 
-- **Afifatul** - [afifatul562](https://github.com/afifatul562)
+- **Afifatul Mawaddah** - [afifatul562](https://github.com/afifatul562)
+- **Dinda Apriona Putri Adryan** - [dindaaprionaa](https://github.com/dindaaprionaa)
 
 ## 🙏 Acknowledgments
 
