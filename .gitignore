@@ -26,3 +26,6 @@ Thumbs.db
 # Ignore all .md files except README.md
 *.md
 !README.md
+
+# Ignore dokumentasi folder
+/dokumentasi/
