@@ -29,3 +29,6 @@ Thumbs.db
 
 # Ignore dokumentasi folder
 /dokumentasi/
+
+# Ignore cache files
+bootstrap/cache/*.tmp
