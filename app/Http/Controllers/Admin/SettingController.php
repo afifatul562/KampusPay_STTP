@@ -133,28 +133,26 @@ class SettingController extends Controller
      */
     private function computeAcademicYearAndSemester(): array
     {
-        $now = now();
+        $now = now(); // Saat ini 1 Januari 2026
         $y = (int) $now->year;
         $m = (int) $now->month;
 
-        if ($m >= 10) { // Okt-Nov-Des
+        // SEMESTER: Januari (1) masuk ke sini -> Ganjil
+        if ($m >= 10 || $m <= 2) {
+            $semester = 'Ganjil';
+        } elseif ($m >= 3 && $m <= 7) {
+            $semester = 'Genap';
+        } else {
+            $semester = 'Libur';
+        }
+
+        // TAHUN AKADEMIK: Januari (1) masuk ke else -> 2025/2026
+        if ($m >= 10) {
             $startYear = $y;
             $endYear = $y + 1;
-            $semester = 'Ganjil';
-        } elseif ($m >= 3 && $m <= 7) { // Mar-Jul
-            $startYear = $y - 1; // masih tahun ajaran yg sama yg dimulai Okt tahun lalu
-            $endYear = $y;
-            $semester = 'Genap';
-        } else { // Jan-Feb (bagian akhir ganjil) atau Aug-Sep (libur, default ke ajaran berjalan)
-            if ($m <= 2) { // Jan-Feb => Ganjil dari tahun ajaran yang dimulai Okt tahun sebelumnya
-                $startYear = $y - 1;
-                $endYear = $y;
-                $semester = 'Ganjil';
-            } else { // Aug-Sep => menjelang ajaran baru; set ke tahun ajaran akan datang & ganjil
-                $startYear = $y;
-                $endYear = $y + 1;
-                $semester = 'Ganjil';
-            }
+        } else {
+            $startYear = $y - 1; // 2026 - 1 = 2025
+            $endYear = $y;     // 2026
         }
 
         return [sprintf('%d/%d', $startYear, $endYear), $semester];

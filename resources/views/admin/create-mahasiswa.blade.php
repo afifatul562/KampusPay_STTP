@@ -61,6 +61,7 @@
                             <option value="2022" {{ old('angkatan') == '2022' ? 'selected' : '' }}>2022</option>
                             <option value="2023" {{ old('angkatan') == '2023' ? 'selected' : '' }}>2023</option>
                             <option value="2024" {{ old('angkatan') == '2024' ? 'selected' : '' }}>2024</option>
+                            <option value="2025" {{ old('angkatan') == '2025' ? 'selected' : '' }}>2025</option>
                         </select>
                         <input type="hidden" name="angkatan" id="angkatan_hidden" value="{{ old('angkatan') }}">
                         <p id="angkatan-help" class="mt-1 text-xs text-gray-500"></p>
@@ -158,19 +159,31 @@ document.addEventListener('DOMContentLoaded', function() {
             angkatanHidden.value = '';
         }
 
-        // --- LOGIKA SEMESTER (DENGAN PERBAIKAN) ---
+        // --- LOGIKA SEMESTER (SINKRON DENGAN ATURAN KAMPUS) ---
         if (angkatanTahun) {
             let selisihTahun = currentYear - angkatanTahun;
-            let semesterAktif = selisihTahun * 2;
+            let semesterAktif;
 
-            // !! PERBAIKAN DI SINI !!
-            // Jika bulan sekarang Oktober (10) atau setelahnya,
-            // berarti sudah masuk semester ganjil (tambah 1)
+            // Aturan:
+            // Oktober (10) s/d Februari (2) = Ganjil
+            // Maret (3) s/d Juli (7) = Genap
+
             if (currentMonth >= 10) {
-                semesterAktif += 1;
+                // Jika sudah masuk Oktober, mahasiswa angkatan baru mulai semester 1, 3, 5, dst.
+                semesterAktif = (selisihTahun * 2) + 1;
+            } else if (currentMonth <= 2) {
+                // Januari & Februari adalah sisa dari semester ganjil tahun ajaran sebelumnya
+                semesterAktif = (selisihTahun * 2) - 1;
+            } else if (currentMonth >= 3 && currentMonth <= 7) {
+                // Maret - Juli adalah semester genap
+                semesterAktif = selisihTahun * 2;
+            } else {
+                // Agustus - September (Masa Libur)
+                // Biasanya tetap ditampilkan sebagai semester genap yang baru selesai
+                semesterAktif = selisihTahun * 2;
             }
-            // !! AKHIR PERBAIKAN !!
 
+            // Batasi minimal semester 1 dan maksimal semester 8
             semesterAktif = Math.max(1, Math.min(semesterAktif, 8));
 
             semesterSelect.value = semesterAktif.toString();
