@@ -149,7 +149,8 @@ php artisan test
 
 ## 👨‍💻 Author
 
-**Afifatul** GitHub: [@afifatul562](https://github.com/afifatul562)
+**Afifatul Mawaddah** - [afifatul562](https://github.com/afifatul562)
+**Dinda Apriona Putri Adryan** - [dindaaprionaa](https://github.com/dindaaprionaa)
 
 ---
 
