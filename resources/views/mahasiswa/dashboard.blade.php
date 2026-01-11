@@ -94,7 +94,61 @@
                                 </span>
                             @endif
                         </div>
-                        <p class="text-sm text-gray-600">Jatuh Tempo:
+                        @php
+                            // Parse semester_label untuk mendapatkan tahun akademik dan semester
+                            $semesterLabel = $tagihan->semester_label ?? null;
+                            $tahunAkademik = '-';
+                            $semesterType = '-';
+                            if ($semesterLabel) {
+                                $parts = explode(' ', trim($semesterLabel));
+                                if (count($parts) >= 2) {
+                                    $tahunAkademik = $parts[0];
+                                    $semesterType = $parts[1];
+                                }
+                            }
+                            
+                            // Calculate semester number
+                            $semesterNumber = null;
+                            $angkatan = $tagihan->mahasiswa->angkatan ?? null;
+                            if ($tahunAkademik !== '-' && $angkatan && $semesterType !== '-') {
+                                try {
+                                    $tahunParts = explode('/', $tahunAkademik);
+                                    if (count($tahunParts) >= 1) {
+                                        $tahunAkademikAwal = (int) $tahunParts[0];
+                                        $angkatanInt = (int) $angkatan;
+                                        if ($tahunAkademikAwal > 0 && $angkatanInt > 0) {
+                                            $selisihTahun = $tahunAkademikAwal - $angkatanInt;
+                                            if (strtolower($semesterType) === 'ganjil') {
+                                                $semesterNumber = $selisihTahun * 2 + 1;
+                                            } else if (strtolower($semesterType) === 'genap') {
+                                                $semesterNumber = $selisihTahun * 2 + 2;
+                                            }
+                                        }
+                                    }
+                                } catch (Exception $e) {
+                                    // Fallback
+                                }
+                            }
+                            
+                            // Fallback ke semester_aktif jika perhitungan gagal
+                            if (!$semesterNumber && isset($tagihan->mahasiswa->semester_aktif)) {
+                                $semesterNumber = $tagihan->mahasiswa->semester_aktif;
+                            }
+                        @endphp
+                        <div class="text-sm text-gray-600 mt-1">
+                            @if($tahunAkademik !== '-')
+                                <span class="font-medium">Tahun Akademik: {{ $tahunAkademik }}</span>
+                                @if($semesterType !== '-')
+                                    <span class="mx-2">•</span>
+                                    <span class="px-2 py-0.5 inline-flex text-xs font-semibold rounded-full {{ strtolower($semesterType) === 'ganjil' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800' }}">{{ $semesterType }}</span>
+                                @endif
+                                @if($semesterNumber)
+                                    <span class="mx-2">•</span>
+                                    <span class="font-medium">Semester {{ $semesterNumber }}</span>
+                                @endif
+                            @endif
+                        </div>
+                        <p class="text-sm text-gray-600 mt-1">Jatuh Tempo:
                             <span class="font-medium {{ \Carbon\Carbon::parse($tagihan->tanggal_jatuh_tempo)->isPast() ? 'text-red-500' : 'text-gray-500' }}">
                                 {{ \Carbon\Carbon::parse($tagihan->tanggal_jatuh_tempo)->isoFormat('D MMMM YYYY') }}
                             </span>

@@ -37,9 +37,6 @@ class Tagihan extends Model
 
     public function konfirmasi()
     {
-        // Gunakan hasOne(...)->latestOfMany()
-        // Ini akan otomatis mengambil HANYA 1 data konfirmasi TERBARU
-        // yang terkait dengan tagihan ini (misal: konfirmasi Ditolak yang terakhir).
         return $this->hasOne(KonfirmasiPembayaran::class, 'tagihan_id', 'tagihan_id')
         ->latestOfMany('konfirmasi_id');
     }

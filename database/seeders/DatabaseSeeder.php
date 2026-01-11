@@ -7,7 +7,7 @@ use Illuminate\Database\Seeder;
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Seed the application's database.
+     * Menjalankan seeder database aplikasi.
      */
     public function run(): void
     {

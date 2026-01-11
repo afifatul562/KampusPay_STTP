@@ -8,11 +8,11 @@ function setButtonLoading(button, isLoading, loadingText = 'Memproses...') {
     if (!button) return;
 
     if (isLoading) {
-        // Simpan original content
+        // Simpan konten asli
         button.dataset.originalContent = button.innerHTML;
         button.disabled = true;
 
-        // Set loading state
+        // Set status loading
         const spinner = `
             <svg class="animate-spin -ml-1 mr-2 h-4 w-4 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -23,7 +23,7 @@ function setButtonLoading(button, isLoading, loadingText = 'Memproses...') {
         button.innerHTML = spinner;
         button.classList.add('opacity-50', 'cursor-not-allowed');
     } else {
-        // Restore original content
+        // Kembalikan konten asli
         if (button.dataset.originalContent) {
             button.innerHTML = button.dataset.originalContent;
             delete button.dataset.originalContent;

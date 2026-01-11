@@ -10,18 +10,17 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class KwitansiController extends Controller
 {
+    /**
+     * Mengunduh kwitansi pembayaran dalam format PDF.
+     */
     public function download(Pembayaran $pembayaran)
     {
-        // 1. KEAMANAN: Gunakan policy untuk validasi akses
         $this->authorize('view', $pembayaran);
 
-        // 2. Load semua relasi yang dibutuhkan untuk ditampilkan di PDF
         $pembayaran->load('tagihan.mahasiswa.user', 'tagihan.tarif', 'verifier');
 
-        // 3. Buat PDF dari sebuah view
         $pdf = Pdf::loadView('mahasiswa.kwitansi_pdf', compact('pembayaran'));
 
-        // 4. Atur nama file dan paksa browser untuk men-download
         $namaFile = 'kwitansi-' . $pembayaran->tagihan->kode_pembayaran . '.pdf';
         return $pdf->download($namaFile);
     }

@@ -38,7 +38,6 @@
             </div>
 
             {{-- Form Pilihan Metode --}}
-            {{-- Form ini akan mengirim ke route 'proses-metode' yang baru kita buat --}}
             <form action="{{ route('mahasiswa.pembayaran.proses-metode', $tagihan->tagihan_id) }}" method="POST">
                 @csrf
                 <div class="p-6 space-y-4">
@@ -50,7 +49,6 @@
                     @endphp
 
                     @if(!$isWajibLunas)
-                    {{-- Pilihan 0: Cicil (hanya untuk tagihan yang boleh dicicil) --}}
                     <button type="submit" name="metode" value="cicil"
                             class="group w-full flex items-center justify-between p-4 border-2 border-purple-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200 shadow-sm hover:shadow-md">
                         <div class="text-left">

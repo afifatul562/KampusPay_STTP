@@ -11,17 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Kolom username dan role sudah ada di migration create_users, skip add
-        // Jika perlu, tambah kolom lain di sini
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['username', 'role']);
+            $table->dropColum
+    /**
+     * Reverse the migrations.
+     */n(['username', 'role']);
         });
     }
 };

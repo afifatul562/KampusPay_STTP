@@ -13,7 +13,6 @@ class UserController extends Controller
 {
     /**
      * Menampilkan semua pengguna dengan role 'kasir' atau 'admin'.
-     * (Menggantikan getAdminUsers)
      */
     public function index()
     {
@@ -26,7 +25,6 @@ class UserController extends Controller
 
     /**
      * Mendaftarkan pengguna baru dengan role 'kasir'.
-     * (Menggantikan registerKasir)
      */
     public function registerKasir(Request $request)
     {

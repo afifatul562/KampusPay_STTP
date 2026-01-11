@@ -167,9 +167,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const apiRequest = (window.App && window.App.apiRequest) ? window.App.apiRequest : null;
         if (!apiRequest) { console.error('apiRequest util tidak tersedia'); }
 
-        // -------------------------------------
-        // FUNGSI FORMAT NOMINAL (Tetap Sama)
-        // -------------------------------------
+        // Fungsi format nominal
         const formatter = new Intl.NumberFormat('id-ID');
         function formatNumberInput(inputElement) { let value = inputElement.value.replace(/[^,\d]/g,'').toString(); if(value.length>1&&value.startsWith('0')&&!value.includes(',')){value=value.substring(1);} const number=parseInt(value.replace(/\./g,''),10); inputElement.value=isNaN(number)?'':formatter.format(number); }
         function unformatNumber(formattedValue) { return formattedValue.replace(/\./g, ''); }
@@ -178,9 +176,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // FUNGSI LOGIKA TABEL & FILTER
         // -------------------------------------
 
-        // ===================================================
-        // !! PERBAIKAN KEAMANAN XSS (Stored) DI SINI !!
-        // ===================================================
+        // Fungsi untuk render tabel tarif
         function renderTable(dataToRender) {
             if (!tarifTableBody) {
                 console.error('tarifTableBody not found in renderTable');
@@ -208,32 +204,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-gray-50';
 
-                // 1. Sel Nama Pembayaran (Aman)
+                // Sel Nama Pembayaran
                 const cellNama = document.createElement('td');
                 cellNama.className = 'px-6 py-4 whitespace-nowrap font-medium text-gray-900';
-                cellNama.textContent = tarif.nama_pembayaran; // AMAN
+                cellNama.textContent = tarif.nama_pembayaran;
                 tr.appendChild(cellNama);
 
-                // 2. Sel Nominal (Aman)
+                // Sel Nominal
                 const cellNominal = document.createElement('td');
                 cellNominal.className = 'px-6 py-4 whitespace-nowrap text-right text-gray-700';
-                cellNominal.textContent = rupiahFormat.format(tarif.nominal); // AMAN
+                cellNominal.textContent = rupiahFormat.format(tarif.nominal);
                 tr.appendChild(cellNominal);
 
-                // 3. Sel Program Studi (Aman)
+                // Sel Program Studi
                 const cellProdi = document.createElement('td');
                 cellProdi.className = 'px-6 py-4 whitespace-nowrap text-gray-500';
-                // Logika ini sudah benar, mengandalkan controller mengirim NULL
-                cellProdi.textContent = tarif.program_studi || 'Semua Jurusan'; // AMAN
+                cellProdi.textContent = tarif.program_studi || 'Semua Jurusan';
                 tr.appendChild(cellProdi);
 
-                // 4. Sel Angkatan (Aman)
+                // Sel Angkatan
                 const cellAngkatan = document.createElement('td');
                 cellAngkatan.className = 'px-6 py-4 whitespace-nowrap text-center text-gray-500';
-                cellAngkatan.textContent = tarif.angkatan || 'Semua Angkatan'; // AMAN
+                cellAngkatan.textContent = tarif.angkatan || 'Semua Angkatan';
                 tr.appendChild(cellAngkatan);
 
-                // 5. Sel Aksi (Aman, karena ID bukan input teks bebas)
+                // Sel Aksi
                 const cellAksi = document.createElement('td');
                 cellAksi.className = 'px-6 py-4 whitespace-nowrap text-right font-medium';
                 cellAksi.innerHTML = `
@@ -282,7 +277,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const uniqueNama = new Set(); const uniqueProdi = new Set(); const uniqueAngkatan = new Set();
             allTarifs.forEach(tarif => {
                 uniqueNama.add(tarif.nama_pembayaran);
-                // Logika ini sudah benar, hanya menambah prodi/angkatan yg 'tidak null'
                 if(tarif.program_studi) { uniqueProdi.add(tarif.program_studi); }
                 if(tarif.angkatan) { uniqueAngkatan.add(tarif.angkatan); }
             });
@@ -291,9 +285,7 @@ document.addEventListener('DOMContentLoaded', function() {
             filterAngkatanSelect.innerHTML = '<option value="">Semua Angkatan</option>'; Array.from(uniqueAngkatan).sort((a,b)=>b.localeCompare(a,undefined,{numeric:true})).forEach(angkatan => { const option = document.createElement('option'); option.value = angkatan; option.textContent = angkatan; filterAngkatanSelect.appendChild(option); });
         }
 
-        // -------------------------------------
-        // FUNGSI WARNING MODAL (Tetap Sama)
-        // -------------------------------------
+        // Fungsi warning modal
         const lateStagePayments = { "Uang KP": 2, "Uang Skripsi": 3, "Uang Wisuda": 3 };
         function checkAngkatanLogic() {
             if (!modalNamaPembayaranSelect || !modalAngkatanSelect || !modalAngkatanWarning) { return; }
@@ -308,9 +300,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // -------------------------------------
-        // FUNGSI MODAL (Dengan SweetAlert)
-        // -------------------------------------
+        // Fungsi modal
         function openModal(mode = 'add', tarifData = null) {
             tarifForm.reset(); tarifIdInput.value = ''; modalAngkatanWarning.classList.add('hidden');
             if (mode === 'add') {
@@ -321,7 +311,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 tarifIdInput.value = tarifData.tarif_id;
                 modalNamaPembayaranSelect.value = tarifData.nama_pembayaran;
                 if(tarifData.nominal !== null && tarifData.nominal !== undefined) { modalNominalInput.value = formatter.format(tarifData.nominal); } else { modalNominalInput.value = ''; }
-                // Logika ini sudah benar, mengubah NULL dari DB menjadi 'Semua Jurusan' di form
                 tarifModal.querySelector('#program_studi').value = tarifData.program_studi || "Semua Jurusan";
                 modalAngkatanSelect.value = tarifData.angkatan || "Semua Angkatan";
                 setTimeout(checkAngkatanLogic, 50);
@@ -333,10 +322,8 @@ document.addEventListener('DOMContentLoaded', function() {
             tarifModal.classList.add('hidden'); tarifModal.classList.remove('flex');
         }
 
-        // -------------------------------------
-        // EVENT LISTENERS (Dengan SweetAlert)
-        // -------------------------------------
-        // Add null checks before adding event listeners
+        // Event listeners
+        // Periksa null sebelum menambahkan event listener
         if (!tarifTableBody) {
             console.error('tarifTableBody not found');
             return;
@@ -382,7 +369,7 @@ document.addEventListener('DOMContentLoaded', function() {
         function formatNominalOnInput() { formatNumberInput(this); }
         function formatNominalOnBlur() { formatNumberInput(this); }
 
-        // Listener Tabel (Edit & Delete) - !! GANTI KE SWEETALERT !!
+        // Event listener tabel untuk edit dan delete
         if (tarifTableBody) {
             tarifTableBody.addEventListener('click', function(event) {
             const button = event.target.closest('button'); if (!button) return;
@@ -390,14 +377,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (button.classList.contains('edit-btn')) {
                 const detailUrl = `{{ url('/api/admin/tarif') }}/${tarifId}`;
-                apiRequest(detailUrl).then(response => openModal('edit', response.data)) // 'data' akan selalu ada
+                apiRequest(detailUrl).then(response => openModal('edit', response.data))
                 .catch(err => {
                     Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal mengambil detail tarif: ' + err.message });
                 });
             }
 
             if (button.classList.contains('delete-btn')) {
-                // !! GANTI CONFIRM !!
                 Swal.fire({
                     title: 'Anda Yakin?',
                     text: "Tarif yang dihapus tidak dapat dikembalikan!",
@@ -411,7 +397,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (result.isConfirmed) {
                         const deleteUrl = `{{ url('/api/admin/tarif') }}/${tarifId}`;
                         apiRequest(deleteUrl, 'DELETE').then(response => {
-                            // !! GANTI ALERT SUKSES !!
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Dihapus!',
@@ -421,7 +406,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             });
                             loadTarifs();
                         }).catch(err => {
-                            // !! GANTI ALERT ERROR !!
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Gagal!',
@@ -434,7 +418,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         }
 
-        // Listener Form Submit Modal - !! GANTI KE SWEETALERT !!
+        // Event listener submit form modal
         tarifForm.addEventListener('submit', function(event) {
             event.preventDefault(); const id = tarifIdInput.value; const isEdit = !!id;
             const url = isEdit ? `{{ url('/api/admin/tarif') }}/${id}` : "{{ route('admin.tarif.store') }}";
@@ -442,7 +426,6 @@ document.addEventListener('DOMContentLoaded', function() {
             let prodiValue = tarifModal.querySelector('#program_studi').value; let angkatanValue = modalAngkatanSelect.value;
             const nominalValue = unformatNumber(modalNominalInput.value);
 
-            // Logika ini sudah benar, mengirim NULL ke controller
             const formData = {
                 nama_pembayaran: modalNamaPembayaranSelect.value,
                 nominal: nominalValue,
@@ -464,7 +447,6 @@ document.addEventListener('DOMContentLoaded', function() {
             setButtonLoading(submitButton, true, 'Menyimpan...');
 
             apiRequest(url, method, formData).then(response => {
-                // !! GANTI ALERT SUKSES !!
                 Swal.fire({
                     icon: 'success',
                     title: 'Berhasil!',
@@ -475,37 +457,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 closeModal();
                 loadTarifs();
             })
-            // ===================================================
-            // !! PERBAIKAN KEAMANAN XSS (Validasi) DI SINI !!
-            // ===================================================
             .catch(err => {
-                let errorContent; // Ganti nama dari errorMessages
+                let errorContent;
 
                 if (err.status === 422 && err.errors) {
-                    // Jika error validasi, buat list yg aman
                     errorContent = document.createElement('div');
 
                     const p = document.createElement('p');
-                    p.textContent = "Input tidak valid:"; // Pesan utama
+                    p.textContent = "Input tidak valid:";
                     errorContent.appendChild(p);
 
                     const ul = document.createElement('ul');
                     ul.className = 'list-disc list-inside text-left mt-2';
                     Object.values(err.errors).forEach(e => {
                         const li = document.createElement('li');
-                        li.textContent = e.join(', '); // AMAN dari XSS
+                        li.textContent = e.join(', ');
                         ul.appendChild(li);
                     });
                     errorContent.appendChild(ul);
                 } else {
-                    // Jika error biasa, pakai text
                     errorContent = err.message || 'Terjadi kesalahan.';
                 }
 
                 Swal.fire({
                     icon: 'error',
                     title: 'Gagal Menyimpan',
-                    html: errorContent // 'html' properti bisa menerima Node Element
+                    html: errorContent
                 });
             })
             .finally(() => {
@@ -513,9 +490,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // -------------------------------------
-        // MUAT DATA AWAL (Dengan SweetAlert Error)
-        // -------------------------------------
+        // Fungsi untuk memuat data tarif
         function loadTarifs() {
             if (!tarifTableBody) {
                 console.error('tarifTableBody not found in loadTarifs');
@@ -524,15 +499,9 @@ document.addEventListener('DOMContentLoaded', function() {
             tarifTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-gray-500">Memuat data...</td></tr>';
             const listUrl = "{{ route('admin.tarif.index') }}";
             apiRequest(listUrl).then(response => {
-                // !! PERBAIKAN KONSISTENSI: 'data' akan selalu ada
-                allTarifs = response.data; // Tidak perlu '|| response' lagi
+                allTarifs = response.data;
                 populateFilterDropdowns();
-
-                // ============================================
-                // !! PASTIKAN BARIS INI BENAR SEKARANG !!
-                // ============================================
-                applyFilters(); // <--- Tidak ada 's' di awal, ada 's' di akhir
-
+                applyFilters();
             }).catch(error => {
                 console.error('Error fetching tarif list:', error);
                 Swal.fire({

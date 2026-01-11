@@ -270,7 +270,7 @@
         </tbody>
     </table>
 
-    {{-- ===== TABEL DETAIL TRANSAKSI (Optional - bisa di-comment jika terlalu panjang) ===== --}}
+    {{-- ===== TABEL DETAIL TRANSAKSI ===== --}}
     @if ($transaksiDetail->isNotEmpty() && $transaksiDetail->count() <= 50)
         <h3 style="font-size: 11pt; font-weight: bold; margin: 30px 0 10px 0;">Detail Transaksi</h3>
         <table>

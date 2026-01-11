@@ -72,21 +72,20 @@ document.addEventListener('DOMContentLoaded', function() {
         const apiRequest = (window.App && window.App.apiRequest) ? window.App.apiRequest : null;
         if (!apiRequest) { console.error('apiRequest util tidak tersedia'); }
 
-        // Helper untuk menampilkan error 422 di SweetAlert (AMAN)
+        // Helper untuk menampilkan error validasi
         function displayValidationErrors(errors) {
             let errorContent = document.createElement('div');
             const p = document.createElement('p'); p.textContent = "Input tidak valid:"; errorContent.appendChild(p);
             const ul = document.createElement('ul'); ul.className = 'list-disc list-inside text-left mt-2';
-            Object.values(errors).forEach(e => { const li = document.createElement('li'); li.textContent = e.join(', '); ul.appendChild(li); }); // AMAN
+            Object.values(errors).forEach(e => { const li = document.createElement('li'); li.textContent = e.join(', '); ul.appendChild(li); });
             errorContent.appendChild(ul);
-            Swal.fire({ icon: 'error', title: 'Gagal', html: errorContent }); // Pakai html
+            Swal.fire({ icon: 'error', title: 'Gagal', html: errorContent });
         }
 
 
-        // --- LOGIKA UNTUK PENGATURAN SISTEM ---
+        // Fungsi untuk memuat informasi sistem
         function loadSystemInfo() {
             apiRequest("{{ route('admin.system-info') }}").then(response => {
-                // Akses via response.data (sesuai controller baru)
                 const data = response.data;
                 document.getElementById('php-version').textContent = data.php_version;
                 document.getElementById('laravel-version').textContent = data.laravel_version;
@@ -94,7 +93,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('server-time').textContent = data.server_time;
             }).catch(error => {
                 console.error('Error fetching system info:', error);
-                // Tampilkan error di UI jika perlu
                 document.getElementById('php-version').textContent = 'Error';
                 document.getElementById('laravel-version').textContent = 'Error';
                 document.getElementById('database-driver').textContent = 'Error';
@@ -104,7 +102,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function loadSettings() {
             apiRequest("{{ route('admin.settings.system.show') }}").then(response => {
-                // Akses via response.data (sesuai controller baru)
                 const data = response.data;
                 document.getElementById('app_name').value = data.app_name || "{{ config('app.name', 'KampusPay') }}";
                 document.getElementById('academic_year').value = data.academic_year || '';
@@ -135,11 +132,10 @@ document.addEventListener('DOMContentLoaded', function() {
             apiRequest(url, 'POST', data)
                 .then(response => {
                     Swal.fire({ icon: 'success', title: 'Berhasil!', text: response.message || 'Pengaturan berhasil disimpan.', timer: 1500, showConfirmButton: false });
-                    // Nama aplikasi tidak perlu diupdate karena field sudah disabled
                 })
                 .catch(err => {
                     if (err.status === 422 && err.errors) {
-                         displayValidationErrors(err.errors); // Panggil helper
+                         displayValidationErrors(err.errors);
                     } else {
                          Swal.fire({ icon: 'error', title: 'Gagal Menyimpan', text: 'Terjadi kesalahan: ' + (err.message || 'Error tidak diketahui') });
                     }
@@ -149,7 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
         });
 
-        // --- PANGGIL FUNGSI SAAT HALAMAN DIMUAT ---
+        // Panggil fungsi saat halaman dimuat
         loadSystemInfo();
         loadSettings();
     });

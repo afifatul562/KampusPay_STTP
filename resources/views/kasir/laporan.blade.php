@@ -171,14 +171,12 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Tab switching
     const tabBulanan = document.getElementById('tab-bulanan');
     const tabPembayaran = document.getElementById('tab-pembayaran');
     const contentBulanan = document.getElementById('content-bulanan');
     const contentPembayaran = document.getElementById('content-pembayaran');
 
     function switchTab(activeTab) {
-        // Reset all tabs
         document.querySelectorAll('.tab-button').forEach(btn => {
             btn.classList.remove('active', 'border-primary-500', 'text-primary-600');
             btn.classList.add('border-transparent', 'text-gray-500');
@@ -187,7 +185,6 @@ document.addEventListener('DOMContentLoaded', function() {
             content.classList.add('hidden');
         });
 
-        // Activate selected tab
         if (activeTab === 'bulanan') {
             tabBulanan.classList.add('active', 'border-primary-500', 'text-primary-600');
             tabBulanan.classList.remove('border-transparent', 'text-gray-500');
@@ -202,7 +199,6 @@ document.addEventListener('DOMContentLoaded', function() {
     tabBulanan.addEventListener('click', () => switchTab('bulanan'));
     tabPembayaran.addEventListener('click', () => switchTab('pembayaran'));
 
-    // Laporan Pembayaran Logic
     const reportForm = document.getElementById('reportForm');
     const viewReportBtn = document.getElementById('viewReportBtn');
     const generatePdfBtn = document.getElementById('generatePdfBtn');
@@ -210,7 +206,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const reportPreviewContent = document.getElementById('reportPreviewContent');
     const tahunSelect = document.getElementById('tahun_pembayaran');
 
-    // Populate tahun
     (function populateYears(){
         const currentYear = new Date().getFullYear();
         const startYear = currentYear - 4;
@@ -311,7 +306,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const tbody = document.createElement('tbody');
         tbody.className = 'bg-white divide-y divide-gray-200';
 
-        // Helper functions
         function createHeaderCell(text, alignRight = false) {
             const th = document.createElement('th');
             th.scope = 'col';
@@ -367,7 +361,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const rupiahFormat = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
 
-        // Data rows
         data.forEach(item => {
             const row = document.createElement('tr');
             row.className = 'hover:bg-gray-50';
@@ -376,15 +369,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const totalAngsuran = item.total_angsuran || 0;
             const sisaPokok = item.sisa_pokok !== undefined ? item.sisa_pokok : (item.jumlah_tagihan || 0) - totalAngsuran;
 
-            // Tentukan status berdasarkan total_angsuran dan sisa_pokok
             let statusText = 'Belum Dibayarkan';
             if (item.status === 'Lunas' || sisaPokok <= 0) {
                 statusText = 'Lunas';
             } else if (totalAngsuran > 0) {
-                // Sudah ada cicilan tapi belum lunas
                 statusText = 'Belum Lunas';
             } else {
-                // Belum ada pembayaran sama sekali
                 statusText = 'Belum Dibayarkan';
             }
 
@@ -400,7 +390,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
-            // Di preview, selalu tampilkan jumlah_tagihan (bukan sisa_pokok atau total_angsuran)
             const jumlahTampil = item.jumlah_tagihan || 0;
 
             row.appendChild(createDataCell(item.kode_pembayaran));
@@ -473,7 +462,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Load riwayat laporan
     const reportHistoryTableElement = document.querySelector('table[aria-label="Tabel riwayat laporan"]');
     const reportHistoryTable = reportHistoryTableElement ? reportHistoryTableElement.querySelector('tbody') : null;
 
@@ -507,7 +495,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 const viewUrl = `/kasir/reports/download/${reportId}?view=1`;
                 const downloadUrl = `/kasir/reports/download/${reportId}`;
 
-                // Format jenis laporan untuk display
                 let jenisLaporan = report.jenis_laporan;
                 if (report.jenis_laporan === 'pembayaran-kasir') {
                     jenisLaporan = 'Laporan Pembayaran';
@@ -539,7 +526,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 reportHistoryTable.appendChild(tr);
             });
 
-            // Attach event listeners untuk tombol delete
             document.querySelectorAll('.delete-report-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
                     const reportId = this.getAttribute('data-id');
@@ -577,7 +563,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Load riwayat saat halaman dimuat
     if (reportHistoryTable) {
         loadReportHistory();
     }

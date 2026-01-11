@@ -10,7 +10,7 @@ class MahasiswaDetail extends Model
     use HasFactory;
 
     protected $table = 'mahasiswa_detail';
-    protected $primaryKey = 'mahasiswa_id'; // <-- PERBAIKAN: Sesuaikan dengan migrasi
+    protected $primaryKey = 'mahasiswa_id';
     protected $fillable = [
         'user_id',
         'npm',

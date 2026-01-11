@@ -15,7 +15,7 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     /**
-     * The attributes that are mass assignable.
+     * Atribut yang dapat diisi secara massal.
      *
      * @var list<string>
      */
@@ -48,7 +48,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Get the name attribute (alias for nama_lengkap)
+     * Mengambil atribut name (alias untuk nama_lengkap)
      */
     public function getNameAttribute()
     {
@@ -56,7 +56,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Set the name attribute (alias for nama_lengkap)
+     * Mengatur atribut name (alias untuk nama_lengkap)
      */
     public function setNameAttribute($value)
     {
@@ -64,7 +64,7 @@ class User extends Authenticatable
     }
 
     /**
-     * The attributes that should be hidden for serialization.
+     * Atribut yang disembunyikan saat serialisasi.
      *
      * @var list<string>
      */
@@ -74,7 +74,7 @@ class User extends Authenticatable
     ];
 
     /**
-     * The attributes that should be cast.
+     * Atribut yang harus di-cast.
      *
      * @var array<string, string>
      */

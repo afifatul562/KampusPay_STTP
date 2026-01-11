@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Auth;
 class RedirectIfAuthenticated
 {
     /**
-     * Handle an incoming request.
+     * Menangani request yang masuk dan mengarahkan pengguna yang sudah terautentikasi ke dashboard.
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  \Closure  $next

@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Auth;
 class CheckRole
 {
     /**
-     * Handle an incoming request.
+     * Menangani request yang masuk dan memeriksa role pengguna.
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  \Closure  $next

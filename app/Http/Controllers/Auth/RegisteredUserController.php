@@ -15,7 +15,7 @@ use Illuminate\View\View;
 class RegisteredUserController extends Controller
 {
     /**
-     * Display the registration view.
+     * Menampilkan halaman registrasi.
      */
     public function create(): View
     {
@@ -23,7 +23,7 @@ class RegisteredUserController extends Controller
     }
 
     /**
-     * Handle an incoming registration request.
+     * Menangani permintaan registrasi pengguna baru.
      *
      * @throws \Illuminate\Validation\ValidationException
      */

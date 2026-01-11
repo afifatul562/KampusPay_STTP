@@ -7,7 +7,7 @@ window.Alpine = Alpine;
 Alpine.start();
 
 document.addEventListener("DOMContentLoaded", function () {
-    // Add CSRF token to all fetch requests
+    // Tambahkan CSRF token ke semua fetch request
     const csrfMeta = document.querySelector('meta[name="csrf-token"]');
     const token = csrfMeta ? csrfMeta.getAttribute("content") : '';
 
@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return originalFetch(input, init);
     };
 
-    // Mark notification as read on click
+    // Tandai notifikasi sebagai sudah dibaca saat diklik
     const notificationItems = document.querySelectorAll('.notification-item');
     if (notificationItems && notificationItems.length > 0) {
         notificationItems.forEach((item) => {
@@ -50,7 +50,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // Global SweetAlert2 defaults & helpers (uniform look & feel)
+    // Default dan helper SweetAlert2 global (tampilan seragam)
     try {
         if (window.Swal && typeof Swal.mixin === 'function') {
             const DefaultAlert = Swal.mixin({
@@ -64,10 +64,10 @@ document.addEventListener("DOMContentLoaded", function () {
                     actions: 'gap-2'
                 }
             });
-            // Override default fire so all Swal.fire() use our mixin
+            // Override default fire agar semua Swal.fire() menggunakan mixin kita
             Swal.fire = DefaultAlert.fire.bind(DefaultAlert);
 
-            // Lightweight helpers
+            // Helper ringan
             const success = (title = 'Berhasil', text = '') => Swal.fire({ icon: 'success', title, text });
             const error = (title = 'Gagal', text = '') => Swal.fire({ icon: 'error', title, text });
             const info = (title = 'Info', text = '') => Swal.fire({ icon: 'info', title, text });
@@ -79,8 +79,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 alert: { success, error, info, confirm }
             });
         }
-    } catch (e) { /* ignore */ }
+    } catch (e) { /* abaikan */ }
 });
 
-// Expose global app helpers
+// Ekspos helper aplikasi global
 window.App = Object.assign({}, window.App || {}, { apiRequest });

@@ -113,10 +113,63 @@
                         <div class="font-medium text-gray-900">{{ data_get($item, 'tagihan.mahasiswa.user.nama_lengkap', 'N/A') }}</div>
                         <div class="text-gray-500">{{ data_get($item, 'tagihan.mahasiswa.npm', 'N/A') }}</div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ data_get($item, 'tagihan.tarif.nama_pembayaran', 'N/A') }}</td>
+                    <td class="px-6 py-4">
+                        @php
+                            $namaTagihan = data_get($item, 'tagihan.tarif.nama_pembayaran', 'N/A');
+                            $semesterLabel = data_get($item, 'tagihan.semester_label', null);
+                            $angkatan = data_get($item, 'tagihan.mahasiswa.angkatan', null);
+                            $programStudi = data_get($item, 'tagihan.mahasiswa.program_studi', null);
+                            $semesterAktif = data_get($item, 'tagihan.mahasiswa.semester_aktif', null);
+
+                            $tahunAkademik = '-';
+                            $semesterType = '-';
+                            if ($semesterLabel) {
+                                $parts = explode(' ', trim($semesterLabel));
+                                if (count($parts) >= 2) {
+                                    $tahunAkademik = $parts[0];
+                                    $semesterType = $parts[1];
+                                }
+                            }
+
+                            $semesterNumber = null;
+                            if ($tahunAkademik !== '-' && $angkatan && $semesterType !== '-') {
+                                try {
+                                    $tahunParts = explode('/', $tahunAkademik);
+                                    if (count($tahunParts) >= 1) {
+                                        $tahunAkademikAwal = (int) $tahunParts[0];
+                                        $angkatanInt = (int) $angkatan;
+                                        if ($tahunAkademikAwal > 0 && $angkatanInt > 0) {
+                                            $selisihTahun = $tahunAkademikAwal - $angkatanInt;
+                                            if (strtolower($semesterType) === 'ganjil') {
+                                                $semesterNumber = $selisihTahun * 2 + 1;
+                                            } else if (strtolower($semesterType) === 'genap') {
+                                                $semesterNumber = $selisihTahun * 2 + 2;
+                                            }
+                                        }
+                                    }
+                                } catch (Exception $e) {
+                                }
+                            }
+
+                            if (!$semesterNumber && $semesterAktif) {
+                                $semesterNumber = $semesterAktif;
+                            }
+                        @endphp
+                        <div class="font-medium text-gray-900">{{ $namaTagihan }}</div>
+                        @if($semesterNumber || $programStudi)
+                            <div class="text-xs text-gray-500 mt-1">
+                                @if($semesterNumber)
+                                    Semester {{ $semesterNumber }}
+                                    @if($programStudi) • @endif
+                                @endif
+                                @if($programStudi)
+                                    {{ $programStudi }}
+                                @endif
+                            </div>
+                        @endif
+                    </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right font-medium text-gray-800">
                         @php
-                            // Prioritas: jumlah_bayar dari pembayaran, jika null baru pakai jumlah_tagihan
                             $jumlahBayar = $item->jumlah_bayar;
                             if ($jumlahBayar === null || $jumlahBayar === 0) {
                                 $jumlahBayar = data_get($item, 'tagihan.jumlah_tagihan', 0);
@@ -205,7 +258,6 @@ document.addEventListener('DOMContentLoaded', function(){
         return `${m[3]}-${m[2]}-${m[1]}`;
     }
 
-    // Prefill tampilan jika ada query sebelumnya
     if (startHidden.value) startDisp.value = toDdMmYyyy(startHidden.value);
     if (endHidden.value) endDisp.value = toDdMmYyyy(endHidden.value);
 
@@ -229,14 +281,12 @@ document.addEventListener('DOMContentLoaded', function(){
     bindFlatpickr(endDisp,   (str)=>{ endHidden.value   = toYmd(str); });
 
     form.addEventListener('submit', function(e){
-        // validasi sederhana
         if ((startDisp.value && !startHidden.value) || (endDisp.value && !endHidden.value)) {
             e.preventDefault();
             alert('Format tanggal harus dd/mm/yyyy.');
         }
     });
 
-    // Batalkan pembayaran (SweetAlert jika tersedia, fallback prompt)
     document.querySelectorAll('.btn-cancel').forEach(function(btn){
         btn.addEventListener('click', async function(){
             const url = this.getAttribute('data-cancel-url');

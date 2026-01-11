@@ -10,11 +10,12 @@ use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
+    /**
+     * Menampilkan dashboard mahasiswa.
+     */
     public function index()
     {
-        // Ambil user yang sedang login beserta detail mahasiswanya
-        // Load relasi konfirmasi untuk menampilkan alasan penolakan
-        $user = User::with('mahasiswaDetail.tagihan.tarif', 'mahasiswaDetail.tagihan.konfirmasi')->find(Auth::id());
+        $user = User::with('mahasiswaDetail.tagihan.tarif', 'mahasiswaDetail.tagihan.konfirmasi', 'mahasiswaDetail.tagihan.mahasiswa')->find(Auth::id());
 
         if (!$user->mahasiswaDetail) {
             abort(404, 'Detail mahasiswa tidak ditemukan.');

@@ -7,12 +7,17 @@ use App\Models\User;
 
 class TagihanPolicy
 {
+    /**
+     * Menentukan apakah pengguna dapat membuat tagihan.
+     */
     public function create(User $user): bool
     {
-        // Admin dan kasir boleh membuat tagihan
         return $user->isAdmin() || $user->isKasir();
     }
 
+    /**
+     * Menentukan apakah pengguna dapat melihat tagihan.
+     */
     public function view(User $user, Tagihan $tagihan): bool
     {
         if ($user->isAdmin() || $user->isKasir()) {
@@ -24,15 +29,19 @@ class TagihanPolicy
         return false;
     }
 
+    /**
+     * Menentukan apakah pengguna dapat memperbarui tagihan.
+     */
     public function update(User $user, Tagihan $tagihan): bool
     {
-        // Hanya admin yang boleh update tagihan (non-breaking rule)
         return $user->isAdmin();
     }
 
+    /**
+     * Menentukan apakah pengguna dapat menghapus tagihan.
+     */
     public function delete(User $user, Tagihan $tagihan): bool
     {
-        // Hanya admin yang boleh hapus tagihan (non-breaking rule)
         return $user->isAdmin();
     }
 }

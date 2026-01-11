@@ -1,12 +1,9 @@
-{{-- Menggunakan layout app.blade.php Anda --}}
 @extends('layouts.app')
 
 @section('title', 'Manajemen User')
 @section('page-title', 'Manajemen User')
 
-{{-- 1. PASTIKAN SEMUA LINK CSS MENGGUNAKAN "https://" --}}
 @push('styles')
-{{-- Tidak perlu CSS tambahan: gunakan Tailwind bawaan agar konsisten --}}
 @endpush
 
 
@@ -20,8 +17,6 @@
             Tambah Kasir
         </button>
     </div>
-
-    {{-- Flash banner dihilangkan karena sudah digantikan SweetAlert global --}}
 
     <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6">
         <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
@@ -298,7 +293,7 @@
         attachFilter('searchStaff', '#tableStaff');
         attachFilter('searchMhs', '#tableMhs');
 
-        // Uniform delete confirmation using SweetAlert
+        // Konfirmasi hapus seragam menggunakan SweetAlert
         (function(){
             const forms = document.querySelectorAll('form.js-delete-user');
             forms.forEach(function(f){

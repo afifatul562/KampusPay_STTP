@@ -7,13 +7,13 @@ use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize; // Untuk auto-size kolom
-use Carbon\Carbon;                            // Import Carbon
-use Illuminate\Support\Facades\Log;            // Import Log
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class TransaksiKasirExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize
 {
-    protected $filters; // Ganti nama variabel agar lebih jelas
+    protected $filters;
 
     /**
      * Terima array filter dari controller.
@@ -45,7 +45,7 @@ class TransaksiKasirExport implements FromQuery, WithHeadings, WithMapping, Shou
                 }
             ])
             ->where('diverifikasi_oleh', $kasirId)
-            ->select('pembayaran.*') // Penting jika ada join/filter relasi
+            ->select('pembayaran.*')
             ->latest('tanggal_bayar');
 
         // Terapkan filter
@@ -134,10 +134,9 @@ class TransaksiKasirExport implements FromQuery, WithHeadings, WithMapping, Shou
      */
     public function map($pembayaran): array
     {
-        $tagihan = $pembayaran->tagihan; // Akses relasi
+        $tagihan = $pembayaran->tagihan;
 
         return [
-            // Gunakan format yang lebih mudah dibaca Excel atau isoFormat
             Carbon::parse($pembayaran->tanggal_bayar)->isoFormat('DD MMM YYYY, HH:mm:ss'),
             optional(optional($tagihan->mahasiswa)->user)->nama_lengkap ?? 'N/A',
             optional($tagihan->mahasiswa)->npm ?? 'N/A',

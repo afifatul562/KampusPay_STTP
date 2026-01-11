@@ -120,7 +120,7 @@
                         $totalSisa = $tunggakan->sum(function($t){ return $t->sisa_pokok ?? $t->jumlah_tagihan; });
                     @endphp
                     <td class="text-right"><strong>Rp {{ number_format($totalSisa, 0, ',', '.') }}</strong></td>
-                    <td></td> {{-- Kolom status kosong --}}
+                    <td></td>
                 </tr>
             </tfoot>
             @endif

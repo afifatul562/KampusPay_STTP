@@ -1,5 +1,3 @@
-{{-- File: resources/views/admin/mahasiswa/create.blade.php (SUDAH DIPERBAIKI) --}}
-
 @extends('layouts.app')
 
 @section('title', 'Tambah Mahasiswa Baru')
@@ -22,11 +20,6 @@
                 </div>
             @endif
 
-            {{--
-              PERUBAHAN:
-              1. Menggunakan 'action' dan 'method' standar.
-              2. 'id="mahasiswaForm"' tidak lagi diperlukan.
-            --}}
             <form action="{{ route('admin.mahasiswa.store') }}" method="POST" class="space-y-4">
                 @csrf
                 <div>
@@ -91,16 +84,10 @@
     </div>
 @endsection
 
-{{--
-  PERUBAHAN:
-  Seluruh blok @push('scripts') dihapus karena kita tidak lagi
-  menggunakan JavaScript/API untuk mengirim form ini.
---}}
-
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. Ambil SEMUA elemen yang kita butuhkan
+    // Ambil semua elemen yang diperlukan
     const npmInput = document.getElementById('npm');
     const prodiSelect = document.getElementById('program_studi');
     const angkatanSelect = document.getElementById('angkatan');
@@ -109,25 +96,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const angkatanHidden = document.getElementById('angkatan_hidden');
     const semesterHidden = document.getElementById('semester_hidden');
 
-    // 2. Kamus Program Studi
+    // Kamus Program Studi
     const prodiMap = {
         '11': 'S1 Teknik Sipil',
         '12': 'D3 Teknik Komputer',
         '13': 'S1 Informatika'
     };
 
-    // 3. Dapatkan tanggal hari ini
+    // Dapatkan tanggal hari ini
     const today = new Date();
     const currentYear = today.getFullYear(); // Tahun sekarang (misal: 2025)
     const currentMonth = today.getMonth() + 1; // Bulan sekarang (misal: 10 untuk Oktober)
 
-    // 4. Tambahkan "pendengar" ke input NPM
+    // Tambahkan event listener ke input NPM
     npmInput.addEventListener('input', function() {
         // Paksa hanya angka dan batasi 9 digit
         this.value = this.value.replace(/\D/g, '').slice(0, 9);
         const npmValue = this.value;
 
-        // --- Logic for Program Studi ---
+        // Logika untuk Program Studi
         if (npmValue.length >= 6) {
             const prodiCode = npmValue.substring(4, 6);
             const matchedProdi = prodiMap[prodiCode];
@@ -138,7 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
             prodiHidden.value = '';
         }
 
-        // --- Logic for Angkatan ---
+        // Logika untuk Angkatan
         let angkatanTahun = null;
         if (npmValue.length >= 2) {
             const angkatanCode = npmValue.substring(0, 2);
@@ -159,7 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
             angkatanHidden.value = '';
         }
 
-        // --- LOGIKA SEMESTER (SINKRON DENGAN ATURAN KAMPUS) ---
+        // Logika semester (sesuai aturan kampus)
         if (angkatanTahun) {
             let selisihTahun = currentYear - angkatanTahun;
             let semesterAktif;

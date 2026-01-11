@@ -57,7 +57,7 @@
         <table class="student-details-table">
             <tr>
                 <td>Nama</td><td>:</td><td>{{ $mahasiswa->user->nama_lengkap ?? 'N/A' }}</td>
-                <td>Tahun Akademik</td><td>:</td><td>{{ $filters['tahun_akademik'] ?? '-' }}</td> {{-- Sesuaikan variabel --}}
+                <td>Tahun Akademik</td><td>:</td><td>{{ $filters['tahun_akademik'] ?? '-' }}</td>
             </tr>
             <tr>
                 <td>NIM</td><td>:</td><td>{{ $mahasiswa->npm ?? 'N/A' }}</td>
@@ -115,7 +115,7 @@
                 <tr>
                     <td colspan="5" class="text-right"><strong>TOTAL PERIODE INI</strong></td>
                     <td class="text-right"><strong>Rp {{ number_format($histori->sum(function($p){ return $p->jumlah_bayar ?? $p->tagihan->jumlah_tagihan ?? 0; }), 0, ',', '.') }}</strong></td>
-                    <td></td> {{-- Kolom Kasir dikosongkan --}}
+                    <td></td>
                 </tr>
             </tfoot>
             @endif

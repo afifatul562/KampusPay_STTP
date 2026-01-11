@@ -21,17 +21,12 @@
             </div>
         @endif
 
-        {{--
-          Catatan: 'mahasiswa_id' mungkin adalah ID dari tabel mahasiswa_detail.
-          Pastikan route 'admin.mahasiswa.update' sudah ada di api.php/web.php
-        --}}
         <form action="{{ route('admin.mahasiswa.update', $mahasiswa->mahasiswa_id) }}" method="POST">
             @csrf
-            @method('PUT') {{-- Penting untuk method update --}}
+            @method('PUT')
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                {{-- Nama Lengkap --}}
                 <div>
                     <label for="nama_lengkap" class="block text-sm font-medium text-gray-700">Nama Lengkap</label>
                     <input type="text" name="nama_lengkap" id="nama_lengkap"
@@ -39,7 +34,6 @@
                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
 
-                {{-- Email --}}
                 <div>
                     <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
                     <input type="email" name="email" id="email"
@@ -47,7 +41,6 @@
                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
 
-                {{-- NPM (edit-able 9 digit) --}}
                 <div>
                     <label for="npm" class="block text-sm font-medium text-gray-700">NPM</label>
                     <input type="text" id="npm" name="npm"
@@ -56,7 +49,6 @@
                     <p id="npm-help" class="mt-1 text-xs text-gray-500">Masukkan 9 digit angka.</p>
                 </div>
 
-                {{-- Program Studi (otomatis dari NPM, non-editable) --}}
                 <div>
                     <label for="program_studi" class="block text-sm font-medium text-gray-700">Program Studi</label>
                     <select id="program_studi" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 appearance-none no-native-arrow bg-gray-100 cursor-not-allowed" disabled>
@@ -68,7 +60,6 @@
                     <input type="hidden" name="program_studi" id="program_studi_hidden" value="{{ old('program_studi', $mahasiswa->program_studi) }}">
                 </div>
 
-                {{-- Semester Aktif (otomatis dari NPM, non-editable) --}}
                 <div>
                     <label for="semester_aktif" class="block text-sm font-medium text-gray-700">Semester</label>
                     <select id="semester_aktif" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 appearance-none no-native-arrow bg-gray-100 cursor-not-allowed" disabled>
@@ -80,7 +71,6 @@
                     <input type="hidden" name="semester_aktif" id="semester_hidden" value="{{ old('semester_aktif', $mahasiswa->semester_aktif) }}">
                 </div>
 
-                {{-- Angkatan (otomatis dari NPM, non-editable) --}}
                 <div>
                     <label for="angkatan" class="block text-sm font-medium text-gray-700">Angkatan</label>
                     <select id="angkatan" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 appearance-none no-native-arrow bg-gray-100 cursor-not-allowed" disabled>

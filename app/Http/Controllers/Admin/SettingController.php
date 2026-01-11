@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Setting; // Pastikan Model Setting di-import
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB; // <-- Tambahkan ini
-use Illuminate\Validation\ValidationException; // <-- Tambahkan ini
-use Illuminate\Database\QueryException; // <-- Tambahkan ini
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Database\QueryException;
 
 class SettingController extends Controller
 {
@@ -30,7 +30,6 @@ class SettingController extends Controller
                 $settings['academic_year'] = $settings['academic_year'] ?? $computedYear;
                 $settings['semester'] = $settings['semester'] ?? $computedSemester;
             }
-            // Bungkus dalam 'data' agar konsisten
             return response()->json(['data' => $settings]);
         } catch (\Exception $e) {
             Log::error('Gagal mengambil system settings: ' . $e->getMessage());
@@ -53,7 +52,7 @@ class SettingController extends Controller
                 'account_number' => 'nullable|string|max:255',
             ]);
 
-            DB::beginTransaction(); // <-- MULAI TRANSAKSI
+            DB::beginTransaction();
             try {
                 // Hitung academic_year & semester otomatis
                 [$computedYear, $computedSemester] = $this->computeAcademicYearAndSemester();
@@ -72,7 +71,7 @@ class SettingController extends Controller
                         ['value' => in_array($key, ['bank_name', 'account_holder', 'account_number']) ? ($value ?: null) : $value]
                     );
                 }
-                DB::commit(); // <-- COMMIT JIKA SUKSES
+                DB::commit();
 
                 // Hapus cache settings agar pembacaan berikutnya segar
                 \Illuminate\Support\Facades\Cache::forget('settings:key_value_map');
@@ -84,7 +83,7 @@ class SettingController extends Controller
                 ]);
 
             } catch (\Exception $e) {
-                DB::rollBack(); // <-- ROLLBACK JIKA GAGAL
+                DB::rollBack();
                 Log::error('Gagal saat menyimpan pengaturan sistem: ' . $e->getMessage());
                 return response()->json([
                     'success' => false,
@@ -112,9 +111,8 @@ class SettingController extends Controller
                 'php_version'     => PHP_VERSION,
                 'laravel_version' => app()->version(),
                 'database'        => config('database.default'),
-                'server_time'     => now()->toDateTimeString() // Atau pakai format lain jika perlu
+                'server_time'     => now()->toDateTimeString()
              ];
-             // Bungkus dalam 'data' agar konsisten
              return response()->json(['data' => $info]);
          } catch (\Exception $e) {
             Log::error('Gagal mengambil system info: ' . $e->getMessage());
@@ -133,11 +131,11 @@ class SettingController extends Controller
      */
     private function computeAcademicYearAndSemester(): array
     {
-        $now = now(); // Saat ini 1 Januari 2026
+        $now = now();
         $y = (int) $now->year;
         $m = (int) $now->month;
 
-        // SEMESTER: Januari (1) masuk ke sini -> Ganjil
+        // Tentukan semester berdasarkan bulan
         if ($m >= 10 || $m <= 2) {
             $semester = 'Ganjil';
         } elseif ($m >= 3 && $m <= 7) {
@@ -146,7 +144,7 @@ class SettingController extends Controller
             $semester = 'Libur';
         }
 
-        // TAHUN AKADEMIK: Januari (1) masuk ke else -> 2025/2026
+        // Tentukan tahun akademik
         if ($m >= 10) {
             $startYear = $y;
             $endYear = $y + 1;

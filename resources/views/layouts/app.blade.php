@@ -298,7 +298,6 @@
 
             bellBtn.addEventListener('click', () => {
                 dropdown.classList.toggle('hidden');
-                // refresh saat dibuka
                 if (!dropdown.classList.contains('hidden')) {
                     loadNotifs();
                 }
@@ -334,7 +333,6 @@
     {{-- Global error handler untuk 419 CSRF Token Mismatch --}}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Handle 419 error dari response
             const originalFetch = window.fetch;
             window.fetch = function(...args) {
                 return originalFetch.apply(this, args).then(response => {

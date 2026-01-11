@@ -92,12 +92,20 @@
                     {{-- Opsi akan diisi oleh JavaScript --}}
                 </select>
             </div>
+            {{-- Filter Angkatan --}}
+            <div class="flex-1">
+                <label for="filterAngkatan" class="block text-sm font-medium text-gray-700 mb-1">Angkatan</label>
+                <select id="filterAngkatan" class="block w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:text-sm">
+                    <option value="">Semua Angkatan</option>
+                    {{-- Opsi akan diisi oleh JavaScript --}}
+                </select>
+            </div>
         </div>
     </x-card>
 
     {{-- Tabel Pembayaran & Tagihan --}}
     <x-data-table
-        :headers="['Kode Pembayaran', 'Mahasiswa', 'Jenis Tagihan', 'Jumlah', 'Status', 'Tgl Bayar', 'Aksi']"
+        :headers="['Kode Pembayaran', 'Mahasiswa', 'Tahun Akademik', 'Semester', 'Jenis Tagihan', 'Jumlah', 'Status', 'Tgl Bayar', 'Aksi']"
         aria-label="Tabel pembayaran dan tagihan">
         <tr id="loading-row">
             <td colspan="7" class="text-center py-10 text-gray-500">Memuat data...</td>
@@ -121,7 +129,6 @@
                         </div>
                         <div>
                             <label for="mahasiswa_id" class="block text-sm font-medium text-gray-700">Pilih Mahasiswa</label>
-                            {{-- !! Ini akan di-target oleh Select2 !! --}}
                             <select id="mahasiswa_id" name="mahasiswa_id" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm sm:text-sm focus:ring-blue-500 focus:border-blue-500" style="width: 100%"><option value="" disabled selected>Pilih angkatan dulu</option></select>
                         </div>
                         <div>
@@ -130,7 +137,6 @@
                         </div>
                         <div>
                             <label for="jumlah_tagihan" class="block text-sm font-medium text-gray-700">Jumlah Tagihan (Rp)</label>
-                            {{-- !! Ganti type="text" agar Cleave.js berfungsi !! --}}
                             <input type="text" id="jumlah_tagihan" name="jumlah_tagihan" required placeholder="Akan terisi otomatis" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm sm:text-sm bg-gray-100 focus:ring-blue-500 focus:border-blue-500" readonly>
                         </div>
                         <div>
@@ -216,15 +222,13 @@
         let allTarifsData = []; // Pindah ke scope atas
         const filterStatusSelect = document.getElementById('filterStatus');
         const filterJenisSelect = document.getElementById('filterJenis');
+        const filterAngkatanSelect = document.getElementById('filterAngkatan');
         const filterNamaMahasiswaInput = document.getElementById('filterNamaMahasiswa');
-        let currentFilters = { status: '', jenis: '', namaMahasiswa: '' };
+        let currentFilters = { status: '', jenis: '', angkatan: '', namaMahasiswa: '' };
         let aktivasiNotifs = [];
         let notifTimer = null;
 
-        // ===========================================
-        // !! Inisialisasi Cleave.js (Format Angka) !!
-        // ===========================================
-        // Gunakan fallback sederhana jika Cleave.js tidak tersedia agar tidak error
+        // Inisialisasi Cleave.js untuk format angka
         const cleaveJumlah = (window.Cleave)
             ? new Cleave(jumlahInput, { numeral: true, numeralThousandsGroupStyle: 'thousand', delimiter: '.' })
             : {
@@ -236,10 +240,7 @@
                 }
             };
 
-        // ===========================================
-        // !! Inisialisasi Flatpickr (Format Tanggal) !!
-        // ===========================================
-        // Gunakan fallback ringan jika Flatpickr tidak tersedia agar tidak error
+        // Inisialisasi Flatpickr untuk format tanggal
         // Paksa placeholder Indonesia sebelum inisialisasi
         tglJatuhTempoInput.setAttribute('placeholder', 'dd/mm/yyyy');
         // Paksa locale ID secara global bila tersedia
@@ -314,9 +315,7 @@
             attributeFilter: ['placeholder']
         });
 
-        // ===========================================
-        // !! Inisialisasi Select2 (Pencarian Mahasiswa) - Opsional !!
-        // ===========================================
+        // Inisialisasi Select2 untuk pencarian mahasiswa (opsional)
         const isjQueryAvailable = !!(window.$ && $.fn);
         const isSelect2Available = isjQueryAvailable && !!$.fn.select2;
         if (isSelect2Available) {
@@ -333,9 +332,7 @@
             });
         }
 
-        // -------------------------------------
-        // FUNGSI API REQUEST (DENGAN SWEETALERT)
-        // -------------------------------------
+        // Fungsi untuk request API
         async function apiRequest(url, method = 'GET', body = null) {
              if (!apiToken) {
                  Swal.fire({ icon: 'error', title: 'Sesi Tidak Valid', text: 'Sesi Anda tidak ditemukan. Harap login kembali.', confirmButtonText: 'Login' }).then(() => { window.location.href = '/login'; });
@@ -423,6 +420,65 @@
         }
 
         // -------------------------------------
+        // FUNGSI HELPER: Parse Semester Label
+        // -------------------------------------
+        function parseSemesterLabel(semesterLabel) {
+            if (!semesterLabel) {
+                return { tahunAkademik: '-', semester: '-', semesterNumber: null };
+            }
+
+            // Format: "2025/2026 Ganjil" atau "2025/2026 Genap"
+            const parts = semesterLabel.trim().split(/\s+/);
+            if (parts.length >= 2) {
+                const tahunAkademik = parts[0]; // "2025/2026"
+                const semester = parts[1]; // "Ganjil" atau "Genap"
+                return { tahunAkademik, semester, semesterNumber: null };
+            }
+
+            // Fallback jika format tidak sesuai
+            return { tahunAkademik: semesterLabel, semester: '-', semesterNumber: null };
+        }
+
+        // -------------------------------------
+        // FUNGSI HELPER: Hitung Nomor Semester dari Tahun Akademik dan Angkatan
+        // -------------------------------------
+        function calculateSemesterNumber(tahunAkademik, angkatan, semesterType) {
+            if (!tahunAkademik || !angkatan || !semesterType || tahunAkademik === '-' || angkatan === null) {
+                return null;
+            }
+
+            try {
+                // Extract tahun pertama dari tahun akademik (misal: "2025/2026" -> 2025)
+                const tahunParts = tahunAkademik.split('/');
+                if (tahunParts.length < 1) return null;
+
+                const tahunAkademikAwal = parseInt(tahunParts[0]);
+                const angkatanInt = parseInt(String(angkatan));
+
+                if (isNaN(tahunAkademikAwal) || isNaN(angkatanInt)) {
+                    return null;
+                }
+
+                // Hitung selisih tahun
+                const selisihTahun = tahunAkademikAwal - angkatanInt;
+
+                // Semester ganjil = semester 1, 3, 5, 7... (selisih*2 + 1)
+                // Semester genap = semester 2, 4, 6, 8... (selisih*2 + 2)
+                const semesterTypeLower = semesterType.toLowerCase();
+                if (semesterTypeLower === 'ganjil') {
+                    return selisihTahun * 2 + 1;
+                } else if (semesterTypeLower === 'genap') {
+                    return selisihTahun * 2 + 2;
+                }
+
+                return null;
+            } catch (e) {
+                console.warn('Error calculating semester number:', e);
+                return null;
+            }
+        }
+
+        // -------------------------------------
         // FUNGSI RENDER TABEL (Aksi Lengkap)
         // -------------------------------------
         function renderTable(dataToRender) {
@@ -432,9 +488,9 @@
             }
             paymentTableBody.innerHTML = '';
             if (!dataToRender || dataToRender.length === 0) {
-                 const isFiltering = currentFilters.status || currentFilters.jenis || currentFilters.namaMahasiswa;
+                 const isFiltering = currentFilters.status || currentFilters.jenis || currentFilters.angkatan || currentFilters.namaMahasiswa;
                  renderEmptyState(paymentTableBody, {
-                     colspan: 7,
+                     colspan: 9,
                      title: isFiltering ? 'Tidak ada data' : 'Belum ada data tagihan',
                      message: isFiltering ? 'Tidak ada data tagihan yang cocok dengan filter yang dipilih.' : 'Silakan buat tagihan baru untuk memulai.',
                      icon: `
@@ -447,7 +503,7 @@
             }
             const rupiahFormat = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
 
-            // Fungsi helper untuk membuat sel (td) dengan textContent (AMAN)
+            // Fungsi helper untuk membuat sel (td) dengan textContent
             function createCell(text, classes = []) {
                 const cell = document.createElement('td');
                 cell.textContent = text ?? '-'; // Gunakan '-' jika null/undefined
@@ -477,21 +533,82 @@
                 cellMahasiswa.className = 'px-6 py-4 whitespace-nowrap';
                 const divNama = document.createElement('div');
                 divNama.className = 'font-medium text-gray-900';
-                divNama.textContent = tagihan.mahasiswa?.user?.nama_lengkap ?? 'N/A'; // Aman
+                divNama.textContent = tagihan.mahasiswa?.user?.nama_lengkap ?? 'N/A';
                 const divNpm = document.createElement('div');
                 divNpm.className = 'text-gray-500';
-                divNpm.textContent = tagihan.mahasiswa?.npm ?? 'N/A'; // Aman
+                divNpm.textContent = tagihan.mahasiswa?.npm ?? 'N/A';
                 cellMahasiswa.appendChild(divNama);
                 cellMahasiswa.appendChild(divNpm);
                 tr.appendChild(cellMahasiswa);
 
-                // 3. Jenis Tagihan
-                tr.appendChild(createCell(tagihan.tarif?.nama_pembayaran, ['text-gray-700']));
+                // 3. Tahun Akademik & Semester
+                const semesterInfo = parseSemesterLabel(tagihan.semester_label);
+                tr.appendChild(createCell(semesterInfo.tahunAkademik, ['text-gray-700']));
 
-                // 4. Jumlah
+                // 4. Semester (Ganjil/Genap) dengan badge
+                const cellSemester = document.createElement('td');
+                cellSemester.className = 'px-6 py-4 whitespace-nowrap';
+                if (semesterInfo.semester && semesterInfo.semester !== '-') {
+                    const badgeClass = semesterInfo.semester.toLowerCase() === 'ganjil'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-purple-100 text-purple-800';
+                    cellSemester.innerHTML = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${badgeClass}">${semesterInfo.semester}</span>`;
+                } else {
+                    cellSemester.textContent = '-';
+                }
+                tr.appendChild(cellSemester);
+
+                // 5. Jenis Tagihan (dengan detail semester dan program studi)
+                // Note: semesterInfo sudah di-parse di atas (baris 557), kita reuse untuk efisiensi
+                const cellJenisTagihan = document.createElement('td');
+                cellJenisTagihan.className = 'px-6 py-4';
+
+                const jenisTagihanDiv = document.createElement('div');
+                jenisTagihanDiv.className = 'space-y-1';
+
+                // Nama tagihan (baris pertama - bold)
+                const namaTagihanDiv = document.createElement('div');
+                namaTagihanDiv.className = 'font-medium text-gray-900';
+                namaTagihanDiv.textContent = tagihan.tarif?.nama_pembayaran ?? 'N/A';
+                jenisTagihanDiv.appendChild(namaTagihanDiv);
+
+                // Detail semester dan program studi (baris kedua - text kecil)
+                const detailDiv = document.createElement('div');
+                detailDiv.className = 'text-xs text-gray-500';
+
+                // Hitung semester dari semester_label dan angkatan (lebih akurat untuk semester saat tagihan dibuat)
+                const angkatan = tagihan.mahasiswa?.angkatan ?? null;
+                let semesterNumber = calculateSemesterNumber(semesterInfo.tahunAkademik, angkatan, semesterInfo.semester);
+
+                // Fallback ke semester_aktif jika perhitungan gagal
+                if (!semesterNumber) {
+                    semesterNumber = tagihan.mahasiswa?.semester_aktif ?? null;
+                }
+
+                const programStudi = tagihan.mahasiswa?.program_studi ?? null;
+
+                const detailParts = [];
+                if (semesterNumber) {
+                    detailParts.push(`Semester ${semesterNumber}`);
+                }
+                if (programStudi) {
+                    detailParts.push(programStudi);
+                }
+
+                if (detailParts.length > 0) {
+                    detailDiv.textContent = detailParts.join(' • ');
+                } else {
+                    detailDiv.textContent = '-';
+                }
+
+                jenisTagihanDiv.appendChild(detailDiv);
+                cellJenisTagihan.appendChild(jenisTagihanDiv);
+                tr.appendChild(cellJenisTagihan);
+
+                // 6. Jumlah
                 tr.appendChild(createCell(rupiahFormat.format(tagihan.jumlah_tagihan), ['text-right', 'font-medium', 'text-gray-800']));
 
-                // 5. Status (Pakai innerHTML tapi aman karena dari logic kita)
+                // Status
                 const cellStatus = document.createElement('td');
                 cellStatus.className = 'px-6 py-4 whitespace-nowrap text-center';
                 const isDibatalkan = pembayaran && pembayaran.status_dibatalkan;
@@ -501,10 +618,10 @@
                 cellStatus.innerHTML = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${isDibatalkan ? 'bg-red-100 text-red-800' : (isLunas ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800')}">${statusText}</span>`;
                 tr.appendChild(cellStatus);
 
-                // 6. Tgl Bayar
+                // 8. Tgl Bayar
                 tr.appendChild(createCell(pembayaran ? new Date(pembayaran.tanggal_bayar).toLocaleDateString('id-ID') : '-', ['text-gray-500']));
 
-                // 7. Aksi (Pakai innerHTML tapi aman karena ID bukan input teks)
+                // Aksi
                 const cellAksi = document.createElement('td');
                 cellAksi.className = 'px-6 py-4 whitespace-nowrap text-right font-medium';
                 cellAksi.innerHTML = `
@@ -538,6 +655,7 @@
          function applyFilters() {
              currentFilters.status = filterStatusSelect.value;
              currentFilters.jenis = filterJenisSelect.value;
+             currentFilters.angkatan = filterAngkatanSelect.value;
              currentFilters.namaMahasiswa = filterNamaMahasiswaInput.value.toLowerCase().trim();
              const filteredData = allTagihanData.filter(tagihan => {
                  let statusMatch = true;
@@ -571,10 +689,11 @@
                      }
                  }
                  const jenisMatch = !currentFilters.jenis || (tagihan.tarif && tagihan.tarif.nama_pembayaran === currentFilters.jenis);
+                 const angkatanMatch = !currentFilters.angkatan || (tagihan.mahasiswa && String(tagihan.mahasiswa.angkatan) === String(currentFilters.angkatan));
                  const namaMatch = !currentFilters.namaMahasiswa ||
                      (tagihan.mahasiswa?.user?.nama_lengkap?.toLowerCase().includes(currentFilters.namaMahasiswa) ||
                       tagihan.mahasiswa?.npm?.toLowerCase().includes(currentFilters.namaMahasiswa));
-                 return statusMatch && jenisMatch && namaMatch;
+                 return statusMatch && jenisMatch && angkatanMatch && namaMatch;
              });
              renderTable(filteredData);
          }
@@ -584,9 +703,33 @@
         // -------------------------------------
          function populateTableFilters() {
              const uniqueJenis = new Set();
-             allTagihanData.forEach(tagihan => { if (tagihan.tarif && tagihan.tarif.nama_pembayaran) { uniqueJenis.add(tagihan.tarif.nama_pembayaran); } });
+             const uniqueAngkatan = new Set();
+             allTagihanData.forEach(tagihan => {
+                 if (tagihan.tarif && tagihan.tarif.nama_pembayaran) {
+                     uniqueJenis.add(tagihan.tarif.nama_pembayaran);
+                 }
+                 if (tagihan.mahasiswa && tagihan.mahasiswa.angkatan) {
+                     uniqueAngkatan.add(tagihan.mahasiswa.angkatan);
+                 }
+             });
+
+             // Populate jenis tagihan
              filterJenisSelect.innerHTML = '<option value="">Semua Jenis</option>';
-             Array.from(uniqueJenis).sort().forEach(jenis => { const option = document.createElement('option'); option.value = jenis; option.textContent = jenis; filterJenisSelect.appendChild(option); });
+             Array.from(uniqueJenis).sort().forEach(jenis => {
+                 const option = document.createElement('option');
+                 option.value = jenis;
+                 option.textContent = jenis;
+                 filterJenisSelect.appendChild(option);
+             });
+
+             // Populate angkatan
+             filterAngkatanSelect.innerHTML = '<option value="">Semua Angkatan</option>';
+             Array.from(uniqueAngkatan).sort((a, b) => b - a).forEach(angkatan => {
+                 const option = document.createElement('option');
+                 option.value = angkatan;
+                 option.textContent = angkatan;
+                 filterAngkatanSelect.appendChild(option);
+             });
          }
 
         // -------------------------------------
@@ -598,18 +741,17 @@
             apiRequest(url).then(response => {
                 allTagihanData = response.data || response;
                 populateTableFilters();
-                // !! PANGGIL applyFilters() DI SINI !!
                 applyFilters();
             }).catch(error => {
                 console.error('Error fetching tagihan:', error);
                 Swal.fire({ icon: 'error', title: 'Gagal Memuat Data', text: `Gagal memuat data tagihan: ${error.message}` });
                 if (paymentTableBody) {
-                    paymentTableBody.innerHTML = `<tr><td colspan="7" class="text-center py-10 text-red-500">Gagal memuat data. Silakan refresh.</td></tr>`;
+                    paymentTableBody.innerHTML = `<tr><td colspan="9" class="text-center py-10 text-red-500">Gagal memuat data. Silakan refresh.</td></tr>`;
                 }
             });
         }
 
-        // --- Fungsi Modal & Form Handling (Diperbarui) ---
+        // Fungsi modal dan form handling
 
         async function populateFormDropdowns() {
             const mahasiswaUrl = "{{ route($mahasiswaIndexRouteName) }}";
@@ -661,7 +803,7 @@
         }
 
         function filterTarifDropdown() {
-            // Ambil option terpilih secara aman (kompatibel dengan Select2)
+            // Ambil option terpilih (kompatibel dengan Select2)
             const selectedValue = mahasiswaSelect.value;
             const selectedOption = mahasiswaSelect.querySelector(`option[value="${CSS.escape(selectedValue)}"]`);
 
@@ -692,7 +834,6 @@
             tarifSelect.dispatchEvent(new Event('change'));
         }
 
-        // !! Perbarui fungsi openTagihanModal !!
         function openTagihanModal(mode = 'add', tagihanData = null) {
             tagihanForm.reset();
             tagihanIdInput.value = '';
@@ -958,7 +1099,7 @@
             detailTagihanContent.innerHTML = '<div class="text-center text-gray-500 py-4">Memuat detail...</div>';
         }
 
-        // --- Fungsi Hapus (DENGAN SWEETALERT) ---
+        // Fungsi untuk menghapus tagihan
         function deleteTagihan(tagihanId, namaTagihan = 'ini') {
             Swal.fire({
                 title: 'Anda Yakin?',
@@ -1031,7 +1172,6 @@
             mahasiswaSelect.addEventListener('change', filterTarifDropdown);
         }
 
-        // !! Perbarui Jumlah Tagihan !!
         if (tarifSelect) {
             tarifSelect.addEventListener('change', function() {
                 const selectedTarifId = this.value;
@@ -1085,7 +1225,7 @@
             window.addEventListener('click', (event) => { if (event.target == detailTagihanModal) { closeDetailModal(); } });
         }
 
-        // Listener Form Submit Modal (DENGAN SWEETALERT)
+        // Event listener untuk submit form modal
         if (tagihanForm) {
             tagihanForm.addEventListener('submit', function(event) {
              event.preventDefault();
@@ -1117,7 +1257,7 @@
                     ul.className = 'list-disc list-inside text-left mt-2';
                     Object.values(err.errors).forEach(e => {
                         const li = document.createElement('li');
-                        li.textContent = e.join(', '); // AMAN
+                        li.textContent = e.join(', ');
                         ul.appendChild(li);
                     });
                     errorContent.appendChild(ul);
@@ -1138,6 +1278,9 @@
          }
          if (filterJenisSelect) {
              filterJenisSelect.addEventListener('change', applyFilters);
+         }
+         if (filterAngkatanSelect) {
+             filterAngkatanSelect.addEventListener('change', applyFilters);
          }
          if (filterNamaMahasiswaInput) {
              // Gunakan debounce untuk performa yang lebih baik

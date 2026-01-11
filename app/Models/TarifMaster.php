@@ -10,7 +10,7 @@ class TarifMaster extends Model
 {
     use HasFactory;
 
-    protected $table = 'tarif_master';  // specify the correct table name
+    protected $table = 'tarif_master';
     protected $primaryKey = 'tarif_id';
     protected $fillable = [
         'nama_pembayaran',

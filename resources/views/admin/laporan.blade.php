@@ -19,7 +19,6 @@
 
     <x-card title="Generate Laporan">
         <form id="reportForm" class="space-y-4">
-            {{-- Form fields --}}
             <div>
                 <label for="jenis_laporan" class="block text-sm font-medium text-gray-700">Jenis Laporan</label>
                 <select id="jenis_laporan" name="jenis_laporan" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
@@ -31,6 +30,14 @@
             <div>
                 <label for="tahun" class="block text-sm font-medium text-gray-700">Tahun</label>
                 <select id="tahun" name="tahun" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"></select>
+            </div>
+            <div id="semesterFilterContainer" class="hidden">
+                <label for="semester" class="block text-sm font-medium text-gray-700">Semester</label>
+                <select id="semester" name="semester" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                    <option value="">Semua Semester</option>
+                    <option value="Ganjil">Ganjil</option>
+                    <option value="Genap">Genap</option>
+                </select>
             </div>
             {{-- Tombol View --}}
             <x-gradient-button type="submit" id="viewReportBtn" variant="primary" size="md" class="w-full" aria-label="Tampilkan Laporan">
@@ -45,7 +52,6 @@
         </form>
     </x-card>
 
-    {{-- Area Preview --}}
     <x-card id="reportPreviewArea" class="hidden" title="Preview Laporan" aria-live="polite">
         <div id="reportPreviewContent" class="overflow-x-auto">
             <p class="text-gray-500">Data preview akan muncul di sini...</p>
@@ -73,14 +79,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const generatePdfBtn = document.getElementById('generatePdfBtn');
         const reportPreviewArea = document.getElementById('reportPreviewArea');
         const reportPreviewContent = document.getElementById('reportPreviewContent');
-        // Find table by aria-label since we're using x-data-table component
+        // Cari tabel berdasarkan aria-label karena menggunakan komponen x-data-table
         const reportHistoryTableElement = document.querySelector('table[aria-label="Tabel riwayat laporan"]');
         const reportHistoryTable = reportHistoryTableElement ? reportHistoryTableElement.querySelector('tbody') : null;
         const tahunSelect = document.getElementById('tahun');
+        const jenisLaporanSelect = document.getElementById('jenis_laporan');
+        const semesterFilterContainer = document.getElementById('semesterFilterContainer');
+        const semesterSelect = document.getElementById('semester');
 
-        // ============================================
-        // !! PASTIKAN VARIABEL INI PAKAI 'let' !!
-        // ============================================
         let currentPreviewData = null;
         let currentReportParams = null;
         // Isi pilihan tahun (10 tahun terakhir)
@@ -100,14 +106,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const apiRequest = (window.App && window.App.apiRequest) ? window.App.apiRequest : null;
         if (!apiRequest) { console.error('apiRequest util tidak tersedia'); }
 
-        // -------------------------------------
-        // FUNGSI LOAD RIWAYAT (AMAN DARI XSS)
-        // -------------------------------------
+        // Fungsi untuk memuat riwayat laporan
         function loadReportHistory() {
             const historyUrl = "{{ route('admin.reports.index') }}";
             reportHistoryTable.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-gray-500">Memuat riwayat...</td></tr>';
 
-            function createHistoryCell(text, classes = []) { /* ... (kode helper cell) ... */
+            function createHistoryCell(text, classes = []) {
                  const td = document.createElement('td'); td.className = 'px-6 py-4 whitespace-nowrap ' + classes.join(' '); td.textContent = text ?? '-'; return td;
             }
 
@@ -156,9 +160,62 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // ===================================================
-        // !! FUNGSI INI DITULIS ULANG AGAR AMAN DARI XSS !!
-        // ===================================================
+        // Fungsi helper untuk parse label semester
+        function parseSemesterLabel(semesterLabel) {
+            if (!semesterLabel) {
+                return { tahunAkademik: '-', semester: '-', semesterNumber: null };
+            }
+
+            // Format: "2025/2026 Ganjil" atau "2025/2026 Genap"
+            const parts = semesterLabel.trim().split(/\s+/);
+            if (parts.length >= 2) {
+                const tahunAkademik = parts[0]; // "2025/2026"
+                const semester = parts[1]; // "Ganjil" atau "Genap"
+                return { tahunAkademik, semester, semesterNumber: null };
+            }
+
+            // Fallback jika format tidak sesuai
+            return { tahunAkademik: semesterLabel, semester: '-', semesterNumber: null };
+        }
+
+        // Fungsi helper untuk menghitung nomor semester dari tahun akademik dan angkatan
+        function calculateSemesterNumber(tahunAkademik, angkatan, semesterType) {
+            if (!tahunAkademik || !angkatan || !semesterType || tahunAkademik === '-' || angkatan === null) {
+                return null;
+            }
+
+            try {
+                // Extract tahun pertama dari tahun akademik (misal: "2025/2026" -> 2025)
+                const tahunParts = tahunAkademik.split('/');
+                if (tahunParts.length < 1) return null;
+
+                const tahunAkademikAwal = parseInt(tahunParts[0]);
+                const angkatanInt = parseInt(String(angkatan));
+
+                if (isNaN(tahunAkademikAwal) || isNaN(angkatanInt)) {
+                    return null;
+                }
+
+                // Hitung selisih tahun
+                const selisihTahun = tahunAkademikAwal - angkatanInt;
+
+                // Semester ganjil = semester 1, 3, 5, 7... (selisih*2 + 1)
+                // Semester genap = semester 2, 4, 6, 8... (selisih*2 + 2)
+                const semesterTypeLower = semesterType.toLowerCase();
+                if (semesterTypeLower === 'ganjil') {
+                    return selisihTahun * 2 + 1;
+                } else if (semesterTypeLower === 'genap') {
+                    return selisihTahun * 2 + 2;
+                }
+
+                return null;
+            } catch (e) {
+                console.warn('Error calculating semester number:', e);
+                return null;
+            }
+        }
+
+        // Fungsi untuk menampilkan preview laporan
         function displayReportPreview(data, type) {
             reportPreviewContent.innerHTML = ''; // Kosongkan
             if (!data || (Array.isArray(data) && data.length === 0) || (typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length === 0) ) {
@@ -226,6 +283,67 @@ document.addEventListener('DOMContentLoaded', function() {
                  td.appendChild(divNpm);
                  return td;
             }
+            // Helper untuk membuat TD Semester dengan badge
+            function createSemesterCell(semesterInfo) {
+                const td = document.createElement('td');
+                td.className = 'px-4 py-2 whitespace-nowrap';
+                if (semesterInfo && semesterInfo.semester && semesterInfo.semester !== '-') {
+                    const badgeClass = semesterInfo.semester.toLowerCase() === 'ganjil'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-purple-100 text-purple-800';
+                    td.innerHTML = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${badgeClass}">${semesterInfo.semester}</span>`;
+                } else {
+                    td.textContent = '-';
+                }
+                return td;
+            }
+            // Helper untuk membuat TD Jenis Tagihan dengan detail semester dan program studi
+            function createJenisTagihanCell(tagihan, semesterInfo) {
+                const td = document.createElement('td');
+                td.className = 'px-4 py-2';
+
+                const jenisTagihanDiv = document.createElement('div');
+                jenisTagihanDiv.className = 'space-y-1';
+
+                // Nama tagihan (baris pertama - bold)
+                const namaTagihanDiv = document.createElement('div');
+                namaTagihanDiv.className = 'font-medium text-gray-900';
+                namaTagihanDiv.textContent = tagihan.tarif?.nama_pembayaran ?? 'N/A';
+                jenisTagihanDiv.appendChild(namaTagihanDiv);
+
+                // Detail semester dan program studi (baris kedua - text kecil)
+                const detailDiv = document.createElement('div');
+                detailDiv.className = 'text-xs text-gray-500';
+
+                // Hitung semester dari semester_label dan angkatan
+                const angkatan = tagihan.mahasiswa?.angkatan ?? null;
+                let semesterNumber = calculateSemesterNumber(semesterInfo.tahunAkademik, angkatan, semesterInfo.semester);
+
+                // Fallback ke semester_aktif jika perhitungan gagal
+                if (!semesterNumber) {
+                    semesterNumber = tagihan.mahasiswa?.semester_aktif ?? null;
+                }
+
+                const programStudi = tagihan.mahasiswa?.program_studi ?? null;
+
+                const detailParts = [];
+                if (semesterNumber) {
+                    detailParts.push(`Semester ${semesterNumber}`);
+                }
+                if (programStudi) {
+                    detailParts.push(programStudi);
+                }
+
+                if (detailParts.length > 0) {
+                    detailDiv.textContent = detailParts.join(' • ');
+                } else {
+                    detailDiv.textContent = '-';
+                }
+
+                jenisTagihanDiv.appendChild(detailDiv);
+                td.appendChild(jenisTagihanDiv);
+                return td;
+            }
 
             const headerRow = document.createElement('tr');
             if (type === 'mahasiswa') {
@@ -237,9 +355,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 headerRow.appendChild(createHeaderCell('Angkatan'));
                 headerRow.appendChild(createHeaderCell('Status'));
             } else if (type === 'pembayaran') {
-                headers = ['Kode Pembayaran', 'Mahasiswa', 'Jenis Tagihan', 'Jumlah', 'Status', 'Tgl Bayar'];
+                headers = ['Kode Pembayaran', 'Mahasiswa', 'Tahun Akademik', 'Semester', 'Jenis Tagihan', 'Jumlah', 'Status', 'Tgl Bayar'];
                 headerRow.appendChild(createHeaderCell('Kode Pembayaran'));
                 headerRow.appendChild(createHeaderCell('Mahasiswa'));
+                headerRow.appendChild(createHeaderCell('Tahun Akademik'));
+                headerRow.appendChild(createHeaderCell('Semester'));
                 headerRow.appendChild(createHeaderCell('Jenis Tagihan'));
                 headerRow.appendChild(createHeaderCell('Jumlah', true));
                 headerRow.appendChild(createHeaderCell('Status'));
@@ -288,16 +408,51 @@ document.addEventListener('DOMContentLoaded', function() {
                 data.forEach(item => {
                     const dataRow = document.createElement('tr');
                     if (type === 'pembayaran') {
-                        // Gunakan 'let' untuk variabel yang nilainya bisa berubah
-                        let statusText = item.status === 'Belum Lunas' ? 'Belum Dibayarkan' : item.status;
+                        // Parse semester label untuk mendapatkan tahun akademik dan semester
+                        const semesterInfo = parseSemesterLabel(item.semester_label);
+
+                        // Handle status sama seperti di list tagihan
+                        const pembayaranAll = item.pembayaran_all || item.pembayaranAll || [];
+                        const pembayaran = item.pembayaran;
+                        const sudahAdaPembayaran = pembayaranAll.length > 0 || (pembayaran && !pembayaran.status_dibatalkan);
+
+                        let statusText = item.status === 'Belum Lunas'
+                            ? (sudahAdaPembayaran ? 'Belum Lunas' : 'Belum Dibayarkan')
+                            : item.status;
+
                         const isLunas = item.status === 'Lunas';
-                        const tglBayar = item.pembayaran ? new Date(item.pembayaran.tanggal_bayar).toLocaleDateString('id-ID') : '-';
+                        const isDibatalkan = pembayaran && pembayaran.status_dibatalkan;
+
+                        if (isDibatalkan) {
+                            statusText = 'Dibatalkan';
+                        }
+
+                        const tglBayar = pembayaran ? new Date(pembayaran.tanggal_bayar).toLocaleDateString('id-ID') : '-';
 
                         dataRow.appendChild(createDataCell(item.kode_pembayaran));
                         dataRow.appendChild(createMahasiswaCell(item.mahasiswa?.user?.nama_lengkap, item.mahasiswa?.npm));
-                        dataRow.appendChild(createDataCell(item.tarif?.nama_pembayaran));
+                        dataRow.appendChild(createDataCell(semesterInfo.tahunAkademik));
+                        dataRow.appendChild(createSemesterCell(semesterInfo));
+                        dataRow.appendChild(createJenisTagihanCell(item, semesterInfo));
                         dataRow.appendChild(createDataCell(rupiahFormat.format(item.jumlah_tagihan || 0), true));
-                        dataRow.appendChild(createStatusCell(statusText, isLunas));
+
+                        // Status cell dengan handling khusus untuk Dibatalkan
+                        const statusCell = document.createElement('td');
+                        statusCell.className = 'px-4 py-2 text-center';
+                        let bgColor, textColor;
+                        if (isDibatalkan) {
+                            bgColor = 'bg-red-100';
+                            textColor = 'text-red-800';
+                        } else if (isLunas) {
+                            bgColor = 'bg-green-100';
+                            textColor = 'text-green-800';
+                        } else {
+                            bgColor = 'bg-yellow-100';
+                            textColor = 'text-yellow-800';
+                        }
+                        statusCell.innerHTML = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${bgColor} ${textColor}">${statusText}</span>`;
+                        dataRow.appendChild(statusCell);
+
                         dataRow.appendChild(createDataCell(tglBayar));
                     }
                     // Jika ada jenis laporan lain (selain mahasiswa & pembayaran) yang datanya array
@@ -311,15 +466,30 @@ document.addEventListener('DOMContentLoaded', function() {
             reportPreviewContent.appendChild(table);
         }
 
-        // -------------------------------------
-        // FUNGSI HAPUS LAPORAN (DENGAN SWEETALERT)
-        // -------------------------------------
-        function deleteReport(reportId, fileName) { /* ... (kode deleteReport) ... */ Swal.fire({ title: 'Anda Yakin?', text: `Yakin hapus riwayat & file "${fileName}"?`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#3085d6', confirmButtonText: 'Ya, Hapus!', cancelButtonText: 'Batal' }).then((result) => { if (result.isConfirmed) { const deleteUrl = `{{ url('api/admin/reports') }}/${reportId}`; apiRequest(deleteUrl, 'DELETE').then(response => { Swal.fire({ icon: 'success', title: 'Dihapus!', text: response.message || 'Laporan berhasil dihapus.', timer: 1500, showConfirmButton: false }); loadReportHistory(); }).catch(err => { Swal.fire({ icon: 'error', title: 'Gagal Hapus', text: 'Gagal menghapus laporan: ' + err.message }); }); } }); }
+        // Fungsi untuk menghapus laporan
+        function deleteReport(reportId, fileName) {
+            Swal.fire({ title: 'Anda Yakin?', text: `Yakin hapus riwayat & file "${fileName}"?`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#3085d6', confirmButtonText: 'Ya, Hapus!', cancelButtonText: 'Batal' }).then((result) => { if (result.isConfirmed) { const deleteUrl = `{{ url('api/admin/reports') }}/${reportId}`; apiRequest(deleteUrl, 'DELETE').then(response => { Swal.fire({ icon: 'success', title: 'Dihapus!', text: response.message || 'Laporan berhasil dihapus.', timer: 1500, showConfirmButton: false }); loadReportHistory(); }).catch(err => { Swal.fire({ icon: 'error', title: 'Gagal Hapus', text: 'Gagal menghapus laporan: ' + err.message }); }); } }); }
 
-        // -------------------------------------
-        // EVENT LISTENERS (DENGAN SWEETALERT)
-        // -------------------------------------
-        // Add null checks before adding event listeners
+        // Event listeners
+        // Tampilkan/sembunyikan filter semester berdasarkan jenis laporan
+        if (jenisLaporanSelect && semesterFilterContainer) {
+            function toggleSemesterFilter() {
+                if (jenisLaporanSelect.value === 'pembayaran') {
+                    semesterFilterContainer.classList.remove('hidden');
+                } else {
+                    semesterFilterContainer.classList.add('hidden');
+                    if (semesterSelect) {
+                        semesterSelect.value = ''; // Reset semester jika bukan pembayaran
+                    }
+                }
+            }
+
+            jenisLaporanSelect.addEventListener('change', toggleSemesterFilter);
+            // Periksa state awal
+            toggleSemesterFilter();
+        }
+
+        // Periksa null sebelum menambahkan event listener
         if (!reportForm || !viewReportBtn || !generatePdfBtn || !reportPreviewArea || !reportPreviewContent || !tahunSelect) {
             console.error('Required elements not found');
         }
@@ -328,7 +498,11 @@ document.addEventListener('DOMContentLoaded', function() {
             reportForm.addEventListener('submit', function(event) {
             event.preventDefault();
             const previewUrl = "{{ route('admin.reports.preview') }}";
-            const formData = { jenis_laporan: this.elements.jenis_laporan.value, tahun: this.elements.tahun.value };
+            const formData = {
+                jenis_laporan: this.elements.jenis_laporan.value,
+                tahun: this.elements.tahun.value,
+                semester: this.elements.semester ? this.elements.semester.value : ''
+            };
             if (!formData.jenis_laporan || !formData.tahun) { Swal.fire({ icon: 'warning', title: 'Input Tidak Lengkap', text: 'Harap pilih jenis laporan dan tahun.' }); return; }
             currentReportParams = formData;
             const submitButton = viewReportBtn; const originalButtonHTML = submitButton.innerHTML; submitButton.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Memuat Preview...`; submitButton.disabled = true; generatePdfBtn.classList.add('hidden'); reportPreviewArea.classList.add('hidden');
@@ -351,17 +525,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     generatePdfBtn.classList.add('hidden');
                 }
             })
-            // ==========================================================
-            // !! PERBAIKAN TAMPILAN ERROR VALIDASI (422) DI SINI !!
-            // ==========================================================
             .catch(err => {
                 let errorContent;
                 if (err.status === 422 && err.errors) {
-                    errorContent = document.createElement('div'); const p = document.createElement('p'); p.textContent = "Input tidak valid:"; errorContent.appendChild(p); const ul = document.createElement('ul'); ul.className = 'list-disc list-inside text-left mt-2'; Object.values(err.errors).forEach(e => { const li = document.createElement('li'); li.textContent = e.join(', '); ul.appendChild(li); }); errorContent.appendChild(ul); // AMAN
+                    errorContent = document.createElement('div'); const p = document.createElement('p'); p.textContent = "Input tidak valid:"; errorContent.appendChild(p); const ul = document.createElement('ul'); ul.className = 'list-disc list-inside text-left mt-2'; Object.values(err.errors).forEach(e => { const li = document.createElement('li'); li.textContent = e.join(', '); ul.appendChild(li); });                     errorContent.appendChild(ul);
                 } else {
                     errorContent = 'Gagal memuat preview laporan: ' + (err.message || 'Error tidak diketahui');
                 }
-                Swal.fire({ icon: 'error', title: 'Gagal Memuat Preview', html: errorContent }); // Pakai html
+                Swal.fire({ icon: 'error', title: 'Gagal Memuat Preview', html: errorContent });
                 reportPreviewContent.innerHTML = `<p class="text-center text-red-500">Gagal memuat preview.</p>`; reportPreviewArea.classList.remove('hidden');
             }).finally(() => {
                 submitButton.innerHTML = originalButtonHTML; submitButton.disabled = false;
@@ -385,17 +556,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     Swal.fire({ icon: 'error', title: 'Gagal Membuat PDF', text: response.message || 'Error tidak diketahui' });
                 }
             })
-            // ==========================================================
-            // !! PERBAIKAN TAMPILAN ERROR VALIDASI (422) DI SINI !!
-            // ==========================================================
             .catch(err => {
                 let errorContent;
                  if (err.status === 422 && err.errors) {
-                    errorContent = document.createElement('div'); const p = document.createElement('p'); p.textContent = "Input tidak valid:"; errorContent.appendChild(p); const ul = document.createElement('ul'); ul.className = 'list-disc list-inside text-left mt-2'; Object.values(err.errors).forEach(e => { const li = document.createElement('li'); li.textContent = e.join(', '); ul.appendChild(li); }); errorContent.appendChild(ul); // AMAN
+                    errorContent = document.createElement('div'); const p = document.createElement('p'); p.textContent = "Input tidak valid:"; errorContent.appendChild(p); const ul = document.createElement('ul'); ul.className = 'list-disc list-inside text-left mt-2'; Object.values(err.errors).forEach(e => { const li = document.createElement('li'); li.textContent = e.join(', '); ul.appendChild(li); });                     errorContent.appendChild(ul);
                 } else {
                      errorContent = 'Terjadi kesalahan saat membuat PDF: ' + (err.message || 'Error tidak diketahui');
                 }
-                Swal.fire({ icon: 'error', title: 'Error PDF', html: errorContent }); // Pakai html
+                Swal.fire({ icon: 'error', title: 'Error PDF', html: errorContent });
             }).finally(() => {
                 submitButton.innerHTML = originalButtonHTML; submitButton.disabled = false;
             });

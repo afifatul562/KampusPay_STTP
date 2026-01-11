@@ -36,7 +36,6 @@ class LaporanController extends Controller
      */
     public function downloadHistori(Request $request)
     {
-        // Load user dengan mahasiswaDetail dan relasi user
         $user = User::with('mahasiswaDetail.user')->findOrFail(Auth::id());
         $mahasiswa = $user->mahasiswaDetail;
         $mahasiswaId = $mahasiswa?->mahasiswa_id;
@@ -46,26 +45,21 @@ class LaporanController extends Controller
                 $q->where('mahasiswa_id', $mahasiswaId);
             });
 
-        // Parse tanggal dari format Y-m-d (sudah dikonversi oleh JavaScript)
         $startDate = null;
         $endDate = null;
 
         if ($request->filled('start_date')) {
             try {
-                // Format yang diterima sudah Y-m-d dari JavaScript
                 $startDate = \Carbon\Carbon::parse($request->start_date)->format('Y-m-d');
                 $query->whereDate('tanggal_bayar', '>=', $startDate);
             } catch (\Exception $e) {
-                // Jika parsing gagal, skip filter tanggal
             }
         }
         if ($request->filled('end_date')) {
             try {
-                // Format yang diterima sudah Y-m-d dari JavaScript
                 $endDate = \Carbon\Carbon::parse($request->end_date)->format('Y-m-d');
                 $query->whereDate('tanggal_bayar', '<=', $endDate);
             } catch (\Exception $e) {
-                // Jika parsing gagal, skip filter tanggal
             }
         }
 

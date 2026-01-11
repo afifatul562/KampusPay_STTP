@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\MahasiswaDetail; // Kita akan pakai ini
+use App\Models\MahasiswaDetail;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -19,7 +19,6 @@ class MahasiswaController extends Controller
     public function index()
     {
         $mahasiswa = MahasiswaDetail::with('user')->orderBy('npm', 'asc')->get();
-        // SELALU bungkus respon
         return response()->json([
             'success' => true,
             'data' => $mahasiswa
@@ -36,7 +35,6 @@ class MahasiswaController extends Controller
 
     /**
      * Menyimpan data mahasiswa baru. (Untuk Web)
-     * !! INI YANG DIPERBAIKI (return-nya) !!
      */
     public function store(Request $request)
     {
@@ -74,21 +72,18 @@ class MahasiswaController extends Controller
 
             DB::commit();
 
-            // !! PERBAIKAN: Ganti dari JSON ke Redirect !!
             return redirect()->route('admin.mahasiswa')->with('success', 'Mahasiswa berhasil didaftarkan.');
 
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error Store Mahasiswa: ' . $e->getMessage());
 
-            // !! PERBAIKAN: Ganti dari JSON ke Redirect !!
             return redirect()->back()->withInput()->with('error', 'Gagal mendaftarkan mahasiswa: ' . $e->getMessage());
         }
     }
 
  /**
      * Mengimpor mahasiswa dari CSV. (Untuk Web)
-     * !! DENGAN LOGGING & VALIDASI LEBIH DETAIL !!
      */
     public function import(Request $request)
     {
@@ -105,7 +100,7 @@ class MahasiswaController extends Controller
 
         $file = $request->file('file_csv');
 
-        // Validasi ekstensi file secara manual (lebih fleksibel)
+        // Validasi ekstensi file secara manual
         $extension = strtolower($file->getClientOriginalExtension());
         if (!in_array($extension, ['csv', 'txt'])) {
             Log::error('Format file tidak valid: ' . $extension);
@@ -138,13 +133,8 @@ class MahasiswaController extends Controller
         $currentYear = (int)$today->format('Y');
         $currentMonth = (int)$today->format('m');
 
-        // ===========================================
-        // !! PERBAIKAN PERFORMA DIMULAI DARI SINI !!
-        // ===========================================
         try {
-            // 1. Ambil semua data yang ada ke memori SEBELUM loop
-            // Kita pakai array_flip untuk pencarian O(1) yang super cepat
-            // Pastikan mengambil semua data tanpa filter apapun
+            // Ambil semua data yang ada ke memori sebelum loop untuk validasi cepat
             $existingEmails = array_flip(User::pluck('email')->toArray());
             $existingUsernames = array_flip(User::pluck('username')->toArray());
             $existingNpms = array_flip(MahasiswaDetail::pluck('npm')->toArray());
@@ -169,7 +159,7 @@ class MahasiswaController extends Controller
             while (($row = fgetcsv($handle, 1000, ",")) !== FALSE) {
                 $lineNumber++;
 
-                // Cek jika baris kosong (logika ini bisa di-skip jika tidak perlu)
+                // Cek jika baris kosong
                 if (empty(array_filter($row, 'strlen'))) {
                     Log::warning("Baris {$lineNumber} dilewati karena kosong.");
                     continue;
@@ -180,7 +170,7 @@ class MahasiswaController extends Controller
                 $email = isset($row[1]) ? trim($row[1]) : null;
                 $npm = isset($row[2]) ? trim($row[2]) : null;
 
-                // Log baris data mentah (lebih baik sebelum 'try' agar selalu tercatat)
+                // Log baris data mentah
                 $rowDataForLog = implode(', ', [$nama_lengkap, $email, $npm]);
                 Log::info("Memproses baris {$lineNumber}: " . $rowDataForLog);
 
@@ -190,7 +180,7 @@ class MahasiswaController extends Controller
                     if (empty($nama_lengkap)) { throw new \Exception("Nama lengkap kosong."); }
                     if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) { throw new \Exception("Format Email tidak valid ('{$email}')."); }
 
-                    // --- Kalkulasi (seperti sebelumnya) ---
+                    // Kalkulasi nilai turunan dari NPM
                     $angkatanCode = substr($npm, 0, 2);
                     $angkatan = '20' . $angkatanCode;
                     $angkatanTahunInt = (int)$angkatan;
@@ -202,9 +192,6 @@ class MahasiswaController extends Controller
                     if ($currentMonth >= 10) { $semesterAktif += 1; } // Asumsi Oktober = Ganjil
                     $semesterAktif = max(1, min($semesterAktif, 8)); // Batasi semester 1-8
 
-                    // ==================================================
-                    // !! PERBAIKAN: Cek duplikat di memori (bukan DB) !!
-                    // ==================================================
                     // Cek duplikat di database yang sudah ada (sebelum import)
                     if (isset($existingEmails[$email])) {
                         // Cek detail di database untuk informasi lebih lengkap
@@ -246,8 +233,7 @@ class MahasiswaController extends Controller
                         'status' => 'Aktif'
                     ]);
 
-                    // !! PENTING: Tambahkan data baru ke array memori !!
-                    // Ini untuk mencegah duplikat di dalam file CSV yang sama
+                    // Tambahkan data baru ke array memori untuk mencegah duplikat di dalam file CSV yang sama
                     $existingEmails[$email] = true;
                     $existingUsernames[$npm] = true;
                     $existingNpms[$npm] = true;
@@ -285,12 +271,9 @@ class MahasiswaController extends Controller
             // Siapkan pesan error untuk ditampilkan
             $errorMessage = 'Gagal melakukan impor: ' . $e->getMessage();
 
-            // Siapkan session khusus untuk detail error per baris
-            // Pastikan $errors didefinisikan dan tidak kosong
+            // Kirim detail error per baris via session terpisah
             if (isset($errors) && !empty($errors) && is_array($errors)) {
-                Log::info('Mengirim ' . count($errors) . ' error detail ke session'); // Debug
-                // Kita tidak tambahkan $errors ke $errorMessage utama agar tidak terlalu panjang
-                // Kita kirim via session terpisah
+                Log::info('Mengirim ' . count($errors) . ' error detail ke session');
                 return redirect()->route('admin.mahasiswa')
                                  ->with('error', $errorMessage)
                                  ->with('import_errors', $errors);
@@ -356,19 +339,12 @@ class MahasiswaController extends Controller
 
     public function edit($id)
     {
-        // Cari data mahasiswa beserta relasi user-nya
-        // Kita gunakan find() agar bisa dicek manual, sama seperti method update() Anda
         $mahasiswaDetail = MahasiswaDetail::with('user')->find($id);
 
-        // Jika data tidak ditemukan, kembalikan ke halaman index dengan error
         if (!$mahasiswaDetail) {
-            // Asumsi Anda punya route 'admin.mahasiswa' untuk halaman index web
             return redirect()->route('admin.mahasiswa')->with('error', 'Data mahasiswa tidak ditemukan.');
         }
 
-        // Tampilkan view 'edit' dan kirim data mahasiswa tersebut
-        // Pastikan Anda membuat file view di:
-        // resources/views/admin/mahasiswa/edit.blade.php
         return view('admin.mahasiswa_edit', [
             'mahasiswa' => $mahasiswaDetail
         ]);
@@ -376,7 +352,6 @@ class MahasiswaController extends Controller
 
     /**
      * Memperbarui data mahasiswa. (Untuk Web)
-     * (Fungsi ini sudah benar dari sebelumnya)
      */
     public function update(Request $request, $id)
     {

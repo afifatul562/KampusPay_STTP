@@ -12,7 +12,7 @@ use Illuminate\View\View;
 class ConfirmablePasswordController extends Controller
 {
     /**
-     * Display the login view.
+     * Menampilkan halaman login.
      */
     public function create(): View
     {
@@ -20,7 +20,7 @@ class ConfirmablePasswordController extends Controller
     }
 
     /**
-     * Handle an incoming authentication request.
+     * Menangani permintaan autentikasi yang masuk.
      */
     public function store(LoginRequest $request): RedirectResponse
     {
@@ -38,12 +38,12 @@ class ConfirmablePasswordController extends Controller
             $request->session()->put('api_token', $token);
         }
 
-        // Redirect ke dashboard "pintar"
+        // Redirect ke dashboard sesuai tujuan sebelumnya
         return redirect()->intended(route('dashboard'));
     }
 
     /**
-     * Destroy an authenticated session.
+     * Menghancurkan sesi yang terautentikasi.
      */
     public function destroy(Request $request): RedirectResponse
     {

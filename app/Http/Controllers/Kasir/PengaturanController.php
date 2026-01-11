@@ -12,7 +12,6 @@ class PengaturanController extends Controller
 {
     /**
      * Menampilkan halaman form untuk mengubah password.
-     * Nama method diubah agar sesuai dengan route baru.
      */
     public function showPasswordForm()
     {
@@ -21,7 +20,6 @@ class PengaturanController extends Controller
 
     /**
      * Memproses permintaan untuk mengubah password.
-     * Nama method diubah agar sesuai dengan route baru.
      */
     public function updatePassword(Request $request)
     {

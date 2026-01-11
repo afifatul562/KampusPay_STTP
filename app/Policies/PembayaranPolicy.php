@@ -7,6 +7,9 @@ use App\Models\User;
 
 class PembayaranPolicy
 {
+    /**
+     * Menentukan apakah pengguna dapat melihat pembayaran.
+     */
     public function view(User $user, Pembayaran $pembayaran): bool
     {
         if ($user->isAdmin() || $user->isKasir()) {

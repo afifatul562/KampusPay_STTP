@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
-use App\Http\Controllers\Admin\MahasiswaController; // Dulu 'as AdminMahasiswaController', kita samakan saja
+use App\Http\Controllers\Admin\MahasiswaController;
 use App\Http\Controllers\Admin\TarifController as AdminTarifController;
 use App\Http\Controllers\Admin\SettingController as AdminSettingController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
@@ -39,7 +39,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', function () {
         $user = Auth::user();
 
-        // Ini akan error jika fungsi di User.php belum ada
         if ($user->isAdmin()) return redirect()->route('admin.dashboard');
         if ($user->isKasir()) return redirect()->route('kasir.dashboard');
         if ($user->isMahasiswa()) return redirect()->route('mahasiswa.dashboard');
@@ -62,12 +61,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/mahasiswa', fn() => view('admin.mahasiswa'))->name('mahasiswa');
         Route::get('/mahasiswa/export', [MahasiswaController::class, 'export'])->name('mahasiswa.export');
 
-        // DIPERBAIKI: Gunakan 'MahasiswaController' yang sudah di-import
         Route::get('/mahasiswa/create', [MahasiswaController::class, 'create'])->name('create-mahasiswa');
         Route::post('/mahasiswa', [MahasiswaController::class, 'store'])->name('mahasiswa.store');
         Route::post('/mahasiswa/import', [MahasiswaController::class, 'import'])->name('mahasiswa.import');
 
-        // DIPERBAIKI: Hapus prefix '/admin/' dan 'admin.' karena sudah ada di grup
         Route::get('mahasiswa/{id}/edit', [MahasiswaController::class, 'edit'])->name('mahasiswa.edit');
         Route::put('mahasiswa/{id}', [MahasiswaController::class, 'update'])->name('mahasiswa.update');
 
@@ -124,7 +121,7 @@ Route::middleware('auth')->group(function () {
         // Aktivasi per semester
         Route::get('/aktivasi', [MahasiswaAktivasiController::class, 'show'])->name('aktivasi');
 
-        // Rute Profil & Ubah Password yang baru (ini dipertahankan)
+        // Rute Profil & Ubah Password
         Route::get('/profil', [MahasiswaProfilController::class, 'index'])->name('profil');
         Route::get('/profil/password', [MahasiswaProfilController::class, 'editPassword'])->name('profil.password.edit');
         Route::post('/profil/password', [MahasiswaProfilController::class, 'updatePassword'])->name('profil.password.update');

@@ -9,11 +9,17 @@ use App\Models\User;
 
 class LoginController extends Controller
 {
+    /**
+     * Menampilkan halaman form login.
+     */
     public function showLoginForm()
     {
         return view('auth.login');
     }
 
+    /**
+     * Menangani proses login pengguna.
+     */
     public function login(Request $request)
     {
         $credentials = $request->validate([
@@ -45,6 +51,9 @@ class LoginController extends Controller
         ])->onlyInput('username');
     }
 
+    /**
+     * Menangani proses logout pengguna.
+     */
     public function logout(Request $request)
     {
         Auth::logout();

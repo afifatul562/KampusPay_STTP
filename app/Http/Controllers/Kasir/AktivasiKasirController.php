@@ -26,6 +26,9 @@ class AktivasiKasirController extends Controller
         return view('kasir.aktivasi');
     }
 
+    /**
+     * Mengambil daftar aktivasi mahasiswa untuk semester saat ini.
+     */
     public function index(Request $request)
     {
         $user = $request->user();
@@ -41,6 +44,9 @@ class AktivasiKasirController extends Controller
         return response()->json(['data' => $data, 'semester' => $semester]);
     }
 
+    /**
+     * Mengubah status aktivasi yang sudah ada.
+     */
     public function override(Request $request, AktivasiStatus $aktivasi)
     {
         $request->validate([
@@ -62,7 +68,7 @@ class AktivasiKasirController extends Controller
                 'chosen_by_role' => $user->role,
             ]);
 
-            Notification::send([$user], new AktivasiStatusChanged($aktivasi)); // log to self
+            Notification::send([$user], new AktivasiStatusChanged($aktivasi));
             $kasir = \App\Models\User::where('role', 'kasir')->get();
             Notification::send($kasir, new AktivasiStatusChanged($aktivasi));
 
@@ -79,6 +85,9 @@ class AktivasiKasirController extends Controller
         }
     }
 
+    /**
+     * Membuat status aktivasi baru dari data mahasiswa.
+     */
     public function createFromMahasiswa(Request $request, MahasiswaDetail $mahasiswa)
     {
         $request->validate([
@@ -120,6 +129,9 @@ class AktivasiKasirController extends Controller
         }
     }
 
+    /**
+     * Memastikan tagihan BSS dibuat jika status adalah BSS.
+     */
     protected function ensureBssTagihan(AktivasiStatus $aktivasi): void
     {
         $semester = $aktivasi->semester_label;

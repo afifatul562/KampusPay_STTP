@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Kasir;
 
 use App\Http\Controllers\Controller;
 use App\Models\TarifMaster;
-use App\Exports\TransaksiKasirExport; // Pastikan class Export ini ada
+use App\Exports\TransaksiKasirExport;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\Pembayaran;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon; // Pastikan Carbon di-import
-use Illuminate\Support\Facades\Log; // Tambahkan Log
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class TransaksiController extends Controller
 {
@@ -24,8 +24,6 @@ class TransaksiController extends Controller
         $tanggal = now()->format('Y-m-d');
         Log::info('Mengekspor transaksi kasir dengan filter:', $filters); // Log filter yg dipakai
 
-        // Kirim filter ke class Export
-        // Pastikan TransaksiKasirExport bisa menangani filter ini
         return Excel::download(
             new TransaksiKasirExport($filters),
             "transaksi-kasir-{$tanggal}.csv",
@@ -101,9 +99,6 @@ class TransaksiController extends Controller
             $query->whereRaw('LOWER(metode_pembayaran) = ?', [strtolower($metode)]);
         }
 
-        // ============================================
-        // !! LOGIKA FILTER TANGGAL ADA DI SINI !!
-        // ============================================
         if ($request->filled('start_date')) {
             try {
                  $startDate = Carbon::parse($request->start_date)->startOfDay();
@@ -122,9 +117,6 @@ class TransaksiController extends Controller
                   Log::warning('Format end_date tidak valid: ' . $request->end_date);
              }
         }
-        // ============================================
-        // !! AKHIR FILTER TANGGAL !!
-        // ============================================
 
 
         // 4. Eksekusi query dengan paginasi
@@ -134,9 +126,7 @@ class TransaksiController extends Controller
              Log::info('Menampilkan ' . $transaksi->count() . ' transaksi dari total ' . $transaksi->total());
         } catch (\Exception $e) {
              Log::error('Error saat query transaksi kasir: ' . $e->getMessage());
-             // Berikan paginator kosong jika query gagal
              $transaksi = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15);
-             // Opsional: Tambahkan pesan error ke session untuk ditampilkan di view
              session()->flash('error', 'Gagal memuat data transaksi.');
         }
 
@@ -172,8 +162,6 @@ class TransaksiController extends Controller
             'status_dibatalkan' => true,
             'tanggal_pembatalan' => now(),
         ]);
-
-        // Opsional: Tidak mengubah status tagihan; tampilan mahasiswa/admin sudah menangani label Dibatalkan
 
         return back()->with('success', 'Pembayaran berhasil dibatalkan.');
     }

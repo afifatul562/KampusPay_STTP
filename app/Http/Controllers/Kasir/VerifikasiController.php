@@ -37,9 +37,8 @@ class VerifikasiController extends Controller
             'kasir_id' => Auth::id(),
             'status_sekarang' => $konfirmasi->status_verifikasi,
         ]);
-        // Pastikan statusnya masih 'Menunggu Verifikasi' untuk mencegah aksi ganda
         if ($konfirmasi->status_verifikasi !== 'Menunggu Verifikasi') {
-            return response()->json(['success' => false, 'message' => 'Status pembayaran ini sudah diubah.'], 409); // 409 Conflict
+            return response()->json(['success' => false, 'message' => 'Status pembayaran ini sudah diubah.'], 409);
         }
 
         $tagihan = $konfirmasi->tagihan;
@@ -104,23 +103,17 @@ class VerifikasiController extends Controller
             'kasir_id' => Auth::id(),
             'status_sekarang' => $konfirmasi->status_verifikasi,
         ]);
-        // 1. Validasi: Pastikan alasan_ditolak dikirim dan valid
-        //    (Ini sesuai dengan 'alasan_ditolak' yang dikirim JavaScript)
-        //    (Dan 'min:10' sesuai dengan validasi di SweetAlert)
         $validated = $request->validate([
             'alasan_ditolak' => 'required|string|min:10|max:500',
         ]);
 
-        // 2. Cek status (logika Anda sudah benar)
         if ($konfirmasi->status_verifikasi !== 'Menunggu Verifikasi') {
             return response()->json(['success' => false, 'message' => 'Status pembayaran ini sudah diubah.'], 409);
         }
 
         try {
-            // 3. Update status DAN simpan alasan penolakan
             $konfirmasi->update([
                 'status_verifikasi' => 'Ditolak',
-                // Pastikan nama kolom di database Anda adalah 'alasan_ditolak'
                 'alasan_ditolak' => $validated['alasan_ditolak'],
             ]);
 
@@ -130,7 +123,6 @@ class VerifikasiController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Gagal menolak pembayaran: ' . $e->getMessage());
-            // Kirim pesan error jika gagal (misal: MassAssignmentException)
             return response()->json(['success' => false, 'message' => 'Gagal menyimpan alasan: ' . $e->getMessage()], 500);
         }
     }

@@ -8,12 +8,13 @@ use Illuminate\Support\Facades\Auth;
 
 class RiwayatController extends Controller
 {
+    /**
+     * Menampilkan riwayat pembayaran mahasiswa.
+     */
     public function index()
     {
-        // Ambil ID mahasiswa yang sedang login
         $mahasiswaId = Auth::user()->mahasiswaDetail->mahasiswa_id;
 
-        // Ambil semua pembayaran (tunai/transfer), termasuk cicilan, yang tidak dibatalkan
         $pembayaran = \App\Models\Pembayaran::with('tagihan.tarif', 'tagihan.mahasiswa', 'verifier')
             ->whereHas('tagihan', function ($q) use ($mahasiswaId) {
                 $q->where('mahasiswa_id', $mahasiswaId);

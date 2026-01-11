@@ -9,13 +9,12 @@ use App\Models\User;
 class AdminUserSeeder extends Seeder
 {
     /**
-     * Run the database seeds.
+     * Menjalankan seeder database.
      */
     public function run(): void
     {
-        // Gunakan env variable dengan fallback untuk backward compatibility
         $adminPassword = env('ADMIN_DEFAULT_PASSWORD', 'password123');
-        
+
         User::updateOrCreate(
             ['username' => 'admin'],
             [

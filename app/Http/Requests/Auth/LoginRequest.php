@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 class LoginRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * Menentukan apakah pengguna diizinkan membuat request ini.
      */
     public function authorize(): bool
     {
@@ -20,20 +20,20 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Mengambil aturan validasi yang berlaku untuk request.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'username' => ['required', 'string'], // <-- DIUBAH DARI 'email'
+            'username' => ['required', 'string'],
             'password' => ['required', 'string'],
         ];
     }
 
     /**
-     * Attempt to authenticate the request's credentials.
+     * Mencoba melakukan autentikasi kredensial dari request.
      *
      * @throws \Illuminate\Validation\ValidationException
      */
@@ -41,12 +41,11 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        // <-- DIUBAH DARI 'email' MENJADI 'username'
         if (! Auth::attempt($this->only('username', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'username' => trans('auth.failed'), // <-- DIUBAH DARI 'email'
+                'username' => trans('auth.failed'),
             ]);
         }
 
@@ -54,7 +53,7 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * Ensure the login request is not rate limited.
+     * Memastikan request login tidak melebihi batas rate limiting.
      *
      * @throws \Illuminate\Validation\ValidationException
      */
@@ -69,7 +68,7 @@ class LoginRequest extends FormRequest
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'username' => trans('auth.throttle', [ // <-- DIUBAH DARI 'email'
+            'username' => trans('auth.throttle', [
                 'seconds' => $seconds,
                 'minutes' => ceil($seconds / 60),
             ]),
@@ -77,11 +76,10 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * Get the rate limiting throttle key for the request.
+     * Mengambil kunci throttle untuk rate limiting pada request.
      */
     public function throttleKey(): string
     {
-        // <-- DIUBAH DARI 'email' MENJADI 'username'
         return Str::transliterate(Str::lower($this->string('username')).'|'.$this->ip());
     }
 }

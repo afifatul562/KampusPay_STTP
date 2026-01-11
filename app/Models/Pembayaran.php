@@ -34,8 +34,6 @@ class Pembayaran extends Model
 
     public function userKasir()
     {
-        // Asumsi kolom 'diverifikasi_oleh' di tabel 'pembayaran'
-        // berisi 'id' dari tabel 'users' (kasir).
         return $this->belongsTo(User::class, 'diverifikasi_oleh', 'id');
     }
 

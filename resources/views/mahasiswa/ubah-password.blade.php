@@ -49,11 +49,10 @@
                         </div>
                     @endif
 
-                    {{-- PERUBAHAN: Input Password Lama (Dengan Ikon) --}}
                     <div>
                         <label for="current_password" class="block text-sm font-medium text-gray-700">Password Saat Ini</label>
-                        <div class="relative mt-1"> {{-- Tambah wrapper --}}
-                            <input type="password" name="current_password" id="current_password" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 pr-10" required> {{-- Tambah pr-10 --}}
+                        <div class="relative mt-1">
+                            <input type="password" name="current_password" id="current_password" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 pr-10" required>
 
                             {{-- Tombol Ikon Mata --}}
                             <button type="button" class="js-toggle-password absolute inset-y-0 right-0 flex items-center pr-3" style="background:transparent; border:none; cursor:pointer;" aria-label="Toggle password visibility">
@@ -73,11 +72,10 @@
                         @enderror
                     </div>
 
-                    {{-- PERUBAHAN: Input Password Baru (Dengan Ikon) --}}
                     <div>
                         <label for="password" class="block text-sm font-medium text-gray-700">Password Baru</label>
-                        <div class="relative mt-1"> {{-- Tambah wrapper --}}
-                            <input type="password" name="password" id="password" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 pr-10" required> {{-- Tambah pr-10 --}}
+                        <div class="relative mt-1">
+                            <input type="password" name="password" id="password" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 pr-10" required>
 
                             {{-- Tombol Ikon Mata --}}
                             <button type="button" class="js-toggle-password absolute inset-y-0 right-0 flex items-center pr-3" style="background:transparent; border:none; cursor:pointer;" aria-label="Toggle password visibility">
@@ -97,11 +95,10 @@
                         @enderror
                     </div>
 
-                    {{-- PERUBAHAN: Input Konfirmasi Password (Dengan Ikon) --}}
                     <div>
                         <label for="password_confirmation" class="block text-sm font-medium text-gray-700">Konfirmasi Password Baru</label>
-                        <div class="relative mt-1"> {{-- Tambah wrapper --}}
-                            <input type="password" name="password_confirmation" id="password_confirmation" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 pr-10" required> {{-- Tambah pr-10 --}}
+                        <div class="relative mt-1">
+                            <input type="password" name="password_confirmation" id="password_confirmation" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 pr-10" required>
 
                             {{-- Tombol Ikon Mata --}}
                             <button type="button" class="js-toggle-password absolute inset-y-0 right-0 flex items-center pr-3" style="background:transparent; border:none; cursor:pointer;" aria-label="Toggle password visibility">
@@ -128,27 +125,20 @@
             </div>
         </div>
     </div>
-</div>
+    </div>
 @endsection
 
-{{-- PERUBAHAN: Tambahkan Script di Bawah --}}
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-
-        // Temukan semua tombol toggle di halaman
         const toggleButtons = document.querySelectorAll('.js-toggle-password');
 
         toggleButtons.forEach(button => {
             button.addEventListener('click', function() {
-                // Temukan input password di dalam div.relative yang sama
                 const inputField = button.parentElement.querySelector('input');
-
-                // Temukan kedua ikon di dalam tombol
                 const iconEye = button.querySelector('.icon-eye');
                 const iconEyeSlash = button.querySelector('.icon-eye-slash');
 
-                // Toggle tipe input
                 if (inputField.type === 'password') {
                     inputField.type = 'text';
                     iconEye.classList.add('hidden');

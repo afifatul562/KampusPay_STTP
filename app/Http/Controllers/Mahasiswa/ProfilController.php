@@ -28,7 +28,6 @@ class ProfilController extends Controller
 
         $allTagihan = $user->mahasiswaDetail->tagihan;
 
-        // Hitung data untuk Ringkasan Keuangan berbasis realisasi pembayaran (jumlah_bayar)
         $totalTerbayar = $allTagihan->sum(function ($tagihan) {
             $payments = $tagihan->relationLoaded('pembayaranAll') ? $tagihan->pembayaranAll : collect();
             $dibayarByPayment = $payments->sum('jumlah_bayar');
@@ -65,7 +64,6 @@ class ProfilController extends Controller
             return $payments->count();
         });
 
-        // Kirim semua data ke view
         return view('mahasiswa.profil', [
             'user' => $user,
             'detail' => $user->mahasiswaDetail,
@@ -89,18 +87,15 @@ class ProfilController extends Controller
      */
     public function updatePassword(Request $request)
     {
-        // 1. Validasi input dari form
         $validated = $request->validate([
             'current_password' => ['required', 'current_password'],
             'password' => ['required', Password::defaults(), 'confirmed'],
         ]);
 
-        // 2. Update password user yang sedang login
         $request->user()->update([
             'password' => Hash::make($validated['password']),
         ]);
 
-        // 3. Arahkan kembali dengan pesan sukses
         return back()->with('status', 'password-updated');
     }
 }

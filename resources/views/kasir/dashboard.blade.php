@@ -105,9 +105,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     resetReceiptContainer();
 
-    // ==========================================================
-    // !! FUNGSI API REQUEST DENGAN SWEETALERT UNTUK ERROR SESI !!
-    // ==========================================================
     async function apiRequest(url, method = 'POST', body = null) {
         const apiToken = document.querySelector('meta[name="api-token"]')?.getAttribute('content');
         if (!apiToken) {
@@ -126,11 +123,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 Swal.fire({ icon: 'error', title: 'Sesi Berakhir', text: 'Sesi Anda telah berakhir. Harap login kembali.', confirmButtonText: 'Login' }).then(() => { window.location.href = '{{ route("login") }}'; });
                 throw new Error('Unauthorized');
             }
-             // Handle No Content response (misal: DELETE sukses)
             if (response.status === 204) {
-                 return { success: true, message: 'Operasi berhasil.' };
-             }
-            // Handle other non-JSON responses potentially
+                return { success: true, message: 'Operasi berhasil.' };
+            }
             const contentType = response.headers.get("content-type");
             if (!contentType || !contentType.includes("application/json")) {
                  const responseBody = await response.text();
@@ -138,37 +133,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(`Server (${response.status}): Respon tidak valid.`);
             }
 
-            const data = await response.json(); // Sekarang aman parse JSON
+            const data = await response.json();
 
             if (!response.ok) {
-                if (response.status === 422 && data.errors) { // Handle Validation Errors
-                     throw { status: 422, errors: data.errors, message: data.message || 'Validation failed' };
+                if (response.status === 422 && data.errors) {
+                    throw { status: 422, errors: data.errors, message: data.message || 'Validation failed' };
                 }
                 throw new Error(data.message || `HTTP error! status: ${response.status}`);
             }
             return data;
         } catch (error) {
-             console.error("Error in apiRequest:", error);
-             if (error.status === 422) throw error; // Re-throw validation errors
-             throw new Error(error.message || 'Gagal terhubung ke server.'); // Throw general error
+            console.error("Error in apiRequest:", error);
+            if (error.status === 422) throw error;
+            throw new Error(error.message || 'Gagal terhubung ke server.');
         }
     }
 
-     // Helper untuk menampilkan error 422 di SweetAlert (AMAN)
     function displayValidationErrors(errors) {
         let errorContent = document.createElement('div');
         const p = document.createElement('p'); p.textContent = "Input tidak valid:"; errorContent.appendChild(p);
         const ul = document.createElement('ul'); ul.className = 'list-disc list-inside text-left mt-2';
-        Object.values(errors).forEach(e => { const li = document.createElement('li'); li.textContent = e.join(', '); ul.appendChild(li); }); // AMAN
+        Object.values(errors).forEach(e => { const li = document.createElement('li'); li.textContent = e.join(', '); ul.appendChild(li); });
         errorContent.appendChild(ul);
-        Swal.fire({ icon: 'error', title: 'Gagal', html: errorContent }); // Pakai html
+        Swal.fire({ icon: 'error', title: 'Gagal', html: errorContent });
     }
 
     async function updateDashboardStats() {
         try {
             const url = "{{ route('kasir.dashboard-stats') }}";
-            const response = await apiRequest(url, 'GET'); // Method GET
-            const data = response.data || response; // Sesuaikan jika API belum konsisten
+            const response = await apiRequest(url, 'GET');
+            const data = response.data || response;
             if (response.success && data) {
                 document.getElementById('transaksi-hari-ini').textContent = data.transaksi_count;
                 document.getElementById('total-penerimaan').textContent = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(data.total_penerimaan);
@@ -176,16 +170,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } catch (error) {
             console.error("Gagal memuat statistik dashboard:", error);
-             // Opsional: Tampilkan error ke user
-            // Swal.fire({ icon: 'warning', title: 'Info', text: 'Gagal memuat statistik dashboard.' });
-         }
+        }
     }
 
     async function searchMahasiswa(options = {}) {
         const { resetReceipt = true } = options;
         const npm = npmInput.value.trim();
         if (!npm) {
-            // !! GANTI ALERT !!
             Swal.fire({ icon: 'warning', title: 'Input Kosong', text: 'Harap masukkan NPM mahasiswa.' });
             return;
         }
@@ -194,7 +185,7 @@ document.addEventListener('DOMContentLoaded', function() {
             resetReceiptContainer();
         }
 
-        const originalButtonHTML = searchBtn.innerHTML; // Simpan HTML asli (termasuk SVG)
+        const originalButtonHTML = searchBtn.innerHTML;
         searchBtn.innerHTML = `<svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
         searchBtn.disabled = true;
 
@@ -205,50 +196,43 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const url = "{{ route('kasir.search-mahasiswa') }}";
             const response = await apiRequest(url, 'POST', { npm: npm });
-            const data = response.data; // Asumsi controller selalu return { success: true, data: ... }
+            const data = response.data;
             if (response.success && data) {
-                displayMahasiswaInfo(data); // Aman
-                displayTagihan(data.tagihan); // Aman
+                displayMahasiswaInfo(data);
+                displayTagihan(data.tagihan);
             } else {
-                // Should not happen if controller always returns success true on find
-                 const errorP = document.createElement('p');
-                 errorP.className = 'text-red-500 font-semibold';
-                 errorP.textContent = response.message || 'Mahasiswa tidak ditemukan.'; // Aman
-                 mahasiswaInfoDiv.innerHTML = '';
-                 mahasiswaInfoDiv.appendChild(errorP);
-                 tagihanListDiv.innerHTML = '<div class="text-gray-400 text-center py-5 border-2 border-dashed rounded-lg">Data tagihan tidak ditemukan</div>';
+                const errorP = document.createElement('p');
+                errorP.className = 'text-red-500 font-semibold';
+                errorP.textContent = response.message || 'Mahasiswa tidak ditemukan.';
+                mahasiswaInfoDiv.innerHTML = '';
+                mahasiswaInfoDiv.appendChild(errorP);
+                tagihanListDiv.innerHTML = '<div class="text-gray-400 text-center py-5 border-2 border-dashed rounded-lg">Data tagihan tidak ditemukan</div>';
             }
-        // Handle Not Found (404) specifically if needed
         } catch (error) {
-             console.error('Error saat mencari mahasiswa:', error);
-             const errorP = document.createElement('p');
-             errorP.className = 'text-red-500 font-semibold';
-             if (error.message && error.message.includes('404')) { // Simple check for 404
-                  errorP.textContent = 'Mahasiswa dengan NPM tersebut tidak ditemukan.';
-             } else if (error.status === 422) { // Handle validation error from controller (if exists)
-                 errorP.textContent = 'NPM tidak valid.'; // Or use displayValidationErrors
-             }
-             else {
-                 errorP.textContent = 'Gagal terhubung ke server: ' + error.message;
-             }
-             mahasiswaInfoDiv.innerHTML = '';
-             mahasiswaInfoDiv.appendChild(errorP);
+            console.error('Error saat mencari mahasiswa:', error);
+            const errorP = document.createElement('p');
+            errorP.className = 'text-red-500 font-semibold';
+            if (error.message && error.message.includes('404')) {
+                errorP.textContent = 'Mahasiswa dengan NPM tersebut tidak ditemukan.';
+            } else if (error.status === 422) {
+                errorP.textContent = 'NPM tidak valid.';
+            } else {
+                errorP.textContent = 'Gagal terhubung ke server: ' + error.message;
+            }
+            mahasiswaInfoDiv.innerHTML = '';
+            mahasiswaInfoDiv.appendChild(errorP);
         } finally {
-            searchBtn.innerHTML = originalButtonHTML; // Kembalikan HTML asli
+            searchBtn.innerHTML = originalButtonHTML;
             searchBtn.disabled = false;
         }
     }
 
-    // ============================================
-    // !! FUNGSI INI DITULIS ULANG AGAR AMAN DARI XSS !!
-    // ============================================
     function displayMahasiswaInfo(mahasiswa) {
-        mahasiswaInfoDiv.innerHTML = ''; // Kosongkan dulu
+        mahasiswaInfoDiv.innerHTML = '';
 
         const container = document.createElement('div');
         container.className = 'mt-4 border-t pt-4 space-y-3';
 
-        // Helper untuk membuat baris info (AMAN)
         function createInfoRow(label, value) {
             const rowDiv = document.createElement('div');
             rowDiv.className = 'flex justify-between items-baseline';
@@ -257,7 +241,7 @@ document.addEventListener('DOMContentLoaded', function() {
             labelSpan.textContent = label;
             const valueSpan = document.createElement('span');
             valueSpan.className = 'font-semibold text-right text-gray-800';
-            valueSpan.textContent = value ?? '-'; // Default ke '-' jika null
+            valueSpan.textContent = value ?? '-';
             rowDiv.appendChild(labelSpan);
             rowDiv.appendChild(valueSpan);
             return rowDiv;
@@ -270,9 +254,6 @@ document.addEventListener('DOMContentLoaded', function() {
         mahasiswaInfoDiv.appendChild(container);
     }
 
-    // ============================================
-    // !! FUNGSI INI DITULIS ULANG AGAR AMAN DARI XSS !!
-    // ============================================
     function isWajibLunas(tagihanItem) {
         const nama = (tagihanItem.tarif?.nama_pembayaran || '').toLowerCase();
         return nama.includes('uang kemahasiswaan') || nama.includes('ujian akhir') || nama.includes('uas');
@@ -299,7 +280,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         tagihan.forEach(item => {
             const label = document.createElement('label');
-            // Tambahkan border biru jika status "Menunggu Pembayaran Tunai"
             const isWaitingCash = item.status === 'Menunggu Pembayaran Tunai';
             const isPendingTransfer = item.status === 'Menunggu Verifikasi Transfer';
             label.className = `flex items-center p-3 border rounded-lg ${isPendingTransfer ? 'bg-gray-50 border-gray-300 cursor-not-allowed opacity-70' : 'hover:bg-gray-50 cursor-pointer transition-colors'} ${isWaitingCash ? 'border-blue-300 bg-blue-50' : ''}`;
@@ -315,12 +295,11 @@ document.addEventListener('DOMContentLoaded', function() {
             checkbox.className = 'h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500';
             checkbox.name = 'tagihan';
             checkbox.value = item.tagihan_id;
-            // Default amount = sisa pokok
             checkbox.dataset.amount = sisaPokok;
             checkbox.dataset.sisaPokok = sisaPokok;
             checkbox.dataset.wajibLunas = wajibLunas ? '1' : '0';
             if (isPendingTransfer) {
-                checkbox.disabled = true; // Jangan diproses tunai saat ada transfer pending
+                checkbox.disabled = true;
             }
 
             const textDiv = document.createElement('div');
@@ -328,7 +307,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const namaP = document.createElement('p');
             namaP.className = 'font-medium text-gray-800';
-            namaP.textContent = item.tarif?.nama_pembayaran ?? 'N/A'; // AMAN
+            namaP.textContent = item.tarif?.nama_pembayaran ?? 'N/A';
 
             const detailDiv = document.createElement('div');
             detailDiv.className = 'flex items-center gap-2 mt-1 flex-wrap';
@@ -357,7 +336,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 detailDiv.appendChild(wajibBadge);
             }
 
-            // Badge waiting cash
             if (isWaitingCash) {
                 const badge = document.createElement('span');
                 badge.className = 'px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-700 border border-blue-300';
@@ -439,7 +417,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedCheckboxes = tagihanListDiv.querySelectorAll('input[name="tagihan"]:checked');
         const tagihanIds = Array.from(selectedCheckboxes).map(cb => cb.value);
         if (tagihanIds.length === 0) {
-            // !! GANTI ALERT !!
             Swal.fire({ icon: 'warning', title: 'Belum Dipilih', text: 'Tidak ada tagihan yang dipilih untuk dibayar.' });
             return;
         }
@@ -454,23 +431,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 cicilan: buildCicilanPayload(selectedCheckboxes)
             });
             if (response.success) {
-                // !! GANTI ALERT !!
                 displayReceipt(response.data || null);
                 Swal.fire({ icon: 'success', title: 'Berhasil!', text: response.message || 'Pembayaran berhasil diproses.', timer: 1500, showConfirmButton: false });
-                updateDashboardStats(); // Update statistik
-                await searchMahasiswa({ resetReceipt: false }); // Refresh data tanpa menghapus kwitansi
+                updateDashboardStats();
+                await searchMahasiswa({ resetReceipt: false });
             } else {
-                // !! GANTI ALERT !!
-                 Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal memproses pembayaran: ' + (response.message || 'Error tidak diketahui.') });
+                Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal memproses pembayaran: ' + (response.message || 'Error tidak diketahui.') });
             }
         } catch(error) {
             console.error("Error saat proses pembayaran:", error);
-             if (error.status === 422) {
-                 displayValidationErrors(error.errors); // Tampilkan error validasi
-             } else {
-                 // !! GANTI ALERT !!
-                 Swal.fire({ icon: 'error', title: 'Error Koneksi', text: error.message || 'Terjadi kesalahan saat menghubungkan ke server.' });
-             }
+            if (error.status === 422) {
+                displayValidationErrors(error.errors);
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error Koneksi', text: error.message || 'Terjadi kesalahan saat menghubungkan ke server.' });
+            }
         } finally {
             setButtonLoading(submitButton, false);
         }
@@ -573,13 +547,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // --- EVENT LISTENERS ---
-    updateDashboardStats(); // Muat statistik awal
+    updateDashboardStats();
     searchBtn.addEventListener('click', () => searchMahasiswa());
     npmInput.addEventListener('keypress', e => { if (e.key === 'Enter') searchMahasiswa(); });
-    // Gunakan event delegation untuk checkbox tagihan
     tagihanListDiv.addEventListener('change', e => { if (e.target.matches('input[name="tagihan"]')) { updatePaymentForm(); } });
-    // Gunakan event delegation untuk form pembayaran
     paymentFormContainer.addEventListener('submit', e => { if (e.target.id === 'process-payment-form') { handlePayment(e); } });
 });
 </script>

@@ -16,6 +16,9 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class LaporanController extends Controller
 {
+    /**
+     * Menampilkan halaman laporan kasir.
+     */
     public function index(Request $request)
     {
         // Tentukan periode (bulan dan tahun)
@@ -360,7 +363,6 @@ class LaporanController extends Controller
 
                 Log::info("Laporan PDF kasir disimpan: {$fileName}");
 
-                // Return JSON dengan download URL (gunakan route web)
                 $downloadUrl = route('kasir.reports.download', ['reportId' => $report->id]);
 
                 return response()->json([
@@ -474,7 +476,6 @@ class LaporanController extends Controller
 
                 Log::info("Laporan PDF tunggakan kasir disimpan: {$fileName}");
 
-                // Return JSON dengan download URL (gunakan route web)
                 $downloadUrl = route('kasir.reports.download', ['reportId' => $report->id]);
 
                 return response()->json([

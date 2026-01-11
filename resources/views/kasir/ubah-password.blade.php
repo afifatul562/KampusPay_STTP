@@ -36,7 +36,7 @@
             <div class="bg-white rounded-xl shadow-md border border-gray-200 p-6">
                 <form method="POST" action="{{ route('kasir.pengaturan.updatePassword') }}" class="space-y-4">
                     @csrf
-                    @method('PUT') {{-- Menggunakan method PUT untuk update --}}
+                    @method('PUT')
 
                     {{-- Pesan Sukses --}}
                     @if (session('status') === 'password-updated')
@@ -50,7 +50,6 @@
                         </div>
                     @endif
 
-                    {{-- PERUBAHAN: Input Password Lama (Dengan Ikon) --}}
                     <div>
                         <label for="current_password" class="block text-sm font-medium text-gray-700">Password Saat Ini</label>
                         <div class="relative mt-1">
@@ -74,7 +73,6 @@
                         @enderror
                     </div>
 
-                    {{-- PERUBAHAN: Input Password Baru (Dengan Ikon) --}}
                     <div>
                         <label for="password" class="block text-sm font-medium text-gray-700">Password Baru</label>
                         <div class="relative mt-1">
@@ -98,7 +96,6 @@
                         @enderror
                     </div>
 
-                    {{-- PERUBAHAN: Input Konfirmasi Password (Dengan Ikon) --}}
                     <div>
                         <label for="password_confirmation" class="block text-sm font-medium text-gray-700">Konfirmasi Password Baru</label>
                         <div class="relative mt-1">
@@ -131,24 +128,17 @@
     </div>
 @endsection
 
-{{-- PERUBAHAN: Tambahkan Script di Bawah --}}
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-
-        // Temukan semua tombol toggle di halaman
         const toggleButtons = document.querySelectorAll('.js-toggle-password');
 
         toggleButtons.forEach(button => {
             button.addEventListener('click', function() {
-                // Temukan input password di dalam div.relative yang sama
                 const inputField = button.parentElement.querySelector('input');
-
-                // Temukan kedua ikon di dalam tombol
                 const iconEye = button.querySelector('.icon-eye');
                 const iconEyeSlash = button.querySelector('.icon-eye-slash');
 
-                // Toggle tipe input
                 if (inputField.type === 'password') {
                     inputField.type = 'text';
                     iconEye.classList.add('hidden');

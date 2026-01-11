@@ -26,9 +26,8 @@ class DashboardController extends Controller
             ->first();
 
         // Kueri 2: Tetap terpisah karena beda tabel
-        $totalMahasiswa = \App\Models\MahasiswaDetail::count(); // Perbaikan kecil: lihat poin 3
+        $totalMahasiswa = \App\Models\MahasiswaDetail::count();
 
-        // Hitung sisanya di PHP (lebih cepat)
         $totalLunas = $tagihanStats->total_lunas ?? 0;
         $totalTagihan = $tagihanStats->total_tagihan ?? 0;
         $totalPembayaran = $tagihanStats->total_pembayaran ?? 0;
@@ -51,9 +50,8 @@ class DashboardController extends Controller
     public function recentPayments()
     {
         // Eager load relasi untuk efisiensi
-        // Pastikan kita load semua relasi sampai ke user
         $recentPayments = Pembayaran::with('tagihan.mahasiswa.user', 'tagihan.tarif')
-        ->latest('tanggal_bayar') // Lebih baik urutkan berdasarkan tanggal bayar
+        ->latest('tanggal_bayar')
         ->limit(10)
         ->get();
 

@@ -14,7 +14,7 @@ body {
     color: #333;
 }
 
-/* Hide native dropdown arrows when desired */
+/* Sembunyikan arrow dropdown native jika diperlukan */
 .no-native-arrow {
     -webkit-appearance: none;
     -moz-appearance: none;
@@ -49,9 +49,7 @@ select.no-native-arrow::-ms-expand {
     background-color: #f5f5f5;
 }
 
-/* Removed legacy component classes in favor of Tailwind utilities */
-
-/* Responsive Design */
+/* Desain Responsif */
 @media (max-width: 768px) {
     .navbar {
         flex-direction: column;

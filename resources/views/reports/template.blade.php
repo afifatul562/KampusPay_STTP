@@ -5,29 +5,24 @@
     <style>
         /* ===== CSS UNTUK KOP SURAT FIXED ===== */
         @page {
-            margin: 0cm 0cm; /* Hapus margin default */
+            margin: 0cm 0cm;
         }
 
         body {
-            /* Beri ruang di atas untuk kop surat */
             margin-top: 4.5cm;
-
-            /* Atur margin halaman standar */
             margin-left: 2cm;
             margin-right: 2cm;
             margin-bottom: 2cm;
-
-            /* Font dari file asli Anda */
             font-family: DejaVu Sans, sans-serif;
             font-size: 10px;
         }
 
         header {
             position: fixed;
-            top: 1cm; /* Jarak kop surat dari atas */
-            left: 2cm; /* Samakan dengan margin-left body */
-            right: 2cm; /* Samakan dengan margin-right body */
-            height: 3cm; /* Perkiraan tinggi kop surat */
+            top: 1cm;
+            left: 2cm;
+            right: 2cm;
+            height: 3cm;
             border-bottom: 2px solid black;
         }
 
@@ -40,8 +35,7 @@
         .institute-details .alamat { font-size: 9px; }
         /* ===== AKHIR CSS KOP SURAT ===== */
 
-
-        h1 { text-align: center; margin-bottom: 5px; } /* Kurangi margin-bottom */
+        h1 { text-align: center; margin-bottom: 5px; }
         .header-info { margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #000; padding: 6px; text-align: left; }

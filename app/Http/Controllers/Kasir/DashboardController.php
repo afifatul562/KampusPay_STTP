@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Log;
 class DashboardController extends Controller
 {
     /**
-     * Mencari mahasiswa berdasarkan NPM dan mengambil tagihan yang BISA DIBAYAR.
+     * Mencari mahasiswa berdasarkan NPM dan mengambil tagihan yang bisa dibayar.
      */
     public function searchMahasiswa(Request $request)
     {
@@ -45,7 +45,7 @@ class DashboardController extends Controller
 
             $mahasiswa->tagihan = $mahasiswa->tagihan->filter(function ($tagihan) use ($allTagihan) {
                 // Jangan tampilkan jika:
-                // 1. Status tagihan adalah "Lunas" (double check)
+                // 1. Status tagihan adalah "Lunas"
                 if ($tagihan->status === 'Lunas') {
                     return false;
                 }
@@ -107,16 +107,14 @@ class DashboardController extends Controller
 
     /**
      * Memproses pembayaran untuk satu atau lebih tagihan.
-     * Termasuk logika "Otomatis Hilang" (Override).
      */
     public function processPayment(Request $request)
     {
         $validated = $request->validate([
             'tagihan_ids'   => 'required|array|min:1',
-            // DIUBAH: Izinkan bayar semua tagihan yg statusnya BUKAN 'Lunas'
             'tagihan_ids.*' => ['required', 'integer', Rule::exists('tagihan', 'tagihan_id')->whereNot('status', 'Lunas')],
-            'metode_pembayaran' => 'required|string|in:Tunai,Transfer Bank Nagari,Transfer', // Ditambah 'Transfer'
-            'cicilan' => 'sometimes|array', // Array dengan key tagihan_id => jumlah_bayar
+            'metode_pembayaran' => 'required|string|in:Tunai,Transfer Bank Nagari,Transfer',
+            'cicilan' => 'sometimes|array',
             'cicilan.*.jumlah_bayar' => 'required_with:cicilan|numeric|min:1',
             'cicilan.*.is_cicilan' => 'sometimes|boolean',
         ]);
@@ -156,13 +154,12 @@ class DashboardController extends Controller
                         throw new \RuntimeException('Tagihan tidak ditemukan saat proses pembayaran.');
                     }
 
-                    // --- DITAMBAHKAN: LOGIKA "OTOMATIS HILANG" (REVISI KASUS DINDA) ---
+                    // Batalkan konfirmasi pembayaran yang masih menunggu verifikasi
                     KonfirmasiPembayaran::where('tagihan_id', $tagihan->tagihan_id)
                         ->where('status_verifikasi', 'Menunggu Verifikasi')
                         ->update([
                             'status_verifikasi' => 'Dibatalkan (Oleh Kasir Tunai)'
                         ]);
-                    // --- SELESAI LOGIKA "OTOMATIS HILANG" ---
 
                     // Cek apakah ini cicilan
                     $cicilanData = $validated['cicilan'][$tagihanId] ?? null;
@@ -260,9 +257,8 @@ class DashboardController extends Controller
             return $pembayaran->jumlah_bayar ?? 0;
         });
 
-        // DIUBAH: Query ini dibuat lebih aman.
-        // Hanya hitung 'pending' jika tagihan utamanya juga 'pending'.
-        // Ini mencegah 'pending verifikasi' yang sudah lunas (via tunai) terhitung.
+        // Hitung konfirmasi pembayaran yang masih menunggu verifikasi
+        // Hanya hitung jika tagihan utamanya juga masih menunggu verifikasi transfer
         $pendingVerifikasiCount = KonfirmasiPembayaran::where('status_verifikasi', 'Menunggu Verifikasi')
             ->whereHas('tagihan', function($q) {
                 $q->where('status', 'Menunggu Verifikasi Transfer');

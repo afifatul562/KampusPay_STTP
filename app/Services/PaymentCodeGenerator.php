@@ -8,11 +8,11 @@ use Illuminate\Support\Str;
 class PaymentCodeGenerator
 {
     /**
-     * Generate unique, consistent payment code for tagihan.
+     * Membuat kode pembayaran yang unik dan konsisten untuk tagihan.
      *
-     * New format (unambiguous & ordered): INV-KP-YYYYMMDD-XXXX
+     * Format baru (tidak ambigu & terurut): INV-KP-YYYYMMDD-XXXX
      * - YYYYMMDD: tanggal pembuatan
-     * - XXXX     : running sequence (zero-padded 4 digits) per tanggal
+     * - XXXX     : urutan berjalan (4 digit dengan zero-padding) per tanggal
      *
      * Contoh: INV-KP-20251103-0007
      *

@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\App;
 class AppServiceProvider extends ServiceProvider
 {
     /**
-     * Register any application services.
+     * Mendaftarkan layanan aplikasi.
      */
     public function register(): void
     {
@@ -24,16 +24,14 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Bootstrap any application services.
+     * Mem-bootstrap layanan aplikasi.
      */
     public function boot(): void
     {
-        // Registrasi kebijakan (policies)
         Gate::policy(Tagihan::class, TagihanPolicy::class);
         Gate::policy(Pembayaran::class, PembayaranPolicy::class);
         Gate::policy(Report::class, ReportPolicy::class);
 
-        // Set locale tanggal Indonesia secara global (Carbon & aplikasi)
         try {
             Carbon::setLocale('id');
             if (function_exists('setlocale')) {
@@ -43,7 +41,6 @@ class AppServiceProvider extends ServiceProvider
                 App::setLocale('id');
             }
         } catch (\Throwable $e) {
-            // ignore locale errors
         }
     }
 }

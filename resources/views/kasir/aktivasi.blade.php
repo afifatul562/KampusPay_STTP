@@ -117,7 +117,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            // Gunakan route search-mahasiswa yang sudah ada
             const response = await apiRequest('/api/kasir/search-mahasiswa', 'POST', { npm });
             if (response.success && response.data) {
                 const mhs = response.data;
@@ -198,13 +197,11 @@ document.addEventListener('DOMContentLoaded', function() {
             let response;
 
             if (currentAktivasiId) {
-                // Override status yang sudah ada
                 response = await apiRequest(`/api/kasir/aktivasi/${currentAktivasiId}/override`, 'POST', {
                     status,
                     note: note || `Status diubah menjadi ${status} oleh kasir`
                 });
             } else {
-                // Buat status baru
                 response = await apiRequest(`/api/kasir/aktivasi/mahasiswa/${currentMahasiswaId}`, 'POST', {
                     status,
                     note: note || `Status ditetapkan sebagai ${status} oleh kasir`
@@ -268,7 +265,6 @@ document.addEventListener('DOMContentLoaded', function() {
     btnSetAktif.addEventListener('click', () => setStatus('aktif'));
     btnSetBss.addEventListener('click', () => setStatus('bss'));
 
-    // Load aktivasi list saat halaman dimuat
     loadAktivasiList();
 });
 </script>

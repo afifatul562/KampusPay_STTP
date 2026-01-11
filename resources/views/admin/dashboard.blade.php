@@ -6,7 +6,6 @@
 @section('content')
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
-    {{-- !! KARTU 1 (DIJADIKAN LINK) !! --}}
     <a href="{{ route('admin.mahasiswa') }}" aria-label="Lihat total dan daftar mahasiswa"
        class="group relative bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-md border border-gray-200 flex items-start gap-5 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 overflow-hidden">
         <div class="absolute inset-0 bg-gradient-to-br from-primary-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -20,7 +19,6 @@
         </div>
     </a>
 
-    {{-- !! KARTU 2 (DIJADIKAN LINK) !! --}}
     <a href="{{ route('admin.pembayaran') }}?status=lunas" aria-label="Buka halaman pembayaran status lunas"
        class="group relative bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-md border border-gray-200 flex items-start gap-5 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 overflow-hidden">
         <div class="absolute inset-0 bg-gradient-to-br from-success-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -34,7 +32,6 @@
         </div>
     </a>
 
-    {{-- Kartu 3: Tingkat Pembayaran (Tetap) --}}
     <div class="group relative bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-md border border-gray-200 flex items-start gap-5 hover:shadow-xl transition-all duration-300 overflow-hidden" aria-label="Kartu ringkasan tingkat pembayaran">
         <div class="absolute inset-0 bg-gradient-to-br from-warning-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         <div class="flex-1 min-w-0 relative z-10">
@@ -49,7 +46,6 @@
         </div>
     </div>
 
-    {{-- Kartu 4: Pending Payment (Link sudah ada dari revisi sebelumnya) --}}
     <a href="{{ route('admin.pembayaran') }}?status=pending" aria-label="Buka halaman pembayaran pending"
        class="group relative bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-md border border-gray-200 flex items-start gap-5 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 overflow-hidden">
         <div class="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -68,7 +64,6 @@
 
     {{-- Tabel Pembayaran Terbaru --}}
     <div class="mt-6 bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
-        {{-- Header Section --}}
         <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-5 border-b border-gray-200">
             <div class="flex items-center gap-4">
                 <div class="bg-white p-3 rounded-lg shadow-sm">
@@ -116,9 +111,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
-    // -------------------------------------
-    // FUNGSI FETCHDATA (DENGAN SWEETALERT)
-    // -------------------------------------
+    // Fungsi untuk mengambil data dari API
     async function fetchData(url) {
         const apiToken = document.querySelector('meta[name="api-token"]')?.getAttribute('content');
         if (!apiToken) {
@@ -141,7 +134,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return data;
     }
 
-    // Fungsi toggleSkeleton (Tetap Sama)
+    // Fungsi untuk toggle skeleton loading
     function toggleSkeleton(valueElId, skeletonElId, showSkeleton) {
         const valueEl = document.getElementById(valueElId);
         const skeletonEl = document.getElementById(skeletonElId);
@@ -154,9 +147,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // -------------------------------------
-    // FUNGSI LOAD STATS (DENGAN SWEETALERT)
-    // -------------------------------------
+    // Fungsi untuk memuat statistik dashboard
     function loadStats() {
         toggleSkeleton('total-mahasiswa-value', 'total-mahasiswa-skeleton', true);
         toggleSkeleton('total-pembayaran-value', 'total-pembayaran-skeleton', true);
@@ -189,9 +180,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // -------------------------------------
-    // FUNGSI LOAD PEMBAYARAN TERBARU (DENGAN SWEETALERT)
-    // -------------------------------------
+    // Fungsi untuk memuat pembayaran terbaru
     function loadRecentPayments() {
         const tbody = document.getElementById('recent-payments-table');
 

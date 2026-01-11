@@ -108,17 +108,11 @@
 
 
 @push('scripts')
-{{-- SweetAlert sudah di-include dari layouts/app.blade.php, jadi tidak perlu lagi --}}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-
-        // Gunakan util global apiRequest
         const apiRequest = (window.App && window.App.apiRequest) ? window.App.apiRequest : null;
         if (!apiRequest) { console.error('apiRequest util tidak tersedia'); }
 
-        // ==========================================================
-        // Event Listener Tabel (Tidak Berubah)
-        // ==========================================================
         const table = document.getElementById('verifikasi-table');
         if (table) {
             table.addEventListener('click', function(event) {
@@ -134,20 +128,15 @@
             });
         }
 
-        // ==========================================================
-        // !! INI FUNGSI YANG DIPERBARUI !!
-        // ==========================================================
         async function handleAction(action, id, button) {
             const isApprove = action === 'approve';
-            const originalButtonHTML = button.innerHTML; // Simpan HTML asli
+            const originalButtonHTML = button.innerHTML;
 
-            // Helper function untuk loading
             const showLoading = () => {
                 button.innerHTML = `<svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
                 button.disabled = true;
             };
 
-            // Helper function untuk handle hasil
             const handleApiResponse = (response, konfirmasiId) => {
                 if (response.success) {
                     Swal.fire('Berhasil!', response.message || 'Aksi berhasil dilakukan.', 'success');
@@ -164,10 +153,8 @@
                 }
             };
 
-            // Helper function untuk handle error
             const handleApiError = (error) => {
-                 if (error.status === 422) {
-                    // Tampilkan error validasi pertama untuk 'alasan_ditolak' jika ada
+                if (error.status === 422) {
                     let errorMsg = error.message || 'Data tidak valid.';
                     if (error.errors && error.errors.alasan_ditolak) {
                         errorMsg = error.errors.alasan_ditolak[0];
@@ -180,16 +167,13 @@
                 button.disabled = false;
             };
 
-            // --- Logika Utama (Approve vs Reject) ---
-
             if (isApprove) {
-                // --- ALUR UNTUK SETUJUI (DENGAN CICILAN) ---
                 const tagihanId = button.dataset.tagihanId;
                 const jumlahTagihan = parseInt(button.dataset.jumlahTagihan) || 0;
                 const sisaPokok = parseInt(button.dataset.sisaPokok) || jumlahTagihan;
                 const isWajibLunas = button.dataset.isWajibLunas === '1';
                 const konfirmasiAmount = parseInt(button.dataset.konfirmasiAmount || '0') || sisaPokok;
-                const bisaCicil = !isWajibLunas && sisaPokok > 0; // izinkan cicil selama boleh dan ada sisa
+                const bisaCicil = !isWajibLunas && sisaPokok > 0;
 
                 let swalConfig = {
                     title: 'Anda yakin?',
@@ -202,7 +186,6 @@
                 };
 
                 if (bisaCicil) {
-                    // Jika bisa cicil, tampilkan form input jumlah bayar
                     const minBayar = Math.min(50000, sisaPokok);
                     swalConfig = {
                         title: 'Setujui Pembayaran',
@@ -257,7 +240,6 @@
                         }
                     };
                 } else {
-                    // Jika wajib lunas atau sudah lunas, langsung approve tanpa form
                     swalConfig.text = isWajibLunas
                         ? 'Pembayaran ini wajib lunas. Tagihan akan dilunaskan.'
                         : 'Pembayaran ini akan disetujui dan tagihan akan dilunaskan.';
@@ -276,7 +258,6 @@
                                     is_cicilan: result.value.is_cicilan
                                 };
                             } else {
-                                // Jika bukan cicilan, jumlah_bayar = jumlah_tagihan (lunas)
                                 body = {
                                     jumlah_bayar: jumlahTagihan,
                                     is_cicilan: 0
@@ -292,12 +273,11 @@
                 });
 
             } else {
-                // --- ALUR UNTUK TOLAK (BARU) ---
                 Swal.fire({
                     title: 'Tolak Verifikasi?',
                     text: 'Harap masukkan alasan penolakan:',
                     icon: 'warning',
-                    input: 'textarea', // <-- Kunci utamanya
+                    input: 'textarea',
                     inputPlaceholder: 'Contoh: Bukti transfer tidak jelas, nominal tidak sesuai...',
                     inputValidator: (value) => {
                         if (!value) {
@@ -313,12 +293,10 @@
                     confirmButtonText: 'Ya, tolak!',
                     cancelButtonText: 'Batal'
                 }).then(async (result) => {
-                    // Cek jika dikonfirmasi DAN ada alasannya
                     if (result.isConfirmed && result.value) {
                         showLoading();
                         try {
                             const url = `{{ url('/api/kasir/verifikasi') }}/reject/${id}`;
-                            // Kirim alasan di dalam body request
                             const body = { alasan_ditolak: result.value };
                             const response = await apiRequest(url, 'POST', body);
                             handleApiResponse(response, id);

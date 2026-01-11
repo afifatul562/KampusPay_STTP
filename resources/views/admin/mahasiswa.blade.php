@@ -5,11 +5,6 @@
 
 @section('content')
 
-    {{--
-      !! BLOK SESSION 'success' DAN 'error' (YANG LAMA) DIHAPUS DARI SINI !!
-      Kita akan memindahkannya ke dalam @push('scripts') agar menjadi popup SweetAlert.
-    --}}
-
 @php
     $headerIcon = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
@@ -44,7 +39,6 @@
         </x-slot:actions>
     </x-page-header>
 
-    {{-- DEFINISI FUNGSI ALPINE.JS --}}
     <script>
         function mahasiswaPage() {
             return {
@@ -68,7 +62,6 @@
                 async fetchData(url, options = {}) {
                     const apiToken = document.querySelector('meta[name="api-token"]')?.getAttribute('content');
                     if (!apiToken) {
-                        // !! GANTI ALERT !!
                         Swal.fire({
                             icon: 'error',
                             title: 'Sesi Tidak Valid',
@@ -87,7 +80,6 @@
                     const response = await fetch(url, config);
 
                     if (response.status === 401) {
-                        // !! GANTI ALERT !!
                         Swal.fire({
                             icon: 'error',
                             title: 'Sesi Berakhir',
@@ -96,14 +88,14 @@
                         }).then(() => { window.location.href = '/login'; });
                         return Promise.reject('Sesi berakhir');
                     }
-                    if (response.status === 204) { return null; } // Handle DELETE success
+                    if (response.status === 204) { return null; }
 
-                    const data = await response.json().catch(() => null); // Baca data
+                    const data = await response.json().catch(() => null);
                     if (!response.ok) {
                         console.error('Fetch error:', data);
                         throw new Error(data?.message || `Gagal mengambil data. Status: ${response.status}`);
                     }
-                    return data; // Kembalikan data (bukan response)
+                    return data;
                 },
 
                 loadMahasiswa() {
@@ -111,7 +103,7 @@
                     const listUrl = "{{ url('api/admin/mahasiswa') }}";
                     this.fetchData(listUrl)
                         .then(data => {
-                            this.allMahasiswa = data.data || []; // Handle jika data kosong
+                            this.allMahasiswa = data.data || [];
                             this.filteredMahasiswa = this.allMahasiswa;
                             const angkatanSet = new Set();
                             const programStudiSet = new Set();
@@ -129,7 +121,6 @@
                         })
                         .catch(error => {
                             console.error('Error fetching mahasiswa list:', error);
-                            // !! GANTI ALERT !!
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Gagal Memuat',
@@ -160,11 +151,10 @@
                     const detailUrl = `{{ url('api/admin/mahasiswa') }}/${mahasiswaId}`;
                     this.fetchData(detailUrl)
                         .then(response => {
-                            this.selectedMhs = response.data; // Data ada di dlm properti 'data'
+                            this.selectedMhs = response.data;
                         })
                         .catch(error => {
                             console.error('Error fetching detail:', error);
-                            // !! GANTI ALERT !!
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Gagal Memuat Detail',
@@ -176,7 +166,6 @@
                 },
 
                 deleteMahasiswa(mahasiswaId, nama) {
-                    // !! GANTI CONFIRM & ALERT !!
                     Swal.fire({
                         title: 'Anda Yakin?',
                         text: `Anda akan menghapus mahasiswa "${nama || 'ini'}". Tindakan ini tidak dapat dibatalkan!`,
@@ -240,18 +229,13 @@
                         return false;
                     }
 
-                    // Set loading state
                     this.modalLoading = true;
-
-                    // Biarkan form submit secara normal (tidak prevent default)
-                    // Form akan redirect setelah submit, dan session message akan ditampilkan
                     return true;
                 }
             };
         }
     </script>
 
-    {{-- Filter --}}
         <x-card title="Filter">
             <div class="flex flex-col sm:flex-row items-center gap-4">
                 <div class="relative w-full sm:w-auto flex-grow">
@@ -287,7 +271,6 @@
             </div>
         </x-card>
 
-        {{-- Tabel --}}
         <x-data-table
             :headers="['Mahasiswa', 'Program Studi', 'Semester', 'Status', 'Aksi']"
             aria-label="Tabel manajemen mahasiswa">
@@ -342,7 +325,6 @@
             </template>
         </x-data-table>
 
-        {{-- MODAL DETAIL MAHASISWA (Layout Grid sudah diperbaiki) --}}
         <div x-show="detailModalOpen" @keydown.escape.window="detailModalOpen = false" x-cloak class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
             <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
                 <div x-show="detailModalOpen" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="detailModalOpen = false" aria-hidden="true"></div>
@@ -372,7 +354,6 @@
             </div>
         </div>
 
-        {{-- MODAL IMPORT CSV --}}
         <div x-show="importModalOpen" @keydown.escape.window="importModalOpen = false" x-cloak
              x-transition:enter="ease-out duration-300"
              x-transition:enter-start="opacity-0"
@@ -437,7 +418,6 @@
 @endsection
 
 @push('scripts')
-{{-- !! SCRIPT BARU UNTUK MENANGANI NOTIFIKASI SESSION DENGAN SWEETALERT !! --}}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Fungsi helper untuk menampilkan notifikasi dengan fallback

@@ -158,7 +158,6 @@
             white-space: nowrap;
         }
 
-        /* ===== BADGE STATUS ===== */
         /* ===== TANDA TANGAN ===== */
         .signature {
             margin-top: 28px;
@@ -293,7 +292,59 @@
         <table class="details-table">
             <tr>
                 <th>Jenis Pembayaran</th>
-                <td>{{ $pembayaran->tagihan->tarif->nama_pembayaran }}</td>
+                <td>
+                    @php
+                        $jenisPembayaran = $pembayaran->tagihan->tarif->nama_pembayaran;
+
+                        if (stripos($jenisPembayaran, 'uang semester') !== false || stripos($jenisPembayaran, 'semester') !== false) {
+                            $semesterLabel = $pembayaran->tagihan->semester_label ?? null;
+                            $tahunAkademik = null;
+                            $semesterType = null;
+
+                            if ($semesterLabel) {
+                                $parts = explode(' ', trim($semesterLabel));
+                                if (count($parts) >= 2) {
+                                    $tahunAkademik = $parts[0];
+                                    $semesterType = $parts[1];
+                                }
+                            }
+
+                            $semesterNumber = null;
+                            $angkatan = $pembayaran->tagihan->mahasiswa->angkatan ?? null;
+
+                            if ($tahunAkademik && $angkatan && $semesterType) {
+                                try {
+                                    $tahunParts = explode('/', $tahunAkademik);
+                                    if (count($tahunParts) >= 1) {
+                                        $tahunAkademikAwal = (int) $tahunParts[0];
+                                        $angkatanInt = (int) $angkatan;
+                                        if ($tahunAkademikAwal > 0 && $angkatanInt > 0) {
+                                            $selisihTahun = $tahunAkademikAwal - $angkatanInt;
+                                            if (strtolower($semesterType) === 'ganjil') {
+                                                $semesterNumber = $selisihTahun * 2 + 1;
+                                            } else if (strtolower($semesterType) === 'genap') {
+                                                $semesterNumber = $selisihTahun * 2 + 2;
+                                            }
+                                        }
+                                    }
+                                } catch (Exception $e) {
+                                }
+                            }
+
+                            if (!$semesterNumber && isset($pembayaran->tagihan->mahasiswa->semester_aktif)) {
+                                $semesterNumber = $pembayaran->tagihan->mahasiswa->semester_aktif;
+                            }
+
+                            if ($semesterNumber) {
+                                echo $jenisPembayaran . ' Semester ' . $semesterNumber;
+                            } else {
+                                echo $jenisPembayaran;
+                            }
+                        } else {
+                            echo $jenisPembayaran;
+                        }
+                    @endphp
+                </td>
             </tr>
             <tr>
                 <th>Kode Pembayaran</th>

@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Controllers\Admin; // Atau namespace controller kamu
+namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Pembayaran;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 
-class PrintController extends Controller // Atau nama controller kamu
+class PrintController extends Controller
 {
     public function cetakBuktiPembayaran(Pembayaran $pembayaran)
     {
@@ -20,7 +20,7 @@ class PrintController extends Controller // Atau nama controller kamu
 
         $filename = 'Kwitansi_' . ($pembayaran->tagihan->kode_pembayaran ?? $pembayaran->tagihan->kode ?? 'pembayaran') . '.pdf';
 
-        // Stream ke browser (bisa diganti ->download($filename) jika perlu mengunduh langsung)
+        // Stream ke browser
         return $pdf->stream($filename);
     }
 }

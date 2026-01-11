@@ -19,11 +19,17 @@ use Carbon\Carbon;
 
 class AktivasiController extends Controller
 {
+    /**
+     * Menampilkan halaman aktivasi mahasiswa.
+     */
     public function show()
     {
         return view('mahasiswa.aktivasi');
     }
 
+    /**
+     * Mengambil status aktivasi mahasiswa untuk semester saat ini.
+     */
     public function current(Request $request)
     {
         $semester = config('academic.current_semester');
@@ -41,6 +47,9 @@ class AktivasiController extends Controller
         ]);
     }
 
+    /**
+     * Menyimpan status aktivasi mahasiswa untuk semester saat ini.
+     */
     public function store(Request $request)
     {
         $request->validate([
@@ -107,6 +116,9 @@ class AktivasiController extends Controller
         }
     }
 
+    /**
+     * Memastikan tagihan BSS dibuat jika status adalah BSS.
+     */
     protected function ensureBssTagihan(AktivasiStatus $aktivasi): void
     {
         $amount = config('academic.bss_amount');

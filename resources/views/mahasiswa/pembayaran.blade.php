@@ -56,13 +56,10 @@
         <div class="divide-y divide-gray-200">
             @forelse ($tagihan as $item)
 
-                {{-- INI BLOK YANG HILANG (PENYEBAB ERROR) --}}
                 @php
-                    // Cek apakah pembayaran dibatalkan
                     $isDibatalkan = $item->pembayaran && $item->pembayaran->status_dibatalkan;
                     $statusForBorder = $item->status;
 
-                    // Jika pembayaran dibatalkan, gunakan border merah
                     if ($isDibatalkan) {
                         $statusForBorder = 'Dibatalkan';
                     }
@@ -84,22 +81,68 @@
                     }
                 @endphp
 
-                {{-- Baris ini (sekitar baris 61) sekarang aman digunakan --}}
                 <div class="p-6 grid grid-cols-1 md:grid-cols-6 gap-4 items-center hover:bg-gray-50 transition-colors {{ $borderColorClass }}">
 
                     {{-- Detail Tagihan --}}
                     <div class="md:col-span-3 flex items-center gap-4">
                         <div>
                             <h4 class="font-semibold text-gray-800">{{ $item->tarif->nama_pembayaran }}</h4>
-                            <p class="text-sm text-gray-600">Jatuh Tempo:
+                            @php
+                                $semesterLabel = $item->semester_label ?? null;
+                                $tahunAkademik = '-';
+                                $semesterType = '-';
+                                if ($semesterLabel) {
+                                    $parts = explode(' ', trim($semesterLabel));
+                                    if (count($parts) >= 2) {
+                                        $tahunAkademik = $parts[0];
+                                        $semesterType = $parts[1];
+                                    }
+                                }
+
+                                $semesterNumber = null;
+                                $angkatan = $item->mahasiswa->angkatan ?? null;
+                                if ($tahunAkademik !== '-' && $angkatan && $semesterType !== '-') {
+                                    try {
+                                        $tahunParts = explode('/', $tahunAkademik);
+                                        if (count($tahunParts) >= 1) {
+                                            $tahunAkademikAwal = (int) $tahunParts[0];
+                                            $angkatanInt = (int) $angkatan;
+                                            if ($tahunAkademikAwal > 0 && $angkatanInt > 0) {
+                                                $selisihTahun = $tahunAkademikAwal - $angkatanInt;
+                                                if (strtolower($semesterType) === 'ganjil') {
+                                                    $semesterNumber = $selisihTahun * 2 + 1;
+                                                } else if (strtolower($semesterType) === 'genap') {
+                                                    $semesterNumber = $selisihTahun * 2 + 2;
+                                                }
+                                            }
+                                    }
+                                } catch (Exception $e) {
+                                }
+                            }
+
+                            if (!$semesterNumber && isset($item->mahasiswa->semester_aktif)) {
+                                    $semesterNumber = $item->mahasiswa->semester_aktif;
+                                }
+                            @endphp
+                            <div class="text-sm text-gray-600 mt-1">
+                                @if($tahunAkademik !== '-')
+                                    <span class="font-medium">Tahun Akademik: {{ $tahunAkademik }}</span>
+                                    @if($semesterType !== '-')
+                                        <span class="mx-2">•</span>
+                                        <span class="px-2 py-0.5 inline-flex text-xs font-semibold rounded-full {{ strtolower($semesterType) === 'ganjil' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800' }}">{{ $semesterType }}</span>
+                                    @endif
+                                    @if($semesterNumber)
+                                        <span class="mx-2">•</span>
+                                        <span class="font-medium">Semester {{ $semesterNumber }}</span>
+                                    @endif
+                                @endif
+                            </div>
+                            <p class="text-sm text-gray-600 mt-1">Jatuh Tempo:
                                 <span class="font-medium {{ $item->status != 'Lunas' && \Carbon\Carbon::parse($item->tanggal_jatuh_tempo)->isPast() ? 'text-red-500' : 'text-gray-500' }}">
                                     {{ \Carbon\Carbon::parse($item->tanggal_jatuh_tempo)->isoFormat('D MMMM YYYY') }}
                                 </span>
                             </p>
                             <p class="text-xs text-gray-400 mt-1 font-mono">Kode: {{ $item->kode_pembayaran }}</p>
-                            {{-- ======================================================== --}}
-                            {{-- !! KODE UNTUK MENAMPILKAN ALASAN PENOLAKAN !! --}}
-                            {{-- ======================================================== --}}
                             @if ($item->status == 'Ditolak' && $item->konfirmasi && $item->konfirmasi->alasan_ditolak)
                                 <div class="mt-3 p-3 bg-orange-100 border-l-4 border-orange-500 text-orange-800 rounded-lg">
                                     <p class="font-semibold text-sm">Alasan Ditolak:</p>
@@ -123,7 +166,6 @@
                                     </div>
                                 </div>
                             @endif
-                            {{-- ======================================================== --}}
                         </div>
                     </div>
 
@@ -142,11 +184,9 @@
                     {{-- Status --}}
                     <div class="md:col-span-1 text-left md:text-center">
                         @php
-                            // Cek apakah pembayaran dibatalkan
                             $isDibatalkan = $item->pembayaran && $item->pembayaran->status_dibatalkan;
                             $statusDisplay = $item->status;
 
-                            // Jika pembayaran dibatalkan, tampilkan "Dibatalkan" bukan status tagihan
                             if ($isDibatalkan) {
                                 $statusDisplay = 'Dibatalkan';
                             }
@@ -175,7 +215,6 @@
                     {{-- Tombol Aksi --}}
                     <div class="md:col-span-1 text-left md:text-right">
                         @php
-                            // Cek apakah pembayaran dibatalkan
                             $isDibatalkan = $item->pembayaran && $item->pembayaran->status_dibatalkan;
                         @endphp
 
