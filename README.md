@@ -149,8 +149,8 @@ php artisan test
 
 ## 👨‍💻 Author
 
-**Afifatul Mawaddah** - [afifatul562](https://github.com/afifatul562)
-**Dinda Apriona Putri Adryan** - [dindaaprionaa](https://github.com/dindaaprionaa)
+* **Afifatul Mawaddah** - [afifatul562](https://github.com/afifatul562)
+* **Dinda Apriona Putri Adryan** - [dindaaprionaa](https://github.com/dindaaprionaa)
 
 ---
 
