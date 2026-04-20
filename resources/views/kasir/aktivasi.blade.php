@@ -5,9 +5,9 @@
 
 @section('content')
 @php
-    $semesterLabel = config('academic.current_semester');
+    $semesterLabel = \App\Models\Setting::currentSemesterLabel();
 @endphp
-<div class="space-y-6">
+<div class="space-y-4 sm:space-y-6">
     <x-breadcrumbs :items="[
         ['label' => 'Dashboard', 'url' => route('kasir.dashboard')],
         ['label' => 'Aktivasi Mahasiswa']

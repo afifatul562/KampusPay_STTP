@@ -16,7 +16,13 @@ class TarifMaster extends Model
         'nama_pembayaran',
         'nominal',
         'program_studi',
-        'angkatan'
+        'angkatan',
+        'billing_code',
+        'rule_json',
+    ];
+
+    protected $casts = [
+        'rule_json' => 'array',
     ];
 
     public function tagihan()

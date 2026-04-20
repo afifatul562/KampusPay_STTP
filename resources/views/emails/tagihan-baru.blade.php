@@ -25,6 +25,10 @@
     </style>
 </head>
 <body>
+    @php
+        $publicRoot = rtrim(config('app.public_url'), '/');
+        $payUrl = $publicRoot . route('mahasiswa.pembayaran.pilih-metode', $tagihan->tagihan_id, false);
+    @endphp
     <div class="container">
         <div class="header">Halo, {{ $tagihan->mahasiswa->user->nama_lengkap }}!</div>
 
@@ -34,7 +38,7 @@
             <table class="details-table">
                 <tr>
                     <th style="width: 30%;">Detail Tagihan</th>
-                    <td>{{ $tagihan->tarif->nama_pembayaran }}</td>
+                    <td>{{ $tagihan->jenis_tampilan }}</td>
                 </tr>
                 <tr>
                     <th>Total Pembayaran</th>
@@ -51,17 +55,17 @@
             </table>
 
             <p style="margin-top: 20px;">
-                Silakan lakukan pembayaran sebelum tanggal jatuh tempo melalui link di bawah ini:
+                Silakan lakukan pembayaran sebelum tanggal jatuh tempo melalui link di bawah ini.
+                <strong>Pastikan Anda sudah login di browser sebagai mahasiswa</strong> (NPM &amp; password), bukan akun admin/kasir — jika tidak, halaman akan menolak akses.
             </p>
 
-            {{-- Ini adalah Link Pembayaran yang diminta pembimbing Anda --}}
-            <a href="{{ route('mahasiswa.pembayaran.pilih-metode', $tagihan->tagihan_id) }}" class="button">
+            <a href="{{ $payUrl }}" class="button">
                 Bayar Sekarang
             </a>
 
             <p>Jika link di atas tidak berfungsi, salin dan tempel URL berikut di browser Anda:</p>
             <p style="font-size: 11px; word-break: break-all;">
-                {{ route('mahasiswa.pembayaran.pilih-metode', $tagihan->tagihan_id) }}
+                {{ $payUrl }}
             </p>
         </div>
 

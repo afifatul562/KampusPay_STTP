@@ -95,7 +95,7 @@
                         <td class="text-center">{{ $index + 1 }}</td>
                         <td>{{ $item->tagihan->kode_pembayaran ?? '-' }}</td>
                         <td>{{ \Carbon\Carbon::parse($item->tanggal_bayar)->isoFormat('D MMM Y, HH:mm') }}</td>
-                        <td>{{ $item->tagihan->tarif->nama_pembayaran ?? 'N/A' }}
+                        <td>{{ $item->tagihan->jenis_tampilan ?? 'N/A' }}
                             @if($item->is_cicilan)
                                 <span style="font-size: 10px; color: #7c3aed;">(Cicilan)</span>
                             @endif

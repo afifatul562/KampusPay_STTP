@@ -11,7 +11,7 @@
     </svg>';
 @endphp
 
-<div x-data="mahasiswaPage()" class="space-y-6">
+<div x-data="mahasiswaPage()" class="space-y-4 sm:space-y-6">
     <x-breadcrumbs :items="[
         ['label' => 'Dashboard', 'url' => route('admin.dashboard')],
         ['label' => 'Manajemen Mahasiswa']
@@ -22,23 +22,24 @@
         subtitle="Kelola data mahasiswa"
         :icon="$headerIcon">
         <x-slot:actions>
-            <div class="flex items-center gap-2">
-                <button @click="importModalOpen = true" type="button" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-success-600 to-success-700 hover:from-success-700 hover:to-success-800 shadow-md hover:shadow-lg transition-all duration-200">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                <button @click="importModalOpen = true" type="button" class="inline-flex items-center justify-center min-h-touch px-4 py-2.5 border border-transparent text-fluid-sm sm:text-sm font-medium rounded-lg text-white bg-gradient-to-r from-success-600 to-success-700 hover:from-success-700 hover:to-success-800 shadow-md hover:shadow-lg transition-all duration-200">
+                    <svg class="w-5 h-5 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                     Import CSV
                 </button>
-                <a href="{{ route('admin.mahasiswa.export') }}" class="inline-flex items-center px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-100 to-indigo-200 text-indigo-700 text-sm font-semibold hover:from-indigo-200 hover:to-indigo-300 shadow-sm hover:shadow-md transition-all duration-200" title="Ekspor CSV">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8v12h16V8M4 8l8-5 8 5M12 12v6m0 0l3-3m-3 3l-3-3"></path></svg>
+                <a href="{{ route('admin.mahasiswa.export') }}" class="inline-flex items-center justify-center min-h-touch px-4 py-2.5 rounded-lg bg-gradient-to-r from-indigo-100 to-indigo-200 text-indigo-700 text-fluid-sm sm:text-sm font-semibold hover:from-indigo-200 hover:to-indigo-300 shadow-sm hover:shadow-md transition-all duration-200 text-center" title="Ekspor CSV">
+                    <svg class="w-5 h-5 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8v12h16V8M4 8l8-5 8 5M12 12v6m0 0l3-3m-3 3l-3-3"></path></svg>
                     Ekspor CSV
                 </a>
-                <a href="{{ route('admin.create-mahasiswa') }}" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 shadow-md hover:shadow-lg transition-all duration-200">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                <a href="{{ route('admin.create-mahasiswa') }}" class="inline-flex items-center justify-center min-h-touch px-4 py-2.5 border border-transparent text-fluid-sm sm:text-sm font-medium rounded-lg text-white bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 shadow-md hover:shadow-lg transition-all duration-200">
+                    <svg class="w-5 h-5 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
                     Tambah Mahasiswa
                 </a>
             </div>
         </x-slot:actions>
     </x-page-header>
 
+    {{-- Alpine: halaman daftar mahasiswa --}}
     <script>
         function mahasiswaPage() {
             return {
@@ -57,6 +58,20 @@
 
                 init() {
                     this.loadMahasiswa();
+                },
+
+                /** Tahun angkatan untuk filter (prioritas kolom angkatan, fallback 2 digit awal NPM). */
+                cohortYear(mhs) {
+                    if (mhs.angkatan) {
+                        return String(mhs.angkatan);
+                    }
+                    if (mhs.npm && mhs.npm.length >= 2) {
+                        const code = mhs.npm.substring(0, 2);
+                        if (/^\d{2}$/.test(code)) {
+                            return '20' + code;
+                        }
+                    }
+                    return '';
                 },
 
                 async fetchData(url, options = {}) {
@@ -88,35 +103,35 @@
                         }).then(() => { window.location.href = '/login'; });
                         return Promise.reject('Sesi berakhir');
                     }
-                    if (response.status === 204) { return null; }
+                    if (response.status === 204) { return null; } // Handle DELETE success
 
-                    const data = await response.json().catch(() => null);
+                    const data = await response.json().catch(() => null); // Baca data
                     if (!response.ok) {
                         console.error('Fetch error:', data);
                         throw new Error(data?.message || `Gagal mengambil data. Status: ${response.status}`);
                     }
-                    return data;
+                    return data; // Kembalikan data (bukan response)
                 },
 
                 loadMahasiswa() {
                     this.loading = true;
-                    const listUrl = "{{ url('api/admin/mahasiswa') }}";
+                    const listUrl = @json(route('admin.mahasiswa.index'));
                     this.fetchData(listUrl)
                         .then(data => {
-                            this.allMahasiswa = data.data || [];
+                            this.allMahasiswa = Array.isArray(data.data) ? data.data : [];
                             this.filteredMahasiswa = this.allMahasiswa;
                             const angkatanSet = new Set();
                             const programStudiSet = new Set();
                             this.allMahasiswa.forEach(mhs => {
-                                if (mhs.npm && mhs.npm.length >= 2) {
-                                    const angkatan = mhs.npm.substring(0, 2);
-                                    if (!isNaN(angkatan)) { angkatanSet.add(angkatan); }
+                                const y = this.cohortYear(mhs);
+                                if (y) {
+                                    angkatanSet.add(y);
                                 }
                                 if (mhs.program_studi) {
                                     programStudiSet.add(mhs.program_studi);
                                 }
                             });
-                            this.angkatanList = Array.from(angkatanSet).sort().reverse();
+                            this.angkatanList = Array.from(angkatanSet).sort((a, b) => Number(b) - Number(a));
                             this.programStudiList = Array.from(programStudiSet).sort();
                         })
                         .catch(error => {
@@ -138,7 +153,7 @@
                         const nama = mhs.user?.nama_lengkap?.toLowerCase() || '';
                         const npm = mhs.npm?.toLowerCase() || '';
                         const searchMatch = nama.includes(query) || npm.includes(query);
-                        const angkatanMatch = (angkatan === '') || (mhs.npm && mhs.npm.startsWith(angkatan));
+                        const angkatanMatch = (angkatan === '') || (this.cohortYear(mhs) === angkatan);
                         const programStudiMatch = (programStudi === '') || (mhs.program_studi === programStudi);
                         return searchMatch && angkatanMatch && programStudiMatch;
                     });
@@ -148,10 +163,10 @@
                     this.detailModalOpen = true;
                     this.modalLoading = true;
                     this.selectedMhs = {};
-                    const detailUrl = `{{ url('api/admin/mahasiswa') }}/${mahasiswaId}`;
+                    const detailUrl = @json(rtrim(route('admin.mahasiswa.index'), '/')) + '/' + mahasiswaId;
                     this.fetchData(detailUrl)
                         .then(response => {
-                            this.selectedMhs = response.data;
+                            this.selectedMhs = response.data || {};
                         })
                         .catch(error => {
                             console.error('Error fetching detail:', error);
@@ -177,7 +192,7 @@
                         cancelButtonText: 'Batal'
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            const deleteUrl = `{{ url('api/admin/mahasiswa') }}/${mahasiswaId}`;
+                            const deleteUrl = @json(rtrim(route('admin.mahasiswa.index'), '/')) + '/' + mahasiswaId;
                             this.fetchData(deleteUrl, { method: 'DELETE' })
                                 .then(() => {
                                     Swal.fire({
@@ -229,28 +244,33 @@
                         return false;
                     }
 
+                    // Set loading state
                     this.modalLoading = true;
+
+                    // Biarkan form submit secara normal (tidak prevent default)
+                    // Form akan redirect setelah submit, dan session message akan ditampilkan
                     return true;
                 }
             };
         }
     </script>
 
+    {{-- Filter --}}
         <x-card title="Filter">
-            <div class="flex flex-col sm:flex-row items-center gap-4">
+            <div class="flex flex-col lg:flex-row lg:items-end gap-3 sm:gap-4">
                 <div class="relative w-full sm:w-auto flex-grow">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                         </svg>
                     </div>
-                    <input type="text" x-model="searchQuery" @input.debounce.300ms="filterMahasiswa" class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Cari nama atau NPM...">
+                    <input type="text" x-model="searchQuery" @input.debounce.300ms="filterMahasiswa" class="block w-full min-h-touch pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-base sm:text-sm" placeholder="Cari nama atau NPM...">
                 </div>
                 <div class="relative w-full sm:w-auto">
-                    <select x-model="selectedAngkatan" @change="filterMahasiswa" class="block w-full sm:w-48 appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:text-sm">
+                    <select x-model="selectedAngkatan" @change="filterMahasiswa" class="block w-full sm:w-48 min-h-touch appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 text-base sm:text-sm">
                         <option value="">Semua Angkatan</option>
                         <template x-for="angkatan in angkatanList" :key="angkatan">
-                            <option :value="angkatan" x-text="'20' + angkatan"></option>
+                            <option :value="angkatan" x-text="angkatan"></option>
                         </template>
                     </select>
                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
@@ -258,7 +278,7 @@
                     </div>
                 </div>
                 <div class="relative w-full sm:w-auto">
-                    <select x-model="selectedProgramStudi" @change="filterMahasiswa" class="block w-full sm:w-56 appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:text-sm">
+                    <select x-model="selectedProgramStudi" @change="filterMahasiswa" class="block w-full sm:w-56 min-h-touch appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 text-base sm:text-sm">
                         <option value="">Semua Program Studi</option>
                         <template x-for="prodi in programStudiList" :key="prodi">
                             <option :value="prodi" x-text="prodi"></option>
@@ -271,12 +291,13 @@
             </div>
         </x-card>
 
+        {{-- Tabel --}}
         <x-data-table
             :headers="['Mahasiswa', 'Program Studi', 'Semester', 'Status', 'Aksi']"
             aria-label="Tabel manajemen mahasiswa">
             <template x-if="loading">
                 <tr>
-                    <td colspan="5" class="px-6 py-4">
+                    <td colspan="5" class="px-3 sm:px-6 py-4">
                         <div class="space-y-3">
                             <div class="h-4 bg-gray-200 rounded w-full animate-pulse"></div>
                             <div class="h-4 bg-gray-200 rounded w-5/6 animate-pulse"></div>
@@ -286,7 +307,7 @@
             </template>
             <template x-if="!loading && filteredMahasiswa.length === 0">
                 <tr>
-                    <td colspan="5" class="px-6 py-12">
+                    <td colspan="5" class="px-3 sm:px-6 py-8 sm:py-12">
                         <div class="text-center">
                             <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
@@ -299,25 +320,25 @@
             </template>
             <template x-for="mhs in filteredMahasiswa" :key="mhs.mahasiswa_id">
                 <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="font-medium text-gray-900" x-text="mhs.user?.nama_lengkap || 'N/A'"></div>
-                        <div class="text-gray-500" x-text="mhs.npm || 'N/A'"></div>
+                    <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                        <div class="font-medium text-gray-900 text-fluid-sm sm:text-base" x-text="mhs.user?.nama_lengkap || 'N/A'"></div>
+                        <div class="text-gray-500 text-fluid-xs sm:text-sm" x-text="mhs.npm || 'N/A'"></div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-gray-700" x-text="mhs.program_studi || 'N/A'"></td>
-                    <td class="px-6 py-4 whitespace-nowrap text-gray-700 text-center" x-text="mhs.semester_aktif || 'N/A'"></td>
-                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                    <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-gray-700 text-fluid-sm" x-text="mhs.program_studi || 'N/A'"></td>
+                    <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-gray-700 text-center text-fluid-sm" x-text="mhs.semester_aktif != null && mhs.semester_aktif !== '' ? mhs.semester_aktif : 'N/A'"></td>
+                    <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-center">
                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" :class="mhs.status === 'Aktif' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'" x-text="mhs.status || 'N/A'"></span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right font-medium">
-                        <div class="flex justify-end items-center gap-2">
-                            <button @click="showDetailModal(mhs.mahasiswa_id)" class="text-gray-500 hover:text-primary-600" data-tooltip="Lihat detail mahasiswa" title="Detail">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                    <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-right font-medium">
+                        <div class="flex justify-end items-center gap-1 sm:gap-2">
+                            <button type="button" @click="showDetailModal(mhs.mahasiswa_id)" class="inline-flex items-center justify-center min-w-touch min-h-touch rounded-lg text-gray-500 hover:text-primary-600 hover:bg-gray-50" data-tooltip="Lihat detail mahasiswa" title="Detail" aria-label="Detail">
+                                <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                             </button>
-                            <a :href="`{{ url('admin/mahasiswa') }}/${mhs.mahasiswa_id}/edit`" class="text-gray-500 hover:text-yellow-600" data-tooltip="Edit data mahasiswa" title="Edit">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536l12.232-12.232z"></path></svg>
+                            <a :href="`{{ url('admin/mahasiswa') }}/${mhs.mahasiswa_id}/edit`" class="inline-flex items-center justify-center min-w-touch min-h-touch rounded-lg text-gray-500 hover:text-yellow-600 hover:bg-gray-50" data-tooltip="Edit data mahasiswa" title="Edit" aria-label="Edit">
+                                <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536l12.232-12.232z"></path></svg>
                             </a>
-                            <button @click="deleteMahasiswa(mhs.mahasiswa_id, mhs.user?.nama_lengkap)" class="text-gray-500 hover:text-danger-600" data-tooltip="Hapus mahasiswa" title="Hapus">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            <button type="button" @click="deleteMahasiswa(mhs.mahasiswa_id, mhs.user?.nama_lengkap)" class="inline-flex items-center justify-center min-w-touch min-h-touch rounded-lg text-gray-500 hover:text-danger-600 hover:bg-gray-50" data-tooltip="Hapus mahasiswa" title="Hapus" aria-label="Hapus">
+                                <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                             </button>
                         </div>
                     </td>
@@ -325,35 +346,41 @@
             </template>
         </x-data-table>
 
-        <div x-show="detailModalOpen" @keydown.escape.window="detailModalOpen = false" x-cloak class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        {{-- Modal detail mahasiswa --}}
+        <div x-show="detailModalOpen" @keydown.escape.window="detailModalOpen = false" x-cloak class="fixed inset-0 z-50 overflow-y-auto pt-safe pb-safe" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div class="flex items-end justify-center min-h-[100dvh] pt-4 px-3 pb-6 sm:pb-20 text-center sm:block sm:p-0 sm:px-4">
                 <div x-show="detailModalOpen" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="detailModalOpen = false" aria-hidden="true"></div>
                 <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                <div x-show="detailModalOpen" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div x-show="detailModalOpen" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block align-bottom bg-white rounded-xl sm:rounded-lg text-left overflow-hidden shadow-xl transform transition-all w-full max-w-[calc(100vw-1.5rem)] sm:max-w-lg sm:my-8 sm:align-middle sm:w-full">
                     <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                         <div class="sm:flex sm:items-start">
                             <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
                                 <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">Detail Mahasiswa</h3>
                                 <div class="mt-4 text-base text-gray-700">
                                     <div x-show="modalLoading" class="text-center p-8">Memuat detail...</div>
-                                    <div x-show="!modalLoading" class="grid grid-cols-[max-content,max-content,1fr] gap-y-2 gap-x-3">
+                                    <div x-show="!modalLoading" class="overflow-x-auto -mx-1 px-1">
+                                    <div class="grid grid-cols-[max-content,max-content,1fr] gap-y-2 gap-x-3 text-fluid-sm min-w-0">
                                         <span class="font-medium text-gray-900">Nama</span><span>:</span><span class="text-left" x-text="selectedMhs.user?.nama_lengkap || 'N/A'"></span>
                                         <span class="font-medium text-gray-900">Email</span><span>:</span><span class="text-left" x-text="selectedMhs.user?.email || 'N/A'"></span>
                                         <span class="font-medium text-gray-900">NPM</span><span>:</span><span class="text-left" x-text="selectedMhs.npm || 'N/A'"></span>
                                         <span class="font-medium text-gray-900">Program Studi</span><span>:</span><span class="text-left" x-text="selectedMhs.program_studi || 'N/A'"></span>
                                         <span class="font-medium text-gray-900">Angkatan</span><span>:</span><span class="text-left" x-text="selectedMhs.angkatan || 'N/A'"></span>
+                                        <span class="font-medium text-gray-900">Semester</span><span>:</span><span class="text-left" x-text="selectedMhs.semester_aktif != null && selectedMhs.semester_aktif !== '' ? selectedMhs.semester_aktif : 'N/A'"></span>
+                                        <span class="font-medium text-gray-900">Status</span><span>:</span><span class="text-left" x-text="selectedMhs.status || 'N/A'"></span>
+                                    </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                        <button @click="detailModalOpen = false" type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">Tutup</button>
+                        <button @click="detailModalOpen = false" type="button" class="mt-3 w-full min-h-touch inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2.5 bg-white text-fluid-base sm:text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto">Tutup</button>
                     </div>
                 </div>
             </div>
         </div>
 
+        {{-- MODAL IMPORT CSV --}}
         <div x-show="importModalOpen" @keydown.escape.window="importModalOpen = false" x-cloak
              x-transition:enter="ease-out duration-300"
              x-transition:enter-start="opacity-0"
@@ -362,7 +389,7 @@
              x-transition:leave-start="opacity-100"
              x-transition:leave-end="opacity-0"
              class="fixed inset-0 z-50 overflow-y-auto">
-            <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="flex items-center justify-center min-h-[100dvh] p-3 sm:p-4 pt-safe pb-safe">
                 <div @click="importModalOpen = false"
                      x-transition:enter="ease-out duration-300"
                      x-transition:enter-start="opacity-0"
@@ -378,15 +405,15 @@
                      x-transition:leave="ease-in duration-200"
                      x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                      x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                     class="relative bg-white rounded-lg shadow-xl transform transition-all sm:max-w-lg w-full">
+                     class="relative bg-white rounded-xl sm:rounded-lg shadow-xl transform transition-all w-full max-w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[90dvh] overflow-y-auto">
                     <form action="{{ route('admin.mahasiswa.import') }}" method="POST" enctype="multipart/form-data" @submit="submitImportForm($event)">
                         @csrf
                         <div class="bg-white px-6 pt-5 pb-4">
                             <h3 class="text-lg leading-6 font-medium text-gray-900">Import Mahasiswa dari CSV</h3>
                             <div class="mt-4">
-                                <p class="text-sm text-gray-600 mb-2">Pastikan file CSV Anda memiliki urutan kolom sebagai berikut:</p>
-                                <code class="text-xs bg-gray-100 p-2 rounded-md block">nama_lengkap, email, npm</code>
-                                <p class="text-sm text-gray-600 mt-2">Program Studi, Angkatan, dan Semester akan diisi otomatis berdasarkan NPM.</p>
+                                <p class="text-sm text-gray-600 mb-2">Baris pertama boleh berisi header. Format kolom:</p>
+                                <code class="text-xs bg-gray-100 p-2 rounded-md block">nama_lengkap, npm</code>
+                                <p class="text-sm text-gray-600 mt-2">File lama dengan kolom <code class="text-xs bg-gray-100 px-1 rounded">nama_lengkap, email, npm</code> tetap bisa diunggah — kolom email diabaikan. Program Studi, Angkatan, dan Semester diisi otomatis dari NPM.</p>
                                 <div class="mt-4">
                                     <label for="file_csv" class="block text-sm font-medium text-gray-700">Pilih File CSV</label>
                                     <input type="file" name="file_csv" id="file_csv" accept=".csv" required
@@ -394,12 +421,12 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="bg-gray-50 px-6 py-3 flex justify-end gap-3">
+                        <div class="bg-gray-50 px-4 sm:px-6 py-3 flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
                             <button @click="importModalOpen = false" type="button"
-                                    class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">Batal</button>
+                                    class="min-h-touch px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-fluid-sm sm:text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto">Batal</button>
                             <button type="submit"
                                     :disabled="modalLoading"
-                                    class="px-4 py-2 bg-green-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    class="min-h-touch px-4 py-2.5 bg-green-600 border border-transparent rounded-lg text-fluid-sm sm:text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto">
                                 <span x-show="!modalLoading">Upload & Import</span>
                                 <span x-show="modalLoading" class="flex items-center">
                                     <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -420,62 +447,43 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Fungsi helper untuk menampilkan notifikasi dengan fallback
         function showNotification(type, title, message, errors = null) {
-            // Tunggu sampai SweetAlert2 dimuat, atau gunakan fallback
-            function tryShowSwal() {
-                if (typeof Swal !== 'undefined' && Swal.fire) {
-                    if (errors && errors.length > 0) {
-                        // Buat elemen untuk error detail
-                        const mainMessageEl = document.createElement('p');
-                        mainMessageEl.textContent = message;
-
-                        const finalHtmlContent = document.createElement('div');
-                        finalHtmlContent.appendChild(mainMessageEl);
-
-                        const errorList = document.createElement('ul');
-                        errorList.className = 'list-disc list-inside text-left text-sm mt-2 max-h-40 overflow-y-auto';
-
-                        errors.forEach(errText => {
-                            const li = document.createElement('li');
-                            li.textContent = errText;
-                            errorList.appendChild(li);
-                        });
-
-                        finalHtmlContent.appendChild(errorList);
-
-                        Swal.fire({
-                            icon: type,
-                            title: title,
-                            html: finalHtmlContent
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: type,
-                            title: title,
-                            text: message,
-                            timer: type === 'success' ? 2000 : undefined,
-                            showConfirmButton: type !== 'success'
-                        });
-                    }
+            function renderWithSwal() {
+                if (errors && errors.length > 0) {
+                    const mainMessageEl = document.createElement('p');
+                    mainMessageEl.textContent = message;
+                    const finalHtmlContent = document.createElement('div');
+                    finalHtmlContent.appendChild(mainMessageEl);
+                    const errorList = document.createElement('ul');
+                    errorList.className = 'list-disc list-inside text-left text-sm mt-2 max-h-40 overflow-y-auto';
+                    errors.forEach(errText => {
+                        const li = document.createElement('li');
+                        li.textContent = errText;
+                        errorList.appendChild(li);
+                    });
+                    finalHtmlContent.appendChild(errorList);
+                    Swal.fire({ icon: type, title: title, html: finalHtmlContent });
                 } else {
-                    // Fallback ke alert jika SweetAlert2 belum dimuat
-                    setTimeout(tryShowSwal, 100);
+                    Swal.fire({
+                        icon: type,
+                        title: title,
+                        text: message,
+                        timer: type === 'success' ? 2000 : undefined,
+                        showConfirmButton: type !== 'success'
+                    });
                 }
             }
 
-            // Coba langsung, jika gagal tunggu 100ms dan coba lagi (maksimal 10 kali = 1 detik)
             let attempts = 0;
             const maxAttempts = 10;
 
             function attemptShow() {
                 if (typeof Swal !== 'undefined' && Swal.fire) {
-                    tryShowSwal();
+                    renderWithSwal();
                 } else if (attempts < maxAttempts) {
                     attempts++;
                     setTimeout(attemptShow, 100);
                 } else {
-                    // Fallback ke alert native jika SweetAlert2 tidak bisa dimuat
                     let alertMessage = title + '\n\n' + message;
                     if (errors && errors.length > 0) {
                         alertMessage += '\n\nDetail Kesalahan:\n' + errors.join('\n');
@@ -500,10 +508,8 @@
             @endphp
 
             @if (!empty($importErrors) && is_array($importErrors) && count($importErrors) > 0)
-                console.log('Import errors found:', @json($importErrors));
                 showNotification('error', 'Gagal!', @json($mainErrorMessage), @json($importErrors));
             @else
-                console.log('No import errors detail found');
                 showNotification('error', 'Gagal!', @json($mainErrorMessage));
             @endif
         @endif

@@ -10,7 +10,7 @@
 
 <div>
     @if($label)
-        <label for="{{ $name }}" class="block text-sm font-medium text-gray-700 mb-1">
+        <label for="{{ $name }}" class="block text-fluid-sm font-medium text-gray-700 mb-1.5">
             {{ $label }}
             @if($required)
                 <span class="text-danger-500">*</span>
@@ -29,7 +29,7 @@
                 type="{{ $type }}"
                 name="{{ $name }}"
                 id="{{ $name }}"
-                {{ $attributes->merge(['class' => 'block w-full border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500' . ($icon ? ' pl-10' : '')]) }}
+                {{ $attributes->merge(['class' => 'block w-full min-h-touch border-gray-300 rounded-lg shadow-sm text-base sm:text-sm focus:border-primary-500 focus:ring-primary-500 px-3 py-2.5' . ($icon ? ' pl-10' : '')]) }}
                 @if($required) required @endif
             />
         @else
@@ -37,7 +37,7 @@
                 type="{{ $type }}"
                 name="{{ $name }}"
                 id="{{ $name }}"
-                {{ $attributes->merge(['class' => 'block w-full border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500']) }}
+                {{ $attributes->merge(['class' => 'block w-full min-h-touch border-gray-300 rounded-lg shadow-sm text-base sm:text-sm focus:border-primary-500 focus:ring-primary-500 px-3 py-2.5']) }}
                 @if($required) required @endif
             />
         @endif

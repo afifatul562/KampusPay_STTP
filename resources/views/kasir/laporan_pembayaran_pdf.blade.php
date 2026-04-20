@@ -95,7 +95,7 @@
                             {{ $tagihan->mahasiswa->user->nama_lengkap ?? 'N/A' }}<br>
                             <small>{{ $tagihan->mahasiswa->npm ?? 'N/A' }}</small>
                         </td>
-                        <td>{{ $tagihan->tarif->nama_pembayaran ?? 'N/A' }}</td>
+                        <td>{{ $tagihan->jenis_tampilan ?? 'N/A' }}</td>
                         <td class="text-right">Rp {{ number_format($totalAngsuran, 0, ',', '.') }}</td>
                         <td class="text-center">
                             <span class="badge badge-belum">Belum Lunas</span>
@@ -124,7 +124,7 @@
                             {{ $tagihan->mahasiswa->user->nama_lengkap ?? 'N/A' }}<br>
                             <small>{{ $tagihan->mahasiswa->npm ?? 'N/A' }}</small>
                         </td>
-                        <td>{{ $tagihan->tarif->nama_pembayaran ?? 'N/A' }}</td>
+                        <td>{{ $tagihan->jenis_tampilan ?? 'N/A' }}</td>
                         <td class="text-right">Rp {{ number_format($totalAngsuran, 0, ',', '.') }}</td>
                         <td class="text-center">
                             <span class="badge badge-lunas">Lunas</span>

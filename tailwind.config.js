@@ -12,7 +12,28 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['Figtree', 'system-ui', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', ...defaultTheme.fontFamily.sans],
+            },
+            fontSize: {
+                /**
+                 * Skala fluid: vw disesuaikan agar tidak “membesar” berdasarkan lebar viewport penuh
+                 * saat konten sebenarnya lebih sempit (tablet, split view). Max tetap nyaman di desktop.
+                 */
+                'fluid-xs': ['clamp(0.6875rem, 0.65rem + 0.2vw, 0.75rem)', { lineHeight: '1.4' }],
+                'fluid-sm': ['clamp(0.8125rem, 0.76rem + 0.25vw, 0.875rem)', { lineHeight: '1.45' }],
+                'fluid-base': ['clamp(0.9375rem, 0.85rem + 0.35vw, 1rem)', { lineHeight: '1.5' }],
+                'fluid-lg': ['clamp(1rem, 0.92rem + 0.45vw, 1.125rem)', { lineHeight: '1.45' }],
+                'fluid-xl': ['clamp(1.125rem, 1rem + 0.55vw, 1.375rem)', { lineHeight: '1.35' }],
+                'fluid-2xl': ['clamp(1.25rem, 1.05rem + 0.75vw, 1.75rem)', { lineHeight: '1.3' }],
+                'fluid-3xl': ['clamp(1.375rem, 1.1rem + 1vw, 2.125rem)', { lineHeight: '1.25' }],
+                /** Judul halaman: lebih konservatif agar tidak memaksa pecah kata di tablet */
+                'fluid-page': ['clamp(1.0625rem, 0.95rem + 0.5vw, 1.625rem)', { lineHeight: '1.25' }],
+            },
+            minHeight: {
+                touch: '2.75rem',
+            },
+            minWidth: {
+                touch: '2.75rem',
             },
             colors: {
                 primary: {

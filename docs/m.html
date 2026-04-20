@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flowchart KampusPay STTP - Format Standar Kampus</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f8f9fa; padding: 24px; }
+        h1 { color: #1a365d; margin-bottom: 8px; font-size: 1.5em; }
+        .subtitle { color: #4a5568; margin-bottom: 24px; font-size: 0.95em; }
+        .diagram { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 32px; overflow-x: auto; border: 1px solid #e2e8f0; }
+        .diagram-title { font-weight: 600; color: #2d3748; margin-bottom: 16px; font-size: 1.05em; }
+        .mermaid { display: flex; justify-content: center; min-height: 200px; }
+        .page-break { page-break-after: always; }
+        @media print { .diagram { box-shadow: none; border: 1px solid #ccc; } }
+    </style>
+</head>
+<body>
+    <h1>Flowchart Aplikasi KampusPay STTP</h1>
+    <p class="subtitle">Flowchart mengikuti format standar (Oval, Jajar Genjang, Belah Ketupat, Silinder) dengan konten sesuai sistem pembayaran kampus</p>
+
+    <!-- FLOWCHART ADMIN - Format sama seperti contoh -->
+    <div class="diagram">
+        <div class="diagram-title">Flowchart Super Admin (Admin) - KampusPay</div>
+        <div class="mermaid">
+flowchart TD
+    Start([Mulai])
+    Start --> A[Halaman Login]
+    A --> B[/Input Username dan Password/]
+    B --> C{Validasi}
+    C -->|Tidak| A
+    C -->|Ya| D[Dashboard Super Admin]
+
+    D --> E1[Data Mahasiswa]
+    D --> E2[Data Tarif]
+    D --> E3[Data Tagihan]
+    D --> E4[Data Pembayaran]
+    D --> E5[Laporan]
+    D --> E6[Pengaturan]
+    D --> E7[Data User]
+    D --> E8[Logout]
+
+    E1 --> F[Proses CRUD]
+    E2 --> F
+    E3 --> F
+    E4 --> F
+    E6 --> F
+    E7 --> F
+
+    E5 --> G[Laporan Pembayaran / Tunggakan / Mahasiswa]
+    G --> H[Cetak Laporan]
+
+    F --> I{Validasi}
+    I -->|Ya| J[(Database)]
+    I -->|Tidak| F
+
+    E8 --> End([Selesai])
+        </div>
+    </div>
+
+    <!-- FLOWCHART KASIR -->
+    <div class="diagram">
+        <div class="diagram-title">Flowchart Kasir - KampusPay</div>
+        <div class="mermaid">
+flowchart TD
+    Start2([Mulai])
+    Start2 --> A2[Halaman Login]
+    A2 --> B2[/Input Username dan Password/]
+    B2 --> C2{Validasi}
+    C2 -->|Tidak| A2
+    C2 -->|Ya| D2[Dashboard Kasir]
+
+    D2 --> F1[Proses Bayar Tunai]
+    D2 --> F2[Tagihan]
+    D2 --> F3[Verifikasi Transfer]
+    D2 --> F4[Aktivasi Mahasiswa]
+    D2 --> F5[Riwayat Pembayaran]
+    D2 --> F6[Laporan]
+    D2 --> F7[Logout]
+
+    F1 --> G2[Proses CRUD]
+    F2 --> G2
+    F3 --> G2
+    F4 --> G2
+
+    F5 --> H2[Riwayat Transaksi]
+    H2 --> I2[Export CSV]
+
+    F6 --> J2[Laporan Pembayaran / Tunggakan]
+    J2 --> K2[Cetak Laporan]
+
+    G2 --> L2{Validasi}
+    L2 -->|Ya| M2[(Database)]
+    L2 -->|Tidak| G2
+
+    F7 --> End2([Selesai])
+        </div>
+    </div>
+
+    <!-- FLOWCHART MAHASISWA -->
+    <div class="diagram">
+        <div class="diagram-title">Flowchart Mahasiswa - KampusPay</div>
+        <div class="mermaid">
+flowchart TD
+    Start3([Mulai])
+    Start3 --> A3[Halaman Login]
+    A3 --> B3[/Input Username dan Password/]
+    B3 --> C3{Validasi}
+    C3 -->|Tidak| A3
+    C3 -->|Ya| D3[Dashboard Mahasiswa]
+
+    D3 --> G1[Pembayaran]
+    D3 --> G2[Riwayat]
+    D3 --> G3[Laporan]
+    D3 --> G4[Logout]
+
+    G1 --> H3[Pilih Metode Pembayaran]
+    H3 --> I3[Tunai / Transfer / Cicilan]
+    I3 --> J3[Proses Pembayaran]
+    J3 --> K3{Validasi}
+    K3 -->|Ya| L3[(Database)]
+    K3 -->|Tidak| J3
+
+    G2 --> M3[Lihat Riwayat Pembayaran]
+
+    G3 --> N3[Laporan Histori / Tunggakan]
+    N3 --> O3[Cetak Laporan]
+
+    G4 --> End3([Selesai])
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'neutral',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            },
+            // Format simbol sesuai standar flowchart
+            nodeSpacing: 50,
+            rankSpacing: 50
+        });
+    </script>
+</body>
+</html>

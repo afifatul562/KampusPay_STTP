@@ -24,9 +24,15 @@ class CheckRole
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Unauthorized: Insufficient role permissions'
+                    'message' => 'Unauthorized: Insufficient role permissions',
                 ], 403);
             }
+
+            if ($user && $user->role !== $role) {
+                $label = $role === 'mahasiswa' ? 'mahasiswa (login dengan NPM)' : $role;
+                abort(403, 'Halaman ini khusus akun '.$label.'. Anda sedang login sebagai '.ucfirst((string) $user->role).'. Logout dulu, lalu login sebagai pemilik tagihan untuk membuka link dari email.');
+            }
+
             abort(403, 'Unauthorized');
         }
 

@@ -4,78 +4,78 @@
 @section('page-title', 'Proses Pembayaran Tunai')
 
 @section('content')
-    <div class="space-y-6">
+    <div class="space-y-4 sm:space-y-6">
         <x-breadcrumbs :items="[
             ['label' => 'Dashboard', 'url' => route('kasir.dashboard')],
             ['label' => 'Proses Pembayaran Tunai']
         ]" />
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
         <a href="{{ route('kasir.transaksi.index', ['filter' => 'hari_ini']) }}" aria-label="Lihat transaksi hari ini"
-           class="group relative bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-md border border-gray-200 flex items-start gap-5 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 overflow-hidden">
+           class="group relative bg-gradient-to-br from-white to-gray-50 p-4 sm:p-5 md:p-6 rounded-xl shadow-md border border-gray-200 flex items-start gap-4 sm:gap-5 hover:shadow-xl active:scale-[0.99] sm:hover:scale-[1.02] transition-all duration-300 overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-br from-primary-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             <div class="flex-1 min-w-0 relative z-10">
-                <div class="text-sm font-medium text-gray-500 mb-1">Transaksi Hari Ini</div>
-                <div id="transaksi-hari-ini" class="text-2xl lg:text-3xl font-bold text-gray-900 mt-1 truncate">...</div>
+                <div class="text-fluid-sm font-medium text-gray-500 mb-1">Transaksi Hari Ini</div>
+                <div id="transaksi-hari-ini" class="text-fluid-2xl lg:text-fluid-3xl font-bold text-gray-900 mt-1 truncate">...</div>
             </div>
-            <div class="relative z-10 bg-gradient-to-br from-primary-400 to-primary-600 p-4 rounded-xl shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
-                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M12 7h.01M15 7h.01"></path></svg>
+            <div class="relative z-10 bg-gradient-to-br from-primary-400 to-primary-600 p-3 sm:p-4 rounded-xl shadow-lg group-hover:shadow-xl sm:group-hover:scale-110 transition-all duration-300 shrink-0">
+                <svg class="w-7 h-7 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M12 7h.01M15 7h.01"></path></svg>
             </div>
         </a>
-        <div class="group relative bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-md border border-gray-200 flex items-start gap-5 hover:shadow-xl transition-all duration-300 overflow-hidden">
+        <div class="group relative bg-gradient-to-br from-white to-gray-50 p-4 sm:p-5 md:p-6 rounded-xl shadow-md border border-gray-200 flex items-start gap-4 sm:gap-5 hover:shadow-xl transition-all duration-300 overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-br from-success-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             <div class="flex-1 min-w-0 relative z-10">
-                <div class="text-sm font-medium text-gray-500 mb-1">Penerimaan Hari Ini</div>
-                <div id="total-penerimaan" class="text-2xl lg:text-3xl font-bold text-gray-900 mt-1 truncate">...</div>
+                <div class="text-fluid-sm font-medium text-gray-500 mb-1">Penerimaan Hari Ini</div>
+                <div id="total-penerimaan" class="text-fluid-2xl lg:text-fluid-3xl font-bold text-gray-900 mt-1 truncate">...</div>
             </div>
-            <div class="relative z-10 bg-gradient-to-br from-success-400 to-success-600 p-4 rounded-xl shadow-lg group-hover:scale-110 transition-all duration-300">
-                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+            <div class="relative z-10 bg-gradient-to-br from-success-400 to-success-600 p-3 sm:p-4 rounded-xl shadow-lg sm:group-hover:scale-110 transition-all duration-300 shrink-0">
+                <svg class="w-7 h-7 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
             </div>
         </div>
         <a href="{{ route('kasir.verifikasi.index') }}" aria-label="Buka halaman pending verifikasi"
-           class="group relative bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-md border border-gray-200 flex items-start gap-5 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 overflow-hidden">
+           class="group relative bg-gradient-to-br from-white to-gray-50 p-4 sm:p-5 md:p-6 rounded-xl shadow-md border border-gray-200 flex items-start gap-4 sm:gap-5 hover:shadow-xl active:scale-[0.99] sm:hover:scale-[1.02] transition-all duration-300 overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-br from-warning-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             <div class="flex-1 min-w-0 relative z-10">
-                <div class="text-sm font-medium text-gray-500 mb-1">Pending Verifikasi</div>
-                <div id="pending-verifikasi-count" class="text-2xl lg:text-3xl font-bold text-gray-900 mt-1 truncate">...</div>
+                <div class="text-fluid-sm font-medium text-gray-500 mb-1">Pending Verifikasi</div>
+                <div id="pending-verifikasi-count" class="text-fluid-2xl lg:text-fluid-3xl font-bold text-gray-900 mt-1 truncate">...</div>
             </div>
-            <div class="relative z-10 bg-gradient-to-br from-warning-400 to-warning-600 p-4 rounded-xl shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
-                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div class="relative z-10 bg-gradient-to-br from-warning-400 to-warning-600 p-3 sm:p-4 rounded-xl shadow-lg group-hover:shadow-xl sm:group-hover:scale-110 transition-all duration-300 shrink-0">
+                <svg class="w-7 h-7 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             </div>
         </a>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 lg:col-span-1">
-            <h3 class="text-lg font-semibold mb-1 text-gray-800">1. Cari Mahasiswa</h3>
-            <p class="text-sm text-gray-500 mb-4">Masukkan NPM untuk memulai transaksi.</p>
-            <div class="flex gap-2">
-                <input type="text" id="npm-search-input" placeholder="Masukkan NPM..." aria-label="Input NPM mahasiswa" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500">
-                <button id="search-btn" aria-label="Cari mahasiswa" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 shadow-md hover:shadow-lg transition-all duration-200">Cari</button>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div class="bg-white p-4 sm:p-5 md:p-6 rounded-xl shadow-md border border-gray-200 lg:col-span-1">
+            <h3 class="text-fluid-lg font-semibold mb-1 text-gray-800">1. Cari Mahasiswa</h3>
+            <p class="text-fluid-sm text-gray-500 mb-4">Masukkan NPM untuk memulai transaksi.</p>
+            <div class="flex flex-col sm:flex-row gap-2">
+                <input type="text" id="npm-search-input" placeholder="Masukkan NPM..." aria-label="Input NPM mahasiswa" class="w-full min-h-touch border-gray-300 rounded-lg shadow-sm text-base sm:text-sm px-3 py-2.5 focus:border-primary-500 focus:ring-primary-500">
+                <button id="search-btn" aria-label="Cari mahasiswa" class="inline-flex items-center justify-center shrink-0 min-h-touch px-4 sm:px-5 py-2.5 border border-transparent text-fluid-sm sm:text-sm font-medium rounded-lg text-white bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 shadow-md hover:shadow-lg transition-all duration-200">Cari</button>
             </div>
             <div id="mahasiswa-info" class="mt-4 text-sm"></div>
         </div>
 
-        <div class="lg:col-span-2 space-y-6">
-            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-                <h3 class="text-lg font-semibold mb-1 text-gray-800">2. Pilih Tagihan</h3>
-                <p class="text-sm text-gray-500 mb-4">Centang tagihan yang akan dibayar.</p>
+        <div class="lg:col-span-2 space-y-4 sm:space-y-6">
+            <div class="bg-white p-4 sm:p-5 md:p-6 rounded-xl shadow-md border border-gray-200">
+                <h3 class="text-fluid-lg font-semibold mb-1 text-gray-800">2. Pilih Tagihan</h3>
+                <p class="text-fluid-sm text-gray-500 mb-4">Centang tagihan yang akan dibayar.</p>
                 <div id="tagihan-list" class="text-gray-400 text-center py-5 border-2 border-dashed rounded-lg">
                     Cari mahasiswa terlebih dahulu
                 </div>
             </div>
 
-            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-                <h3 class="text-lg font-semibold mb-1 text-gray-800">3. Proses Pembayaran</h3>
-                <p class="text-sm text-gray-500 mb-4">Pilih metode dan konfirmasi pembayaran.</p>
+            <div class="bg-white p-4 sm:p-5 md:p-6 rounded-xl shadow-md border border-gray-200">
+                <h3 class="text-fluid-lg font-semibold mb-1 text-gray-800">3. Proses Pembayaran</h3>
+                <p class="text-fluid-sm text-gray-500 mb-4">Pilih metode dan konfirmasi pembayaran.</p>
                 <div id="payment-form-container" class="text-gray-400 text-center py-5 border-2 border-dashed rounded-lg">
                     Pilih tagihan terlebih dahulu
                 </div>
             </div>
 
-            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-                <h3 class="text-lg font-semibold mb-1 text-gray-800">4. Kwitansi Pembayaran</h3>
-                <p class="text-sm text-gray-500 mb-4">Cetak kwitansi setelah pembayaran tunai berhasil diproses.</p>
+            <div class="bg-white p-4 sm:p-5 md:p-6 rounded-xl shadow-md border border-gray-200">
+                <h3 class="text-fluid-lg font-semibold mb-1 text-gray-800">4. Kwitansi Pembayaran</h3>
+                <p class="text-fluid-sm text-gray-500 mb-4">Cetak kwitansi setelah pembayaran tunai berhasil diproses.</p>
                 <div id="receipt-container" class="text-gray-400 text-center py-5 border-2 border-dashed rounded-lg">
                     Belum ada pembayaran tunai yang diproses.
                 </div>
@@ -124,8 +124,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error('Unauthorized');
             }
             if (response.status === 204) {
-                return { success: true, message: 'Operasi berhasil.' };
-            }
+                 return { success: true, message: 'Operasi berhasil.' };
+             }
             const contentType = response.headers.get("content-type");
             if (!contentType || !contentType.includes("application/json")) {
                  const responseBody = await response.text();
@@ -133,36 +133,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(`Server (${response.status}): Respon tidak valid.`);
             }
 
-            const data = await response.json();
+            const data = await response.json(); // Sekarang aman parse JSON
 
             if (!response.ok) {
-                if (response.status === 422 && data.errors) {
-                    throw { status: 422, errors: data.errors, message: data.message || 'Validation failed' };
+                if (response.status === 422 && data.errors) { // Handle Validation Errors
+                     throw { status: 422, errors: data.errors, message: data.message || 'Validation failed' };
                 }
                 throw new Error(data.message || `HTTP error! status: ${response.status}`);
             }
             return data;
         } catch (error) {
-            console.error("Error in apiRequest:", error);
-            if (error.status === 422) throw error;
-            throw new Error(error.message || 'Gagal terhubung ke server.');
+             console.error("Error in apiRequest:", error);
+             if (error.status === 422) throw error; // Re-throw validation errors
+             throw new Error(error.message || 'Gagal terhubung ke server.'); // Throw general error
         }
     }
 
+    // Helper untuk menampilkan error 422 di SweetAlert
     function displayValidationErrors(errors) {
         let errorContent = document.createElement('div');
         const p = document.createElement('p'); p.textContent = "Input tidak valid:"; errorContent.appendChild(p);
         const ul = document.createElement('ul'); ul.className = 'list-disc list-inside text-left mt-2';
         Object.values(errors).forEach(e => { const li = document.createElement('li'); li.textContent = e.join(', '); ul.appendChild(li); });
         errorContent.appendChild(ul);
-        Swal.fire({ icon: 'error', title: 'Gagal', html: errorContent });
+        Swal.fire({ icon: 'error', title: 'Gagal', html: errorContent }); // Pakai html
     }
 
     async function updateDashboardStats() {
         try {
             const url = "{{ route('kasir.dashboard-stats') }}";
-            const response = await apiRequest(url, 'GET');
-            const data = response.data || response;
+            const response = await apiRequest(url, 'GET'); // Method GET
+            const data = response.data || response; // Sesuaikan jika API belum konsisten
             if (response.success && data) {
                 document.getElementById('transaksi-hari-ini').textContent = data.transaksi_count;
                 document.getElementById('total-penerimaan').textContent = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(data.total_penerimaan);
@@ -170,7 +171,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } catch (error) {
             console.error("Gagal memuat statistik dashboard:", error);
-        }
+             // Opsional: Tampilkan error ke user
+            // Swal.fire({ icon: 'warning', title: 'Info', text: 'Gagal memuat statistik dashboard.' });
+         }
     }
 
     async function searchMahasiswa(options = {}) {
@@ -185,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function() {
             resetReceiptContainer();
         }
 
-        const originalButtonHTML = searchBtn.innerHTML;
+        const originalButtonHTML = searchBtn.innerHTML; // Simpan HTML asli (termasuk SVG)
         searchBtn.innerHTML = `<svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
         searchBtn.disabled = true;
 
@@ -196,39 +199,42 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const url = "{{ route('kasir.search-mahasiswa') }}";
             const response = await apiRequest(url, 'POST', { npm: npm });
-            const data = response.data;
+            const data = response.data; // Asumsi controller selalu return { success: true, data: ... }
             if (response.success && data) {
-                displayMahasiswaInfo(data);
-                displayTagihan(data.tagihan);
+                displayMahasiswaInfo(data); // Aman
+                displayTagihan(data.tagihan); // Aman
             } else {
-                const errorP = document.createElement('p');
-                errorP.className = 'text-red-500 font-semibold';
-                errorP.textContent = response.message || 'Mahasiswa tidak ditemukan.';
-                mahasiswaInfoDiv.innerHTML = '';
-                mahasiswaInfoDiv.appendChild(errorP);
-                tagihanListDiv.innerHTML = '<div class="text-gray-400 text-center py-5 border-2 border-dashed rounded-lg">Data tagihan tidak ditemukan</div>';
+                // Should not happen if controller always returns success true on find
+                 const errorP = document.createElement('p');
+                 errorP.className = 'text-red-500 font-semibold';
+                 errorP.textContent = response.message || 'Mahasiswa tidak ditemukan.'; // Aman
+                 mahasiswaInfoDiv.innerHTML = '';
+                 mahasiswaInfoDiv.appendChild(errorP);
+                 tagihanListDiv.innerHTML = '<div class="text-gray-400 text-center py-5 border-2 border-dashed rounded-lg">Data tagihan tidak ditemukan</div>';
             }
+        // Handle Not Found (404) specifically if needed
         } catch (error) {
-            console.error('Error saat mencari mahasiswa:', error);
-            const errorP = document.createElement('p');
-            errorP.className = 'text-red-500 font-semibold';
-            if (error.message && error.message.includes('404')) {
-                errorP.textContent = 'Mahasiswa dengan NPM tersebut tidak ditemukan.';
-            } else if (error.status === 422) {
-                errorP.textContent = 'NPM tidak valid.';
-            } else {
-                errorP.textContent = 'Gagal terhubung ke server: ' + error.message;
-            }
-            mahasiswaInfoDiv.innerHTML = '';
-            mahasiswaInfoDiv.appendChild(errorP);
+             console.error('Error saat mencari mahasiswa:', error);
+             const errorP = document.createElement('p');
+             errorP.className = 'text-red-500 font-semibold';
+             if (error.status === 422 && error.errors) {
+                 displayValidationErrors(error.errors);
+                 errorP.textContent = 'Periksa kembali NPM yang dimasukkan.';
+             } else if (error.message && error.message.includes('404')) {
+                 errorP.textContent = 'Mahasiswa dengan NPM tersebut tidak ditemukan.';
+             } else {
+                 errorP.textContent = 'Gagal terhubung ke server: ' + error.message;
+             }
+             mahasiswaInfoDiv.innerHTML = '';
+             mahasiswaInfoDiv.appendChild(errorP);
         } finally {
-            searchBtn.innerHTML = originalButtonHTML;
+            searchBtn.innerHTML = originalButtonHTML; // Kembalikan HTML asli
             searchBtn.disabled = false;
         }
     }
 
     function displayMahasiswaInfo(mahasiswa) {
-        mahasiswaInfoDiv.innerHTML = '';
+        mahasiswaInfoDiv.innerHTML = ''; // Kosongkan dulu
 
         const container = document.createElement('div');
         container.className = 'mt-4 border-t pt-4 space-y-3';
@@ -241,7 +247,7 @@ document.addEventListener('DOMContentLoaded', function() {
             labelSpan.textContent = label;
             const valueSpan = document.createElement('span');
             valueSpan.className = 'font-semibold text-right text-gray-800';
-            valueSpan.textContent = value ?? '-';
+            valueSpan.textContent = value ?? '-'; // Default ke '-' jika null
             rowDiv.appendChild(labelSpan);
             rowDiv.appendChild(valueSpan);
             return rowDiv;
@@ -265,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!tagihan || tagihan.length === 0) {
             renderEmptyState(tagihanListDiv, {
                 title: 'Tidak ada tagihan',
-                message: '✅ Tidak ada tagihan yang belum lunas.',
+                message: 'Tidak ada tagihan yang belum lunas.',
                 icon: `
                     <svg class="mx-auto h-12 w-12 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -280,9 +286,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         tagihan.forEach(item => {
             const label = document.createElement('label');
+            // Tambahkan border biru jika status "Menunggu Pembayaran Tunai"
             const isWaitingCash = item.status === 'Menunggu Pembayaran Tunai';
             const isPendingTransfer = item.status === 'Menunggu Verifikasi Transfer';
-            label.className = `flex items-center p-3 border rounded-lg ${isPendingTransfer ? 'bg-gray-50 border-gray-300 cursor-not-allowed opacity-70' : 'hover:bg-gray-50 cursor-pointer transition-colors'} ${isWaitingCash ? 'border-blue-300 bg-blue-50' : ''}`;
+            label.className = `flex items-start sm:items-center gap-2 p-3 sm:p-4 border rounded-lg min-h-touch ${isPendingTransfer ? 'bg-gray-50 border-gray-300 cursor-not-allowed opacity-70' : 'hover:bg-gray-50 cursor-pointer transition-colors'} ${isWaitingCash ? 'border-blue-300 bg-blue-50' : ''}`;
 
             const sisaPokok = item.sisa_pokok ?? item.jumlah_tagihan;
             const totalAngsuran = item.total_angsuran ?? 0;
@@ -292,18 +299,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
-            checkbox.className = 'h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500';
+            checkbox.className = 'h-5 w-5 sm:h-4 sm:w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 shrink-0';
             checkbox.name = 'tagihan';
             checkbox.value = item.tagihan_id;
+            // Default amount = sisa pokok
             checkbox.dataset.amount = sisaPokok;
             checkbox.dataset.sisaPokok = sisaPokok;
             checkbox.dataset.wajibLunas = wajibLunas ? '1' : '0';
             if (isPendingTransfer) {
-                checkbox.disabled = true;
+                checkbox.disabled = true; // Jangan diproses tunai saat ada transfer pending
             }
 
             const textDiv = document.createElement('div');
-            textDiv.className = 'ml-3 text-sm flex-grow';
+            textDiv.className = 'text-fluid-sm sm:text-sm flex-grow min-w-0';
 
             const namaP = document.createElement('p');
             namaP.className = 'font-medium text-gray-800';
@@ -336,6 +344,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 detailDiv.appendChild(wajibBadge);
             }
 
+            // Badge waiting cash
             if (isWaitingCash) {
                 const badge = document.createElement('span');
                 badge.className = 'px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-700 border border-blue-300';
@@ -364,7 +373,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 input.max = sisaPokok;
                 input.step = 1000;
                 input.value = sisaPokok;
-                input.className = 'w-full md:w-64 px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500';
+                input.className = 'w-full md:w-64 min-h-touch px-3 py-2.5 border rounded-lg text-base sm:text-sm focus:ring-blue-500 focus:border-blue-500';
                 input.addEventListener('input', () => {
                     const val = parseInt(input.value) || 0;
                     checkbox.dataset.amount = val > 0 ? val : 0;
@@ -402,7 +411,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <input type="hidden" id="metode_pembayaran" name="metode_pembayaran" value="Tunai">
                         </div>
-                       <button type="submit" class="mt-4 w-full inline-flex justify-center items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold transition-colors">
+                       <button type="submit" class="mt-4 w-full min-h-touch inline-flex justify-center items-center px-4 py-3 bg-green-600 text-white text-fluid-sm sm:text-base rounded-lg hover:bg-green-700 font-semibold transition-colors active:scale-[0.99]">
                            Proses Pembayaran
                        </button>
                     </form>
@@ -433,18 +442,18 @@ document.addEventListener('DOMContentLoaded', function() {
             if (response.success) {
                 displayReceipt(response.data || null);
                 Swal.fire({ icon: 'success', title: 'Berhasil!', text: response.message || 'Pembayaran berhasil diproses.', timer: 1500, showConfirmButton: false });
-                updateDashboardStats();
-                await searchMahasiswa({ resetReceipt: false });
+                updateDashboardStats(); // Update statistik
+                await searchMahasiswa({ resetReceipt: false }); // Refresh data tanpa menghapus kwitansi
             } else {
-                Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal memproses pembayaran: ' + (response.message || 'Error tidak diketahui.') });
+                 Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal memproses pembayaran: ' + (response.message || 'Error tidak diketahui.') });
             }
         } catch(error) {
             console.error("Error saat proses pembayaran:", error);
-            if (error.status === 422) {
-                displayValidationErrors(error.errors);
-            } else {
-                Swal.fire({ icon: 'error', title: 'Error Koneksi', text: error.message || 'Terjadi kesalahan saat menghubungkan ke server.' });
-            }
+             if (error.status === 422) {
+                 displayValidationErrors(error.errors); // Tampilkan error validasi
+             } else {
+                 Swal.fire({ icon: 'error', title: 'Error Koneksi', text: error.message || 'Terjadi kesalahan saat menghubungkan ke server.' });
+             }
         } finally {
             setButtonLoading(submitButton, false);
         }
@@ -498,7 +507,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="flex items-center gap-3 sm:gap-4">
                         <span class="font-semibold text-gray-700">${jumlah}</span>
-                        <a href="${kwitansiUrl}" target="_blank" rel="noopener" class="inline-flex items-center px-3 py-1.5 rounded-lg bg-gradient-to-r from-primary-100 to-primary-200 text-primary-700 text-xs font-semibold hover:from-primary-200 hover:to-primary-300 shadow-sm hover:shadow-md transition-all duration-200">
+                        <a href="${kwitansiUrl}" target="_blank" rel="noopener" class="inline-flex items-center justify-center min-h-touch sm:min-h-0 px-3 py-2 sm:py-1.5 rounded-lg bg-gradient-to-r from-primary-100 to-primary-200 text-primary-700 text-fluid-xs sm:text-xs font-semibold hover:from-primary-200 hover:to-primary-300 shadow-sm hover:shadow-md transition-all duration-200">
                             Cetak Kwitansi
                         </a>
                     </div>
@@ -532,7 +541,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <span class="text-sm font-semibold text-gray-700">Total Pembayaran Tunai</span>
                     <span class="text-xl font-bold text-blue-600">${totalFormatted}</span>
                 </div>
-                ${multiple ? '<button id="printAllReceipts" class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-gradient-to-r from-primary-600 to-primary-700 text-white text-sm font-semibold hover:from-primary-700 hover:to-primary-800 shadow-md hover:shadow-lg transition-all duration-200">Cetak Semua Kwitansi</button>' : ''}
+                ${multiple ? '<button id="printAllReceipts" type="button" class="w-full sm:w-auto inline-flex items-center justify-center min-h-touch px-4 py-2.5 rounded-lg bg-gradient-to-r from-primary-600 to-primary-700 text-white text-fluid-sm sm:text-sm font-semibold hover:from-primary-700 hover:to-primary-800 shadow-md hover:shadow-lg transition-all duration-200">Cetak Semua Kwitansi</button>' : ''}
             </div>`;
 
         const printAllBtn = receiptContainer.querySelector('#printAllReceipts');
@@ -547,10 +556,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    updateDashboardStats();
+    // Event listeners
+    updateDashboardStats(); // Muat statistik awal
     searchBtn.addEventListener('click', () => searchMahasiswa());
     npmInput.addEventListener('keypress', e => { if (e.key === 'Enter') searchMahasiswa(); });
+    // Gunakan event delegation untuk checkbox tagihan
     tagihanListDiv.addEventListener('change', e => { if (e.target.matches('input[name="tagihan"]')) { updatePaymentForm(); } });
+    // Gunakan event delegation untuk form pembayaran
     paymentFormContainer.addEventListener('submit', e => { if (e.target.id === 'process-payment-form') { handlePayment(e); } });
 });
 </script>

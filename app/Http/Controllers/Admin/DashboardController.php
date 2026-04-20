@@ -6,70 +6,55 @@ use App\Http\Controllers\Controller;
 use App\Models\MahasiswaDetail;
 use App\Models\Pembayaran;
 use App\Models\Tagihan;
-use App\Models\User;
-use Illuminate\Http\Request;
-
 class DashboardController extends Controller
 {
     /**
-     * Mengambil data statistik utama untuk dashboard.
-     * (Menggantikan getDashboardStats)
+     * Statistik dashboard:
+     * - total_pembayaran: SUM(jumlah_bayar) pada pembayaran yang tidak dibatalkan;
+     * - tingkat_pembayaran: total_pembayaran dibanding total nominal tagihan (penyebut);
+     * - pending_payment: jumlah baris tagihan yang statusnya bukan "Lunas".
      */
     public function stats()
     {
-        // Kueri 1: Mengambil data statistik dari tabel Tagihan dalam satu kali jalan
-        $tagihanStats = Tagihan::selectRaw("
+        $tagihanStats = Tagihan::selectRaw('
                 COUNT(*) as total_tagihan,
-                SUM(CASE WHEN status = 'Lunas' THEN 1 ELSE 0 END) as total_lunas,
-                SUM(CASE WHEN status = 'Lunas' THEN jumlah_tagihan ELSE 0 END) as total_pembayaran
-            ")
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as total_lunas,
+                SUM(COALESCE(jumlah_tagihan, 0)) as total_nominal
+            ', ['Lunas'])
             ->first();
 
-        // Kueri 2: Tetap terpisah karena beda tabel
-        $totalMahasiswa = \App\Models\MahasiswaDetail::count();
+        // Total rupiah yang sudah masuk (termasuk cicilan / belum lunas penuh)
+        $totalDibayar = (float) Pembayaran::where('status_dibatalkan', false)->sum('jumlah_bayar');
 
-        $totalLunas = $tagihanStats->total_lunas ?? 0;
-        $totalTagihan = $tagihanStats->total_tagihan ?? 0;
-        $totalPembayaran = $tagihanStats->total_pembayaran ?? 0;
+        $totalMahasiswa = MahasiswaDetail::count();
+
+        $totalLunas = (int) ($tagihanStats->total_lunas ?? 0);
+        $totalTagihan = (int) ($tagihanStats->total_tagihan ?? 0);
+        $totalNominal = (float) ($tagihanStats->total_nominal ?? 0);
 
         $pendingPayment = $totalTagihan - $totalLunas;
-        $tingkatPembayaran = $totalTagihan > 0 ? ($totalLunas / $totalTagihan) * 100 : 0;
+        $tingkatPembayaran = $totalNominal > 0
+            ? min(100, ($totalDibayar / $totalNominal) * 100)
+            : 0;
 
         return response()->json([
             'total_mahasiswa' => $totalMahasiswa,
-            'total_pembayaran' => (int) $totalPembayaran,
+            'total_pembayaran' => (int) round($totalDibayar),
             'tingkat_pembayaran' => round($tingkatPembayaran, 2),
             'pending_payment' => $pendingPayment,
         ]);
     }
 
     /**
-     * Mengambil data pembayaran terakhir.
-     * (Menggantikan getRecentPayments)
+     * Daftar pembayaran terbaru untuk widget dashboard (JSON).
      */
     public function recentPayments()
     {
-        // Eager load relasi untuk efisiensi
         $recentPayments = Pembayaran::with('tagihan.mahasiswa.user', 'tagihan.tarif')
-        ->latest('tanggal_bayar')
-        ->limit(10)
-        ->get();
-
-        return response()->json($recentPayments);
-    }
-
-    /**
-     * Mengambil data registrasi user terbaru.
-     * (Menggantikan getRecentRegistrations)
-     */
-    public function recentRegistrations()
-    {
-        $registrations = User::with('mahasiswaDetail')
-            ->whereIn('role', ['mahasiswa', 'kasir'])
-            ->latest()
+            ->latest('tanggal_bayar')
             ->limit(10)
             ->get();
 
-        return response()->json($registrations);
+        return response()->json($recentPayments);
     }
 }

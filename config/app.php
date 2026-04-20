@@ -56,6 +56,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Public URL (email & link eksternal)
+    |--------------------------------------------------------------------------
+    |
+    | Dipakai untuk link di email/notifikasi agar mengarah ke domain yang bisa
+    | dibuka mahasiswa. Default sama dengan APP_URL. Isi APP_PUBLIC_URL jika
+    | APP_URL masih localhost tetapi aplikasi sudah punya domain (mis. hosting).
+    |
+    */
+
+    'public_url' => rtrim((string) (env('APP_PUBLIC_URL') ?: env('APP_URL', 'http://localhost')), '/'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

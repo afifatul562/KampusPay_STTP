@@ -140,7 +140,7 @@ class TransaksiKasirExport implements FromQuery, WithHeadings, WithMapping, Shou
             Carbon::parse($pembayaran->tanggal_bayar)->isoFormat('DD MMM YYYY, HH:mm:ss'),
             optional(optional($tagihan->mahasiswa)->user)->nama_lengkap ?? 'N/A',
             optional($tagihan->mahasiswa)->npm ?? 'N/A',
-            optional($tagihan->tarif)->nama_pembayaran ?? 'N/A',
+            optional($tagihan)->jenis_tampilan ?? 'N/A',
             $pembayaran->jumlah_bayar ?? optional($tagihan)->jumlah_tagihan ?? 0,
             $pembayaran->metode_pembayaran,
             optional($tagihan)->kode_pembayaran ?? 'N/A',

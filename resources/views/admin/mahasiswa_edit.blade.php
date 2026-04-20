@@ -4,7 +4,7 @@
 @section('page-title', 'Edit Mahasiswa')
 
 @section('content')
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+    <div class="bg-white p-4 sm:p-5 md:p-6 rounded-xl shadow-sm border border-gray-200">
         <h3 class="text-xl font-semibold text-gray-800 mb-6">
             Edit Data: <span class="font-bold">{{ $mahasiswa->user->nama_lengkap }}</span>
         </h3>
@@ -25,8 +25,9 @@
             @csrf
             @method('PUT')
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
 
+                {{-- Nama Lengkap --}}
                 <div>
                     <label for="nama_lengkap" class="block text-sm font-medium text-gray-700">Nama Lengkap</label>
                     <input type="text" name="nama_lengkap" id="nama_lengkap"
@@ -34,13 +35,16 @@
                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
 
+                {{-- Email (opsional; mahasiswa juga bisa mengisi di profil) --}}
                 <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <label for="email" class="block text-sm font-medium text-gray-700">Email <span class="text-gray-400 font-normal">(opsional)</span></label>
                     <input type="email" name="email" id="email"
                            value="{{ old('email', $mahasiswa->user->email) }}"
+                           placeholder="Kosongkan jika belum ada"
                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
 
+                {{-- NPM (edit-able 9 digit) --}}
                 <div>
                     <label for="npm" class="block text-sm font-medium text-gray-700">NPM</label>
                     <input type="text" id="npm" name="npm"
@@ -49,6 +53,7 @@
                     <p id="npm-help" class="mt-1 text-xs text-gray-500">Masukkan 9 digit angka.</p>
                 </div>
 
+                {{-- Program Studi (otomatis dari NPM, non-editable) --}}
                 <div>
                     <label for="program_studi" class="block text-sm font-medium text-gray-700">Program Studi</label>
                     <select id="program_studi" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 appearance-none no-native-arrow bg-gray-100 cursor-not-allowed" disabled>
@@ -60,6 +65,7 @@
                     <input type="hidden" name="program_studi" id="program_studi_hidden" value="{{ old('program_studi', $mahasiswa->program_studi) }}">
                 </div>
 
+                {{-- Semester Aktif (otomatis dari NPM, non-editable) --}}
                 <div>
                     <label for="semester_aktif" class="block text-sm font-medium text-gray-700">Semester</label>
                     <select id="semester_aktif" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 appearance-none no-native-arrow bg-gray-100 cursor-not-allowed" disabled>
@@ -71,6 +77,7 @@
                     <input type="hidden" name="semester_aktif" id="semester_hidden" value="{{ old('semester_aktif', $mahasiswa->semester_aktif) }}">
                 </div>
 
+                {{-- Angkatan (otomatis dari NPM, non-editable) --}}
                 <div>
                     <label for="angkatan" class="block text-sm font-medium text-gray-700">Angkatan</label>
                     <select id="angkatan" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 appearance-none no-native-arrow bg-gray-100 cursor-not-allowed" disabled>
@@ -85,6 +92,45 @@
                     <input type="hidden" name="angkatan" id="angkatan_hidden" value="{{ old('angkatan', $mahasiswa->angkatan) }}">
                 </div>
 
+                {{-- Program (manual) --}}
+                <div>
+                    <label for="program_type" class="block text-sm font-medium text-gray-700">Program</label>
+                    @php $programType = old('program_type', $mahasiswa->program?->program_type ?? 'reguler'); @endphp
+                    <select id="program_type" name="program_type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="reguler" {{ $programType === 'reguler' ? 'selected' : '' }}>Reguler</option>
+                        <option value="eksklusif" {{ $programType === 'eksklusif' ? 'selected' : '' }}>Eksklusif</option>
+                        <option value="kip" {{ $programType === 'kip' ? 'selected' : '' }}>KIP</option>
+                    </select>
+                </div>
+
+                {{-- Skema KIP (jika program = kip) --}}
+                <div>
+                    <label for="kip_scheme" class="block text-sm font-medium text-gray-700">Skema KIP</label>
+                    @php $kipScheme = old('kip_scheme', $mahasiswa->program?->kip_scheme); @endphp
+                    <select id="kip_scheme" name="kip_scheme" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="" {{ $kipScheme ? '' : 'selected' }}>-</option>
+                        <option value="1" {{ (string)$kipScheme === '1' ? 'selected' : '' }}>Skema 1 (Full)</option>
+                        <option value="2" {{ (string)$kipScheme === '2' ? 'selected' : '' }}>Skema 2</option>
+                    </select>
+                    <p class="mt-1 text-xs text-gray-500">Diisi hanya jika Program = KIP.</p>
+                </div>
+
+                {{-- Transfer --}}
+                <div class="flex items-center gap-2">
+                    @php $isTransfer = (bool) old('is_transfer', $mahasiswa->program?->is_transfer ?? false); @endphp
+                    <input id="is_transfer" name="is_transfer" type="checkbox" value="1" {{ $isTransfer ? 'checked' : '' }}>
+                    <label for="is_transfer" class="text-sm font-medium text-gray-700">Mahasiswa transfer</label>
+                </div>
+
+                {{-- Mulai semester transfer --}}
+                <div>
+                    <label for="start_semester" class="block text-sm font-medium text-gray-700">Mulai semester (transfer)</label>
+                    <input type="number" id="start_semester" name="start_semester" min="1" max="14"
+                           value="{{ old('start_semester', $mahasiswa->program?->start_semester) }}"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                           placeholder="Mis. 3">
+                    <p class="mt-1 text-xs text-gray-500">Jika transfer, tagihan semester di bawah ini tidak akan dibuat.</p>
+                </div>
             </div>
 
             <div class="mt-8 flex justify-end gap-3">

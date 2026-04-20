@@ -39,13 +39,31 @@ return new class extends Migration
     private function hasIndex(string $table, string $indexName): bool
     {
         $connection = Schema::getConnection();
+        $driver = $connection->getDriverName();
         $tableName = $connection->getTablePrefix() . $table;
-        $indexes = $connection->select(
-            'SHOW INDEX FROM `' . $tableName . '` WHERE Key_name = ?',
-            [$indexName]
-        );
 
-        return ! empty($indexes);
+        if ($driver === 'sqlite') {
+            $rows = $connection->select("PRAGMA index_list('$tableName')");
+            foreach ($rows as $row) {
+                $name = $row->name ?? $row['name'] ?? null;
+                if ($name === $indexName) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        if ($driver === 'mysql') {
+            $indexes = $connection->select(
+                'SHOW INDEX FROM `' . $tableName . '` WHERE Key_name = ?',
+                [$indexName]
+            );
+
+            return ! empty($indexes);
+        }
+
+        return false;
     }
 };
 

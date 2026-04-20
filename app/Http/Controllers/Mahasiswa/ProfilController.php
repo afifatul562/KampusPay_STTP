@@ -6,8 +6,12 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use App\Models\User;
+use App\Models\AktivasiStatus;
+use App\Models\Tagihan;
+use App\Models\Setting;
 
 class ProfilController extends Controller
 {
@@ -26,7 +30,21 @@ class ProfilController extends Controller
             abort(404, 'Detail mahasiswa tidak ditemukan.');
         }
 
-        $allTagihan = $user->mahasiswaDetail->tagihan;
+        $semester = Setting::currentSemesterLabel();
+        $aktivasi = AktivasiStatus::query()
+            ->where('mahasiswa_id', $user->mahasiswaDetail->mahasiswa_id)
+            ->where('semester_label', $semester)
+            ->latest()
+            ->first();
+
+        $today = now()->toDateString();
+        $allTagihan = $user->mahasiswaDetail->tagihan
+            ->filter(static function (Tagihan $t) use ($aktivasi, $today) {
+                if ($aktivasi && $aktivasi->status === 'bss') {
+                    return (bool) $t->is_bss && (!$t->available_from || (string) $t->available_from->toDateString() <= $today);
+                }
+                return !$t->is_bss && (!$t->available_from || (string) $t->available_from->toDateString() <= $today);
+            });
 
         $totalTerbayar = $allTagihan->sum(function ($tagihan) {
             $payments = $tagihan->relationLoaded('pembayaranAll') ? $tagihan->pembayaranAll : collect();
@@ -72,6 +90,29 @@ class ProfilController extends Controller
             'totalTerbayar' => $totalTerbayar,
             'pembayaranSelesai' => $pembayaranSelesai,
         ]);
+    }
+
+    /**
+     * Menyimpan atau memperbarui email kontak mahasiswa.
+     */
+    public function updateEmail(Request $request)
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'email' => [
+                'required',
+                'email',
+                Rule::unique('users', 'email')->ignore($user->id),
+            ],
+        ]);
+
+        $user->update([
+            'email' => $validated['email'],
+            'email_verified_at' => null,
+        ]);
+
+        return redirect()->route('mahasiswa.profil')->with('status', 'email-updated');
     }
 
     /**

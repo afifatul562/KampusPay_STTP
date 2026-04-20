@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Log;
 class DashboardController extends Controller
 {
     /**
-     * Mencari mahasiswa berdasarkan NPM dan mengambil tagihan yang bisa dibayar.
+     * Cari mahasiswa berdasarkan NPM dan ambil tagihan yang masih bisa diproses.
      */
     public function searchMahasiswa(Request $request)
     {
@@ -25,27 +25,19 @@ class DashboardController extends Controller
 
         $mahasiswa = MahasiswaDetail::with([
             'user',
-            'tagihan' => function ($query) {
-                // Ambil tagihan yang bisa dibayar (status bukan 'Lunas')
-                // Ini akan mencakup: 'Belum Lunas', 'Menunggu Pembayaran Tunai',
-                // 'Ditolak', dan 'Menunggu Verifikasi Transfer'
-                $query->where('status', '!=', 'Lunas');
-            },
+            'tagihan' => fn ($query) => $query->where('status', '!=', 'Lunas'),
             'tagihan.tarif',
-            'tagihan.pembayaran' // Eager load untuk cek status pembayaran
+            'tagihan.pembayaran',
         ])->where('npm', $request->npm)->first();
 
-        // Filter tambahan: Pastikan tidak ada tagihan yang statusnya "Lunas" atau sudah punya pembayaran aktif
-        // Juga sembunyikan tagihan yang dibatalkan jika sudah ada tagihan pengganti dengan jenis yang sama yang sudah lunas
+        // Filter tambahan: sembunyikan tagihan lunas / yang sudah punya pembayaran aktif, dan
+        // sembunyikan tagihan dibatalkan jika sudah ada pengganti jenis sama yang lunas.
         if ($mahasiswa && $mahasiswa->tagihan) {
-            // Ambil semua tagihan mahasiswa untuk cek tagihan pengganti
             $allTagihan = Tagihan::with('pembayaran', 'tarif')
                 ->where('mahasiswa_id', $mahasiswa->mahasiswa_id)
                 ->get();
 
             $mahasiswa->tagihan = $mahasiswa->tagihan->filter(function ($tagihan) use ($allTagihan) {
-                // Jangan tampilkan jika:
-                // 1. Status tagihan adalah "Lunas"
                 if ($tagihan->status === 'Lunas') {
                     return false;
                 }
@@ -53,41 +45,34 @@ class DashboardController extends Controller
                 // 2. Tagihan punya pembayaran yang tidak dibatalkan (sudah lunas)
                 if ($tagihan->pembayaran) {
                     $isCancelled = $tagihan->pembayaran->status_dibatalkan ?? false;
-                    // Jika pembayaran tidak dibatalkan, berarti sudah lunas, jangan tampilkan
                     if (!$isCancelled) {
                         return false;
                     }
 
-                    // 3. Jika pembayaran dibatalkan, cek apakah ada tagihan lain dengan jenis yang sama yang sudah lunas
                     if ($isCancelled) {
-                        // Cari tagihan lain dengan tarif_id yang sama (jenis pembayaran sama) yang sudah lunas
                         $hasReplacement = $allTagihan->contains(function ($otherTagihan) use ($tagihan) {
-                            // Tagihan lain dengan jenis yang sama (tarif_id sama)
                             if ($otherTagihan->tagihan_id === $tagihan->tagihan_id) {
-                                return false; // Skip tagihan yang sama
+                                return false;
                             }
 
                             if ($otherTagihan->tarif_id !== $tagihan->tarif_id) {
-                                return false; // Bukan jenis yang sama
+                                return false;
                             }
 
-                            // Cek apakah tagihan lain sudah lunas
                             if ($otherTagihan->status === 'Lunas') {
                                 return true;
                             }
 
-                            // Cek apakah tagihan lain punya pembayaran yang tidak dibatalkan
                             if ($otherTagihan->pembayaran) {
                                 $otherIsCancelled = $otherTagihan->pembayaran->status_dibatalkan ?? false;
                                 if (!$otherIsCancelled) {
-                                    return true; // Ada tagihan pengganti yang sudah lunas
+                                    return true;
                                 }
                             }
 
                             return false;
                         });
 
-                        // Jika ada tagihan pengganti yang sudah lunas, jangan tampilkan tagihan yang dibatalkan
                         if ($hasReplacement) {
                             return false;
                         }
@@ -107,6 +92,7 @@ class DashboardController extends Controller
 
     /**
      * Memproses pembayaran untuk satu atau lebih tagihan.
+     * Termasuk logika "Otomatis Hilang" (Override).
      */
     public function processPayment(Request $request)
     {
@@ -141,7 +127,6 @@ class DashboardController extends Controller
         $mahasiswa = optional($tagihanCollection->first()->mahasiswa);
         $kasir = Auth::user();
         $kasirId = $kasir->id;
-        // Simpan waktu UTC untuk database, tapi siapkan versi lokal untuk tampilan
         $tanggalBayarUtc = now();
         $tanggalBayarDisplay = $tanggalBayarUtc->clone()->setTimezone(config('app.timezone'));
         $receiptItems = [];
@@ -154,24 +139,21 @@ class DashboardController extends Controller
                         throw new \RuntimeException('Tagihan tidak ditemukan saat proses pembayaran.');
                     }
 
-                    // Batalkan konfirmasi pembayaran yang masih menunggu verifikasi
                     KonfirmasiPembayaran::where('tagihan_id', $tagihan->tagihan_id)
                         ->where('status_verifikasi', 'Menunggu Verifikasi')
                         ->update([
                             'status_verifikasi' => 'Dibatalkan (Oleh Kasir Tunai)'
                         ]);
 
-                    // Cek apakah ini cicilan
                     $cicilanData = $validated['cicilan'][$tagihanId] ?? null;
                     $isCicilan = $cicilanData && isset($cicilanData['is_cicilan']) && $cicilanData['is_cicilan'];
                     $jumlahBayar = $cicilanData && isset($cicilanData['jumlah_bayar'])
                         ? $cicilanData['jumlah_bayar']
                         : $tagihan->jumlah_tagihan;
 
-                    // Validasi cicilan
                     if ($isCicilan) {
                         $sisaPokok = $tagihan->sisa_pokok ?? $tagihan->jumlah_tagihan;
-                        $minBayar = min(50000, $sisaPokok); // Minimal 50k kecuali sisa < 50k
+                        $minBayar = min(50000, $sisaPokok);
                         if ($jumlahBayar > $sisaPokok) {
                             throw new \RuntimeException("Jumlah pembayaran melebihi sisa pokok untuk tagihan {$tagihan->kode_pembayaran}.");
                         }
@@ -182,28 +164,24 @@ class DashboardController extends Controller
                             throw new \RuntimeException("Jumlah pembayaran harus lebih dari 0 untuk tagihan {$tagihan->kode_pembayaran}.");
                         }
                     } else {
-                        // Jika bukan cicilan, pastikan jumlah_bayar = jumlah_tagihan (lunas)
                         $jumlahBayar = $tagihan->jumlah_tagihan;
                     }
 
-                    // 1. Buat record pembayaran tunai baru
                     $pembayaran = Pembayaran::create([
                         'tagihan_id'        => $tagihan->tagihan_id,
                         'diverifikasi_oleh' => $kasirId,
                         'tanggal_bayar'     => $tanggalBayarUtc,
                         'metode_pembayaran' => $validated['metode_pembayaran'],
-                        'status_pembayaran' => 'LUNAS',
                         'jumlah_bayar'      => $jumlahBayar,
                         'is_cicilan'        => $isCicilan,
                     ]);
 
-                    // 2. Update total_angsuran dan sisa_pokok
                     $tagihan->updateAngsuran();
 
                     $receiptItems[] = [
                         'pembayaran_id'   => $pembayaran->pembayaran_id,
                         'kode_pembayaran' => $tagihan->kode_pembayaran ?? $tagihan->kode ?? ('TAG-' . $tagihan->tagihan_id),
-                        'nama_tagihan'    => $tagihan->tarif->nama_pembayaran ?? 'Pembayaran',
+                        'nama_tagihan'    => $tagihan->jenis_tampilan,
                         'jumlah'          => $jumlahBayar,
                         'kwitansi_url'    => route('kasir.kwitansi.download', ['pembayaran' => $pembayaran->pembayaran_id]),
                     ];
@@ -257,8 +235,8 @@ class DashboardController extends Controller
             return $pembayaran->jumlah_bayar ?? 0;
         });
 
-        // Hitung konfirmasi pembayaran yang masih menunggu verifikasi
-        // Hanya hitung jika tagihan utamanya juga masih menunggu verifikasi transfer
+        // Hitung pending hanya jika tagihan masih "Menunggu Verifikasi Transfer"
+        // agar konfirmasi yang sudah terselesaikan tidak ikut terhitung.
         $pendingVerifikasiCount = KonfirmasiPembayaran::where('status_verifikasi', 'Menunggu Verifikasi')
             ->whereHas('tagihan', function($q) {
                 $q->where('status', 'Menunggu Verifikasi Transfer');

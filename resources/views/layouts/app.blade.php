@@ -2,7 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @auth
         @if(Auth::user()->isAdmin() || Auth::user()->isKasir() || Auth::user()->isMahasiswa())
@@ -35,9 +35,9 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/id.js"></script>
     <style>
         /* Make Select2 look closer to Tailwind form inputs */
-        .select2-container .select2-selection--single { height: 38px; border-color: #d1d5db; }
-        .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 38px; padding-left: 12px; color: #374151; }
-        .select2-container--default .select2-selection--single .select2-selection__arrow { height: 38px; right: 6px; }
+        .select2-container .select2-selection--single { min-height: 44px; height: 44px; border-color: #d1d5db; }
+        .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 44px; padding-left: 12px; color: #374151; font-size: max(16px, 1rem); }
+        .select2-container--default .select2-selection--single .select2-selection__arrow { height: 44px; right: 6px; }
         .select2-container--default.select2-container--open .select2-selection--single { border-color: #3b82f6; box-shadow: 0 0 0 1px #3b82f6; }
         .select2-dropdown { z-index: 60; }
         /* Ensure flatpickr calendar appears above modal overlay */
@@ -172,10 +172,45 @@
 
     @stack('styles')
 </head>
-<body class="font-sans antialiased bg-gray-100">
-    <div x-data="{ sidebarOpen: false }" class="flex h-screen bg-gray-100">
+<body class="font-sans antialiased bg-gray-100 text-fluid-base">
+    {{-- Drawer + hamburger sampai xl (1280px): iPad Pro/Nest Hub lebar 1024 mendapat konten penuh --}}
+    <div
+        x-data="{
+            sidebarOpen: false,
+            init() {
+                const mql = window.matchMedia('(min-width: 1280px)');
+                const sync = () => { if (mql.matches) this.sidebarOpen = false };
+                mql.addEventListener('change', sync);
+            }
+        }"
+        @keydown.escape.window="sidebarOpen = false"
+        class="flex min-h-0 h-[100dvh] xl:h-screen bg-gray-100">
 
-        <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-30 w-64 bg-gray-800 text-white transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0">
+        <div
+            x-show="sidebarOpen"
+            x-transition:enter="transition-opacity ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition-opacity ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            @click="sidebarOpen = false"
+            class="fixed inset-0 z-20 bg-gray-900/50 backdrop-blur-[1px] xl:hidden"
+            style="display: none;"
+            aria-hidden="true"></div>
+
+        <aside
+            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+            class="fixed inset-y-0 left-0 z-30 flex w-[min(18rem,calc(100vw-2.5rem))] max-w-[min(18rem,100vw)] flex-col bg-gray-800 text-white shadow-xl transform transition-transform duration-300 ease-in-out xl:relative xl:max-w-none xl:w-64 xl:translate-x-0 xl:shrink-0 xl:shadow-none"
+            role="navigation"
+            aria-label="Menu utama">
+            <div class="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-700/80 xl:hidden shrink-0">
+                <span class="text-xs font-medium text-gray-400 truncate">Menu</span>
+                <button type="button" @click="sidebarOpen = false" class="inline-flex items-center justify-center min-h-touch min-w-touch rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-primary-500" aria-label="Tutup menu">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             @if(Auth::user()->isAdmin())
                 @include('layouts.partials.admin-nav')
             @elseif(Auth::user()->isKasir())
@@ -183,25 +218,26 @@
             @elseif(Auth::user()->isMahasiswa())
                 @include('layouts.partials.mahasiswa-nav')
             @endif
+            </div>
         </aside>
 
-        <div class="flex-1 flex flex-col overflow-hidden">
-            <header class="flex justify-between items-center p-4 bg-white border-b shadow-sm">
-                <button @click.stop="sidebarOpen = !sidebarOpen" class="md:hidden text-gray-500 focus:outline-none" data-tooltip="Toggle menu" title="Menu">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        <div class="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
+            <header class="flex items-center gap-2 sm:gap-3 pt-safe pb-3 sm:pb-4 px-3 sm:px-4 xl:px-6 bg-white border-b shadow-sm shrink-0 pl-[max(0.75rem,env(safe-area-inset-left,0px))] pr-[max(0.75rem,env(safe-area-inset-right,0px))]">
+                <button type="button" @click.stop="sidebarOpen = !sidebarOpen" class="xl:hidden shrink-0 inline-flex items-center justify-center min-h-[2.5rem] min-w-[2.5rem] sm:min-h-touch sm:min-w-touch rounded-xl text-gray-600 hover:bg-gray-100 active:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500" data-tooltip="Buka atau tutup menu" title="Menu" aria-label="Buka menu" :aria-expanded="sidebarOpen">
+                    <svg class="w-[1.125rem] h-[1.125rem] sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                 </button>
 
-                <h1 class="text-2xl font-bold text-gray-800 hidden md:block">@yield('page-title', 'Dashboard')</h1>
+                <h1 class="flex-1 min-w-0 text-fluid-page xl:text-fluid-2xl font-bold text-gray-800 truncate pr-1 [overflow-wrap:anywhere]">@yield('page-title', 'Dashboard')</h1>
 
                 @auth {{-- Hanya tampilkan jika user login --}}
-                <div class="flex items-center ml-auto gap-4"> {{-- ml-auto untuk dorong ke kanan --}}
+                <div class="flex items-center shrink-0 gap-2 sm:gap-3 xl:gap-4"> {{-- ml-auto untuk dorong ke kanan --}}
                     @if(Auth::user()->isKasir())
                     <div class="relative">
-                        <button id="globalNotifBell" type="button" class="relative inline-flex items-center justify-center w-11 h-11 rounded-full bg-gray-50 border border-gray-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500">
-                            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
-                            <span id="globalNotifBadge" class="absolute -top-1 -right-1 min-w-[18px] px-1 rounded-full bg-primary-500 text-white text-[11px] font-semibold leading-4 text-center hidden">0</span>
+                        <button id="globalNotifBell" type="button" class="relative inline-flex items-center justify-center min-h-touch min-w-touch sm:w-11 sm:h-11 rounded-full bg-gray-50 border border-gray-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500" aria-label="Notifikasi aktivasi">
+                            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                            <span id="globalNotifBadge" class="absolute -top-0.5 -right-0.5 min-w-[1.125rem] px-1 rounded-full bg-primary-500 text-white text-fluid-xs font-semibold leading-4 text-center hidden">0</span>
                         </button>
-                        <div id="globalNotifDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                        <div id="globalNotifDropdown" class="hidden absolute right-0 mt-2 w-[min(calc(100vw-1.5rem),20rem)] sm:w-80 max-w-[calc(100vw-1rem)] bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                             <div class="p-3 border-b border-gray-100 flex items-center justify-between">
                                 <span class="font-semibold text-gray-800 text-sm">Notifikasi Aktivasi</span>
                                 <button id="globalNotifClose" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
@@ -220,7 +256,7 @@
                 @endauth
             </header>
 
-            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 px-3 py-4 sm:px-4 sm:py-5 xl:p-6 pb-safe w-full min-w-0">
                 @yield('content')
             </main>
         </div>

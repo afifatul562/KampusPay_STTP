@@ -3,8 +3,8 @@
 ])
 
 @if(count($items) > 0)
-    <nav aria-label="Breadcrumb" class="mb-4">
-        <ol class="flex items-center space-x-2 text-sm text-gray-600">
+    <nav aria-label="Breadcrumb" class="mb-3 sm:mb-4">
+        <ol class="flex flex-wrap items-center gap-x-2 gap-y-1 text-fluid-sm text-gray-600">
             @foreach($items as $index => $item)
                 <li class="flex items-center">
                     @if($index > 0)

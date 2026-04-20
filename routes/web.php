@@ -8,7 +8,7 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\MahasiswaController;
 use App\Http\Controllers\Admin\TarifController as AdminTarifController;
 use App\Http\Controllers\Admin\SettingController as AdminSettingController;
-use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\LegacyImportController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Kasir\DashboardController as KasirDashboardController;
 use App\Http\Controllers\Kasir\TransaksiController as KasirTransaksiController;
@@ -31,7 +31,9 @@ use App\Models\User;
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    return Auth::check()
+        ? redirect()->route('dashboard')
+        : redirect()->route('login');
 });
 
 Route::middleware('auth')->group(function () {
@@ -57,7 +59,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/dashboard', fn() => view('admin.dashboard'))->name('dashboard');
         Route::get('/dashboard/stats', [AdminDashboardController::class, 'stats'])->name('dashboard.stats');
         Route::get('/dashboard/recent-payments', [AdminDashboardController::class, 'recentPayments'])->name('dashboard.recentPayments');
-        Route::get('/dashboard/recent-registrations', [AdminDashboardController::class, 'recentRegistrations'])->name('dashboard.recentRegistrations');
+        Route::get('/import-data', [LegacyImportController::class, 'index'])->name('import.index');
+        Route::post('/import-data/tagihan', [LegacyImportController::class, 'importTagihan'])->name('import.tagihan');
+        Route::post('/import-data/pembayaran', [LegacyImportController::class, 'importPembayaran'])->name('import.pembayaran');
         Route::get('/mahasiswa', fn() => view('admin.mahasiswa'))->name('mahasiswa');
         Route::get('/mahasiswa/export', [MahasiswaController::class, 'export'])->name('mahasiswa.export');
 
@@ -77,13 +81,15 @@ Route::middleware('auth')->group(function () {
         Route::get('/reports/download/{report}', [AdminReportController::class, 'download'])
             ->middleware('throttle:30,1')
             ->name('reports.download');
-        Route::resource('users', App\Http\Controllers\Admin\UserManagementController::class);
+        Route::resource('users', App\Http\Controllers\Admin\UserManagementController::class)
+            ->except(['create', 'store', 'show']);
     });
 
     // --- RUTE KASIR ---
     Route::middleware(\App\Http\Middleware\CheckRole::class . ':kasir')->prefix('kasir')->name('kasir.')->group(function () {
         Route::get('/dashboard', fn() => view('kasir.dashboard'))->name('dashboard');
         Route::get('/tagihan', fn() => view('admin.pembayaran', ['rolePrefix' => 'kasir']))->name('tagihan');
+        Route::get('/pembayaran/print/{pembayaran}', [\App\Http\Controllers\Admin\PrintController::class, 'cetakBuktiPembayaran'])->name('pembayaran.print');
         Route::get('/transaksi', [KasirTransaksiController::class, 'index'])->name('transaksi.index');
         Route::get('/transaksi/export', [KasirTransaksiController::class, 'export'])->name('transaksi.export');
         Route::post('/transaksi/{pembayaran}/cancel', [KasirTransaksiController::class, 'cancel'])->name('transaksi.cancel');
@@ -123,6 +129,7 @@ Route::middleware('auth')->group(function () {
 
         // Rute Profil & Ubah Password
         Route::get('/profil', [MahasiswaProfilController::class, 'index'])->name('profil');
+        Route::patch('/profil/email', [MahasiswaProfilController::class, 'updateEmail'])->name('profil.email.update');
         Route::get('/profil/password', [MahasiswaProfilController::class, 'editPassword'])->name('profil.password.edit');
         Route::post('/profil/password', [MahasiswaProfilController::class, 'updatePassword'])->name('profil.password.update');
     });

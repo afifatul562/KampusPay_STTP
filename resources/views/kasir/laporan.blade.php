@@ -13,7 +13,7 @@
     </svg>';
 @endphp
 
-<div class="space-y-6">
+<div class="space-y-4 sm:space-y-6">
     <x-page-header
         title="Laporan"
         subtitle="Lihat dan ekspor laporan pembayaran"
@@ -394,7 +394,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             row.appendChild(createDataCell(item.kode_pembayaran));
             row.appendChild(createMahasiswaCell(item.mahasiswa?.user?.nama_lengkap, item.mahasiswa?.npm));
-            row.appendChild(createDataCell(item.tarif?.nama_pembayaran));
+            row.appendChild(createDataCell(item.jenis_tampilan || item.tarif?.nama_pembayaran));
             row.appendChild(createDataCell(rupiahFormat.format(jumlahTampil), true));
 
             row.appendChild(createStatusCell(statusText, isLunas));

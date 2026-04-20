@@ -3,30 +3,25 @@
 @section('title', 'Manajemen User')
 @section('page-title', 'Manajemen User')
 
-@push('styles')
-@endpush
-
-
 @section('content')
-<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
+<div class="w-full max-w-[1600px] mx-auto py-0 sm:py-1">
 
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <h1 class="text-2xl font-semibold text-gray-800">Manajemen User</h1>
-        <button id="openAddKasirBtn" class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-gradient-to-r from-success-600 to-success-700 text-white text-sm font-semibold hover:from-success-700 hover:to-success-800 shadow-md hover:shadow-lg transition-all duration-200">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 mb-4">
+        <button type="button" id="openAddKasirBtn" class="inline-flex items-center justify-center min-h-touch px-4 py-2.5 rounded-lg bg-gradient-to-r from-success-600 to-success-700 text-white text-fluid-sm sm:text-sm font-semibold hover:from-success-700 hover:to-success-800 shadow-md hover:shadow-lg transition-all duration-200 w-full sm:w-auto">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             Tambah Kasir
         </button>
     </div>
 
     <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6">
-        <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h6 class="font-semibold text-lg text-gray-800">Daftar Staff (Kasir / Admin)</h6>
+        <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+            <h6 class="font-semibold text-fluid-lg text-gray-800">Daftar Staff (Kasir / Admin)</h6>
         </div>
         <div class="p-4 sm:p-6">
             <div class="mb-3">
-                <input id="searchStaff" type="text" placeholder="Cari nama atau email..." class="w-full sm:w-80 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500" />
+                <input id="searchStaff" type="text" placeholder="Cari nama atau email..." class="w-full sm:w-80 min-h-touch border border-gray-300 rounded-lg px-3 py-2.5 text-base sm:text-sm focus:ring-blue-500 focus:border-blue-500" />
             </div>
-            <div class="overflow-x-auto">
+            <div class="table-responsive rounded-lg border border-gray-100">
                 <table id="tableStaff" class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
@@ -38,7 +33,7 @@
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                        @forelse ($staff as $index => $user)
+                        @forelse ($staff as $user)
                             <tr>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ $loop->iteration }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $user->nama_lengkap }}</td>
@@ -87,14 +82,14 @@
     </div>
 
     <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6">
-        <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h6 class="font-semibold text-lg text-gray-800">Daftar Mahasiswa</h6>
+        <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+            <h6 class="font-semibold text-fluid-lg text-gray-800">Daftar Mahasiswa</h6>
         </div>
         <div class="p-4 sm:p-6">
             <div class="mb-3">
-                <input id="searchMhs" type="text" placeholder="Cari nama atau email..." class="w-full sm:w-80 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500" />
+                <input id="searchMhs" type="text" placeholder="Cari nama atau email..." class="w-full sm:w-80 min-h-touch border border-gray-300 rounded-lg px-3 py-2.5 text-base sm:text-sm focus:ring-blue-500 focus:border-blue-500" />
             </div>
-            <div class="overflow-x-auto">
+            <div class="table-responsive rounded-lg border border-gray-100">
                 <table id="tableMhs" class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
@@ -106,7 +101,7 @@
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                        @forelse ($mahasiswa as $index => $user)
+                        @forelse ($mahasiswa as $user)
                              <tr>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ $loop->iteration }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $user->nama_lengkap }}</td>
@@ -280,12 +275,13 @@
             const table = document.querySelector(tableSelector);
             if (!input || !table) return;
             const tbody = table.querySelector('tbody');
+            if (!tbody) return;
             input.addEventListener('input', function(){
                 const q = this.value.toLowerCase().trim();
                 Array.from(tbody.rows).forEach(function(row){
-                    // gabungkan teks nama + email
-                    const nameCell = row.cells[1]?.textContent.toLowerCase() || '';
-                    const emailCell = row.cells[2]?.textContent.toLowerCase() || '';
+                    if (!row.cells || row.cells.length < 3) return;
+                    const nameCell = row.cells[1].textContent.toLowerCase();
+                    const emailCell = row.cells[2].textContent.toLowerCase();
                     row.style.display = (nameCell.includes(q) || emailCell.includes(q)) ? '' : 'none';
                 });
             });
@@ -293,7 +289,7 @@
         attachFilter('searchStaff', '#tableStaff');
         attachFilter('searchMhs', '#tableMhs');
 
-        // Konfirmasi hapus seragam menggunakan SweetAlert
+        // Uniform delete confirmation using SweetAlert
         (function(){
             const forms = document.querySelectorAll('form.js-delete-user');
             forms.forEach(function(f){

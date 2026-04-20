@@ -293,7 +293,7 @@
                             {{ $pembayaran->tagihan->mahasiswa->user->nama_lengkap ?? 'N/A' }}<br>
                             <small>{{ $pembayaran->tagihan->mahasiswa->npm ?? 'N/A' }}</small>
                         </td>
-                        <td>{{ $pembayaran->tagihan->tarif->nama_pembayaran ?? 'N/A' }}</td>
+                        <td>{{ $pembayaran->tagihan->jenis_tampilan ?? 'N/A' }}</td>
                         <td class="text-right">Rp {{ number_format($pembayaran->tagihan->jumlah_tagihan, 0, ',', '.') }}</td>
                         <td class="text-center">{{ $pembayaran->metode_pembayaran }}</td>
                     </tr>

@@ -13,7 +13,7 @@
     </svg>';
 @endphp
 
-<div class="space-y-6">
+<div class="space-y-4 sm:space-y-6">
     <x-page-header
         title="Riwayat Transaksi Lunas"
         subtitle="Daftar semua pembayaran yang telah berhasil diselesaikan"
@@ -30,7 +30,7 @@
                         {{ optional($item->tanggal_bayar ?? $item->created_at)->isoFormat('D MMM YYYY, HH:mm') ?? 'N/A' }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
-                        {{ optional($item->tagihan->tarif)->nama_pembayaran ?? 'N/A' }}
+                        {{ optional($item->tagihan)->jenis_tampilan ?? optional($item->tagihan->tarif)->nama_pembayaran ?? 'N/A' }}
                         <p class="text-xs text-gray-400 mt-1 font-mono">Kode: {{ $item->tagihan->kode_pembayaran ?? '-' }}</p>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right font-medium text-gray-800">

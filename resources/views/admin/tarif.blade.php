@@ -8,9 +8,10 @@
     $headerIcon = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
     </svg>';
+    $bssTarifName = config('academic.bss_tarif_name', 'Administrasi BSS');
 @endphp
 
-<div class="space-y-6">
+<div class="space-y-4 sm:space-y-6">
     <x-breadcrumbs :items="[
         ['label' => 'Dashboard', 'url' => route('admin.dashboard')],
         ['label' => 'Master Data Tarif']
@@ -33,7 +34,7 @@
         <div class="flex flex-col sm:flex-row gap-4">
             {{-- Filter Nama Pembayaran --}}
             <div class="relative flex-grow">
-                <select id="filterNama" class="block w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:text-sm">
+                <select id="filterNama" class="block w-full min-h-touch appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 text-base sm:text-sm">
                     <option value="">Semua Nama Pembayaran</option>
                     {{-- Opsi akan diisi oleh JavaScript --}}
                 </select>
@@ -43,7 +44,7 @@
             </div>
             {{-- Filter Program Studi --}}
             <div class="relative">
-                <select id="filterProdi" class="block w-full sm:w-48 appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:text-sm">
+                <select id="filterProdi" class="block w-full sm:w-48 min-h-touch appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 text-base sm:text-sm">
                     <option value="">Semua Prodi</option>
                     {{-- Opsi akan diisi oleh JavaScript --}}
                 </select>
@@ -53,7 +54,7 @@
             </div>
             {{-- Filter Angkatan --}}
             <div class="relative">
-                <select id="filterAngkatan" class="block w-full sm:w-48 appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:text-sm">
+                <select id="filterAngkatan" class="block w-full sm:w-48 min-h-touch appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 text-base sm:text-sm">
                     <option value="">Semua Angkatan</option>
                     {{-- Opsi akan diisi oleh JavaScript --}}
                 </select>
@@ -74,8 +75,8 @@
     </x-data-table>
 
     {{-- Modal Tambah/Edit Tarif --}}
-    <div id="tarifModal" class="hidden fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-gray-900 bg-opacity-60">
-        <div class="relative bg-white rounded-lg shadow-xl transform transition-all sm:max-w-lg w-full">
+    <div id="tarifModal" class="hidden fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-3 sm:p-4 pt-safe pb-safe bg-gray-900 bg-opacity-60">
+        <div class="relative bg-white rounded-xl sm:rounded-lg shadow-xl transform transition-all w-full max-w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[90dvh] overflow-y-auto">
             <form id="tarifForm">
                 <input type="hidden" id="tarifId" name="tarif_id">
                 <div class="bg-white px-6 pt-5 pb-4">
@@ -90,11 +91,13 @@
                                 <option value="" disabled selected>Pilih Jenis Pembayaran</option>
                                 <option value="Uang Semester">Uang Semester</option>
                                 <option value="Uang Ujian Akhir">Uang Ujian Akhir</option>
+                                <option value="Ujian Akhir Semester">Ujian Akhir Semester</option>
                                 <option value="Uang Pembangunan">Uang Pembangunan</option>
                                 <option value="Uang Kemahasiswaan">Uang Kemahasiswaan</option>
                                 <option value="Uang KP">Uang KP</option>
                                 <option value="Uang Skripsi">Uang Skripsi</option>
                                 <option value="Uang Wisuda">Uang Wisuda</option>
+                                <option value="{{ e($bssTarifName) }}">{{ e($bssTarifName) }}</option>
                             </select>
                         </div>
                         <div>
@@ -118,6 +121,7 @@
                                 <option value="2023">2023</option>
                                 <option value="2024">2024</option>
                                 <option value="2025">2025</option>
+                                <option value="2026">2026</option>
                             </select>
                             <span id="angkatanWarning" class="text-xs text-yellow-600 mt-1 hidden"></span>
                         </div>
@@ -163,20 +167,63 @@ document.addEventListener('DOMContentLoaded', function() {
             attachModalListeners();
         }
 
-        // Pakai util global apiRequest
         const apiRequest = (window.App && window.App.apiRequest) ? window.App.apiRequest : null;
-        if (!apiRequest) { console.error('apiRequest util tidak tersedia'); }
+        if (!apiRequest) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Halaman tidak siap',
+                text: 'Utilitas API tidak dimuat. Muat ulang halaman atau pastikan build aset (npm run build / dev) berjalan.'
+            });
+            return;
+        }
 
-        // Fungsi format nominal
+        // -------------------------------------
+        // FUNGSI FORMAT NOMINAL (Tetap Sama)
+        // -------------------------------------
         const formatter = new Intl.NumberFormat('id-ID');
-        function formatNumberInput(inputElement) { let value = inputElement.value.replace(/[^,\d]/g,'').toString(); if(value.length>1&&value.startsWith('0')&&!value.includes(',')){value=value.substring(1);} const number=parseInt(value.replace(/\./g,''),10); inputElement.value=isNaN(number)?'':formatter.format(number); }
-        function unformatNumber(formattedValue) { return formattedValue.replace(/\./g, ''); }
+        function formatNumberInput(inputElement) {
+            let value = inputElement.value.replace(/[^,\d]/g, '').toString();
+            if (value.length > 1 && value.startsWith('0') && !value.includes(',')) {
+                value = value.substring(1);
+            }
+            const number = parseInt(value.replace(/\./g, ''), 10);
+            inputElement.value = isNaN(number) ? '' : formatter.format(number);
+        }
+        function unformatNumber(formattedValue) {
+            return formattedValue.replace(/\./g, '');
+        }
 
-        // -------------------------------------
-        // FUNGSI LOGIKA TABEL & FILTER
-        // -------------------------------------
+        const TARIF_API = @json(url('/api/admin/tarif'));
 
-        // Fungsi untuk render tabel tarif
+        /** Gabungkan nama tarif dari API ke dropdown (agar tarif kustom/BSS tetap bisa dipilih & diedit). */
+        function mergeNamaPembayaranSelectOptions(tarifs) {
+            const select = document.getElementById('nama_pembayaran');
+            if (!select) return;
+            const prev = select.value;
+            const names = new Set();
+            select.querySelectorAll('option[value]').forEach(opt => {
+                if (opt.value) names.add(opt.value);
+            });
+            (tarifs || []).forEach(t => {
+                if (t.nama_pembayaran) names.add(t.nama_pembayaran);
+            });
+            if (prev) names.add(prev);
+            const sorted = Array.from(names).sort((a, b) => a.localeCompare(b, 'id'));
+            select.innerHTML = '<option value="" disabled>Pilih Jenis Pembayaran</option>';
+            sorted.forEach(nama => {
+                const op = document.createElement('option');
+                op.value = nama;
+                op.textContent = nama;
+                select.appendChild(op);
+            });
+            if (prev && names.has(prev)) {
+                select.value = prev;
+            } else {
+                const first = select.querySelector('option[value=""]');
+                if (first) first.selected = true;
+            }
+        }
+
         function renderTable(dataToRender) {
             if (!tarifTableBody) {
                 console.error('tarifTableBody not found in renderTable');
@@ -204,31 +251,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-gray-50';
 
-                // Sel Nama Pembayaran
+                // 1. Sel Nama Pembayaran (Aman)
                 const cellNama = document.createElement('td');
                 cellNama.className = 'px-6 py-4 whitespace-nowrap font-medium text-gray-900';
-                cellNama.textContent = tarif.nama_pembayaran;
+                cellNama.textContent = tarif.nama_pembayaran; // AMAN
                 tr.appendChild(cellNama);
 
-                // Sel Nominal
+                // 2. Sel Nominal (Aman)
                 const cellNominal = document.createElement('td');
                 cellNominal.className = 'px-6 py-4 whitespace-nowrap text-right text-gray-700';
-                cellNominal.textContent = rupiahFormat.format(tarif.nominal);
+                cellNominal.textContent = rupiahFormat.format(tarif.nominal); // AMAN
                 tr.appendChild(cellNominal);
 
-                // Sel Program Studi
+                // 3. Sel Program Studi (Aman)
                 const cellProdi = document.createElement('td');
                 cellProdi.className = 'px-6 py-4 whitespace-nowrap text-gray-500';
-                cellProdi.textContent = tarif.program_studi || 'Semua Jurusan';
+                // Logika ini sudah benar, mengandalkan controller mengirim NULL
+                cellProdi.textContent = tarif.program_studi || 'Semua Jurusan'; // AMAN
                 tr.appendChild(cellProdi);
 
-                // Sel Angkatan
+                // 4. Sel Angkatan (Aman)
                 const cellAngkatan = document.createElement('td');
                 cellAngkatan.className = 'px-6 py-4 whitespace-nowrap text-center text-gray-500';
-                cellAngkatan.textContent = tarif.angkatan || 'Semua Angkatan';
+                cellAngkatan.textContent = tarif.angkatan || 'Semua Angkatan'; // AMAN
                 tr.appendChild(cellAngkatan);
 
-                // Sel Aksi
+                // 5. Sel Aksi (Aman, karena ID bukan input teks bebas)
                 const cellAksi = document.createElement('td');
                 cellAksi.className = 'px-6 py-4 whitespace-nowrap text-right font-medium';
                 cellAksi.innerHTML = `
@@ -277,6 +325,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const uniqueNama = new Set(); const uniqueProdi = new Set(); const uniqueAngkatan = new Set();
             allTarifs.forEach(tarif => {
                 uniqueNama.add(tarif.nama_pembayaran);
+                // Logika ini sudah benar, hanya menambah prodi/angkatan yg 'tidak null'
                 if(tarif.program_studi) { uniqueProdi.add(tarif.program_studi); }
                 if(tarif.angkatan) { uniqueAngkatan.add(tarif.angkatan); }
             });
@@ -285,7 +334,9 @@ document.addEventListener('DOMContentLoaded', function() {
             filterAngkatanSelect.innerHTML = '<option value="">Semua Angkatan</option>'; Array.from(uniqueAngkatan).sort((a,b)=>b.localeCompare(a,undefined,{numeric:true})).forEach(angkatan => { const option = document.createElement('option'); option.value = angkatan; option.textContent = angkatan; filterAngkatanSelect.appendChild(option); });
         }
 
-        // Fungsi warning modal
+        // -------------------------------------
+        // FUNGSI WARNING MODAL (Tetap Sama)
+        // -------------------------------------
         const lateStagePayments = { "Uang KP": 2, "Uang Skripsi": 3, "Uang Wisuda": 3 };
         function checkAngkatanLogic() {
             if (!modalNamaPembayaranSelect || !modalAngkatanSelect || !modalAngkatanWarning) { return; }
@@ -300,7 +351,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // Fungsi modal
+        // -------------------------------------
+        // FUNGSI MODAL (Dengan SweetAlert)
+        // -------------------------------------
         function openModal(mode = 'add', tarifData = null) {
             tarifForm.reset(); tarifIdInput.value = ''; modalAngkatanWarning.classList.add('hidden');
             if (mode === 'add') {
@@ -311,6 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 tarifIdInput.value = tarifData.tarif_id;
                 modalNamaPembayaranSelect.value = tarifData.nama_pembayaran;
                 if(tarifData.nominal !== null && tarifData.nominal !== undefined) { modalNominalInput.value = formatter.format(tarifData.nominal); } else { modalNominalInput.value = ''; }
+                // Logika ini sudah benar, mengubah NULL dari DB menjadi 'Semua Jurusan' di form
                 tarifModal.querySelector('#program_studi').value = tarifData.program_studi || "Semua Jurusan";
                 modalAngkatanSelect.value = tarifData.angkatan || "Semua Angkatan";
                 setTimeout(checkAngkatanLogic, 50);
@@ -322,8 +376,10 @@ document.addEventListener('DOMContentLoaded', function() {
             tarifModal.classList.add('hidden'); tarifModal.classList.remove('flex');
         }
 
-        // Event listeners
-        // Periksa null sebelum menambahkan event listener
+        // -------------------------------------
+        // EVENT LISTENERS (Dengan SweetAlert)
+        // -------------------------------------
+        // Add null checks before adding event listeners
         if (!tarifTableBody) {
             console.error('tarifTableBody not found');
             return;
@@ -369,14 +425,13 @@ document.addEventListener('DOMContentLoaded', function() {
         function formatNominalOnInput() { formatNumberInput(this); }
         function formatNominalOnBlur() { formatNumberInput(this); }
 
-        // Event listener tabel untuk edit dan delete
         if (tarifTableBody) {
             tarifTableBody.addEventListener('click', function(event) {
             const button = event.target.closest('button'); if (!button) return;
             const tarifId = button.dataset.id;
 
             if (button.classList.contains('edit-btn')) {
-                const detailUrl = `{{ url('/api/admin/tarif') }}/${tarifId}`;
+                const detailUrl = `${TARIF_API}/${tarifId}`;
                 apiRequest(detailUrl).then(response => openModal('edit', response.data))
                 .catch(err => {
                     Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal mengambil detail tarif: ' + err.message });
@@ -395,7 +450,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     cancelButtonText: 'Batal'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        const deleteUrl = `{{ url('/api/admin/tarif') }}/${tarifId}`;
+                        const deleteUrl = `${TARIF_API}/${tarifId}`;
                         apiRequest(deleteUrl, 'DELETE').then(response => {
                             Swal.fire({
                                 icon: 'success',
@@ -418,14 +473,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         }
 
-        // Event listener submit form modal
         tarifForm.addEventListener('submit', function(event) {
             event.preventDefault(); const id = tarifIdInput.value; const isEdit = !!id;
-            const url = isEdit ? `{{ url('/api/admin/tarif') }}/${id}` : "{{ route('admin.tarif.store') }}";
+            const url = isEdit ? `${TARIF_API}/${id}` : "{{ route('admin.tarif.store') }}";
             const method = isEdit ? 'PUT' : 'POST';
             let prodiValue = tarifModal.querySelector('#program_studi').value; let angkatanValue = modalAngkatanSelect.value;
             const nominalValue = unformatNumber(modalNominalInput.value);
 
+            // Logika ini sudah benar, mengirim NULL ke controller
             const formData = {
                 nama_pembayaran: modalNamaPembayaranSelect.value,
                 nominal: nominalValue,
@@ -458,31 +513,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadTarifs();
             })
             .catch(err => {
-                let errorContent;
+                let errorContent; // Ganti nama dari errorMessages
 
                 if (err.status === 422 && err.errors) {
+                    // Jika error validasi, buat list yg aman
                     errorContent = document.createElement('div');
 
                     const p = document.createElement('p');
-                    p.textContent = "Input tidak valid:";
+                    p.textContent = "Input tidak valid:"; // Pesan utama
                     errorContent.appendChild(p);
 
                     const ul = document.createElement('ul');
                     ul.className = 'list-disc list-inside text-left mt-2';
                     Object.values(err.errors).forEach(e => {
                         const li = document.createElement('li');
-                        li.textContent = e.join(', ');
+                        li.textContent = e.join(', '); // AMAN dari XSS
                         ul.appendChild(li);
                     });
                     errorContent.appendChild(ul);
                 } else {
+                    // Jika error biasa, pakai text
                     errorContent = err.message || 'Terjadi kesalahan.';
                 }
 
                 Swal.fire({
                     icon: 'error',
                     title: 'Gagal Menyimpan',
-                    html: errorContent
+                    html: errorContent // 'html' properti bisa menerima Node Element
                 });
             })
             .finally(() => {
@@ -490,7 +547,9 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // Fungsi untuk memuat data tarif
+        // -------------------------------------
+        // MUAT DATA AWAL (Dengan SweetAlert Error)
+        // -------------------------------------
         function loadTarifs() {
             if (!tarifTableBody) {
                 console.error('tarifTableBody not found in loadTarifs');
@@ -499,8 +558,9 @@ document.addEventListener('DOMContentLoaded', function() {
             tarifTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-gray-500">Memuat data...</td></tr>';
             const listUrl = "{{ route('admin.tarif.index') }}";
             apiRequest(listUrl).then(response => {
-                allTarifs = response.data;
+                allTarifs = Array.isArray(response.data) ? response.data : [];
                 populateFilterDropdowns();
+                mergeNamaPembayaranSelectOptions(allTarifs);
                 applyFilters();
             }).catch(error => {
                 console.error('Error fetching tarif list:', error);
@@ -512,8 +572,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (tarifTableBody) {
                     tarifTableBody.innerHTML = `<tr><td colspan="5" class="text-center py-10 text-red-500">Gagal memuat data. Silakan refresh halaman.</td></tr>`;
                 }
-            }); // <--- Kurung kurawal penutup untuk .catch
-        } // <--- Kurung kurawal penutup untuk function loadTarifs
+            });
+        }
 
         // Panggil inisialisasi elemen modal SETELAH DOM ready
         initializeModalElements();

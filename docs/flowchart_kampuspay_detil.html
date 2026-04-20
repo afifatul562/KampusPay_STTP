@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flowchart KampusPay - Web & Android (Detail)</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f8f9fa; padding: 24px; }
+        h1 { color: #1a365d; margin-bottom: 8px; font-size: 1.5em; }
+        .subtitle { color: #4a5568; margin-bottom: 20px; font-size: 0.95em; }
+        .diagram { background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 28px; overflow-x: auto; border: 1px solid #e2e8f0; }
+        .diagram-title { font-weight: 600; color: #2d3748; margin-bottom: 12px; font-size: 1.05em; }
+        .mermaid { display: flex; justify-content: center; min-height: 150px; }
+        .note { background: #edf2f7; padding: 12px 16px; border-radius: 6px; margin-top: 16px; font-size: 0.9em; color: #2d3748; }
+    </style>
+</head>
+<body>
+    <h1>Flowchart KampusPay STTP - Web & Android (Detail)</h1>
+    <p class="subtitle">Satu aplikasi: Web (Admin, Kasir) + Android (Mahasiswa). Alur gabungan termasuk notifikasi, email, dan kode pembayaran.</p>
+
+    <!-- 1. Login & Role -->
+    <div class="diagram">
+        <div class="diagram-title">1. Alur Login & Penentuan Role/Platform</div>
+        <div class="mermaid">
+flowchart TD
+    Start([Mulai])
+    Start --> A[Halaman Login]
+    A --> B[/Input Username dan Password/]
+    B --> C{Validasi}
+    C -->|Tidak| A
+    C -->|Ya| D{Cek Role}
+    D -->|Admin| E[Dashboard Admin - Web]
+    D -->|Kasir| F[Dashboard Kasir - Web]
+    D -->|Mahasiswa| G[Dashboard Mahasiswa - Web/Android]
+        </div>
+    </div>
+
+    <!-- 2. Notifikasi ke Mahasiswa -->
+    <div class="diagram">
+        <div class="diagram-title">2. Notifikasi ke Mahasiswa - Saat Tagihan Dibuat (Admin/Kasir)</div>
+        <div class="mermaid">
+flowchart LR
+    subgraph Web
+        A1[Admin/Kasir Buat Tagihan]
+    end
+    A1 --> DB[(Database)]
+    DB --> N1[Kirim Email]
+    DB --> N2[Notifikasi Database]
+    
+    N1 --> E1[Email ke Inbox Mahasiswa]
+    E1 --> E2[Isi: Detail tagihan, Jumlah, Kode Pembayaran, Link Bayar]
+    
+    N2 --> D1[Simpan di tabel notifications]
+    D1 --> D2[Muncul di Dashboard Mahasiswa - Web/Android]
+        </div>
+    </div>
+
+    <!-- 3. Notifikasi ke Kasir -->
+    <div class="diagram">
+        <div class="diagram-title">3. Notifikasi ke Kasir - Saat Mahasiswa Pilih Aktivasi</div>
+        <div class="mermaid">
+flowchart LR
+    subgraph Android
+        M1[Mahasiswa Pilih Aktivasi Aktif/BSS]
+    end
+    M1 --> DB2[(Database)]
+    DB2 --> N3[AktivasiStatusChanged]
+    N3 --> K1[Notifikasi ke Semua Kasir]
+    K1 --> K2[Bell Icon di Dashboard Web Kasir]
+    K2 --> K3[Isi: Nama mahasiswa, NPM, semester, status]
+        </div>
+    </div>
+
+    <!-- 4. Kode Pembayaran / Voucher -->
+    <div class="diagram">
+        <div class="diagram-title">4. Kode Pembayaran - Flow untuk Mahasiswa (Android/Web)</div>
+        <div class="mermaid">
+flowchart TD
+    T1[Admin/Kasir Buat Tagihan]
+    T1 --> Gen[Generate Kode Pembayaran]
+    Gen --> Save[(Simpan ke Database)]
+    
+    Save --> P1[Email ke Mahasiswa]
+    Save --> P2[API Response ke App]
+    
+    P1 --> M1[Mahasiswa terima email]
+    M1 --> M2[Kode ada di email + link Bayar]
+    
+    P2 --> M3[Mahasiswa lihat di App Android/Web]
+    M3 --> M4[Kode tampil di detail tagihan]
+    
+    M2 --> Pay[Bayar di Kasir]
+    M4 --> Pay
+    Pay --> Kasir[Kasir input kode untuk proses bayar tunai]
+        </div>
+    </div>
+
+    <!-- 5. Proses Mahasiswa Detail -->
+    <div class="diagram">
+        <div class="diagram-title">5. Proses Pembayaran Mahasiswa - Detail (Web & Android)</div>
+        <div class="mermaid">
+flowchart TD
+    D[Dashboard Mahasiswa]
+    D --> N{Ada Notifikasi?}
+    N -->|Ya| N1[Email + In-App Notification]
+    N1 --> L[Klik Link / Buka App]
+    N -->|Tidak| L
+    L --> Tag[Lihat Tagihan]
+    Tag --> Metode[Pilih Metode Pembayaran]
+    
+    Metode --> T1[Tunai]
+    Metode --> T2[Transfer]
+    Metode --> T3[Cicilan]
+    
+    T1 --> S1[Status: Menunggu Bayar di Kasir]
+    S1 --> K1[Datang ke kasir dengan Kode Pembayaran]
+    
+    T2 --> U1[Upload Bukti Transfer]
+    T3 --> U2[Input Jumlah + Upload Bukti]
+    U1 --> V1[Menunggu Verifikasi Kasir - Web]
+    U2 --> V1
+    
+    V1 --> V2{Kasir Verifikasi}
+    V2 -->|Setujui| DB[(Database)]
+    V2 -->|Tolak| Tolak[Status Ditolak]
+        </div>
+    </div>
+
+    <!-- 6. Gabungan Web + Android -->
+    <div class="diagram">
+        <div class="diagram-title">6. Ringkasan Satu Aplikasi - Web & Android</div>
+        <div class="mermaid">
+flowchart TB
+    subgraph Web["Platform Web"]
+        subgraph Admin["Admin"]
+            A1[Mahasiswa]
+            A2[Tarif]
+            A3[Tagihan]
+            A4[Pembayaran]
+            A5[Laporan]
+            A6[Pengaturan]
+            A7[User]
+        end
+        subgraph Kasir["Kasir"]
+            K1[Proses Bayar Tunai]
+            K2[Tagihan]
+            K3[Verifikasi Transfer]
+            K4[Aktivasi]
+            K5[Riwayat]
+            K6[Laporan]
+            K7[Notifikasi Aktivasi]
+        end
+    end
+    
+    subgraph Android["Platform Android"]
+        subgraph Mahasiswa["Mahasiswa"]
+            M1[Pembayaran]
+            M2[Riwayat]
+            M3[Laporan]
+            M4[Kwitansi]
+            M5[Aktivasi]
+            M6[Notifikasi Tagihan]
+        end
+    end
+    
+    Admin --> DB[(Database)]
+    Kasir --> DB
+    Mahasiswa --> API[API]
+    API --> DB
+        </div>
+    </div>
+
+    <div class="note">
+        <strong>Ringkasan:</strong> Web untuk Admin & Kasir. Android untuk Mahasiswa (via API). Satu database. Notifikasi: (1) Tagihan baru → Email + in-app ke Mahasiswa, (2) Aktivasi → In-app ke Kasir di Web. Kode Pembayaran = voucher/referensi yang dikirim ke Mahasiswa via email & tampil di app.
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'step' } });
+    </script>
+</body>
+</html>

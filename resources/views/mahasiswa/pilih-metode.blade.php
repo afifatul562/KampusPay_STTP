@@ -4,22 +4,22 @@
 @section('page-title', 'Pilih Metode Pembayaran')
 
 @section('content')
-    <div class="max-w-2xl mx-auto">
+    <div class="max-w-2xl mx-auto w-full px-0 sm:px-0">
         {{-- Card utama --}}
         <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
-            <div class="p-6 border-b bg-gradient-to-r from-gray-50 to-gray-100">
-                <h2 class="text-xl font-semibold text-gray-800">Pilih Metode untuk Tagihan</h2>
+            <div class="p-4 sm:p-6 border-b bg-gradient-to-r from-gray-50 to-gray-100">
+                <h2 class="text-fluid-lg sm:text-xl font-semibold text-gray-800">Pilih Metode untuk Tagihan</h2>
             </div>
 
             {{-- Info Tagihan --}}
-            <div class="p-6 space-y-4 border-b">
-                <div class="flex justify-between items-center">
-                    <span class="text-sm text-gray-500">Tagihan</span>
-                    <span class="font-semibold text-gray-900 text-right">{{ $tagihan->tarif->nama_pembayaran }}</span>
+            <div class="p-4 sm:p-6 space-y-3 sm:space-y-4 border-b">
+                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
+                    <span class="text-fluid-sm text-gray-500">Tagihan</span>
+                    <span class="font-semibold text-gray-900 text-left sm:text-right break-words">{{ $tagihan->jenis_tampilan }}</span>
                 </div>
-                <div class="flex justify-between items-center">
-                    <span class="text-sm text-gray-500">Jumlah Tagihan</span>
-                    <span class="text-2xl font-bold text-blue-600">Rp. {{ number_format($tagihan->jumlah_tagihan, 0, ',', '.') }}</span>
+                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
+                    <span class="text-fluid-sm text-gray-500">Jumlah Tagihan</span>
+                    <span class="text-fluid-xl sm:text-2xl font-bold text-blue-600">Rp. {{ number_format($tagihan->jumlah_tagihan, 0, ',', '.') }}</span>
                 </div>
                 @if($tagihan->total_angsuran > 0)
                 <div class="flex justify-between items-center">
@@ -40,8 +40,8 @@
             {{-- Form Pilihan Metode --}}
             <form action="{{ route('mahasiswa.pembayaran.proses-metode', $tagihan->tagihan_id) }}" method="POST">
                 @csrf
-                <div class="p-6 space-y-4">
-                    <p class="text-sm text-gray-600">Silakan pilih salah satu metode pembayaran yang Anda inginkan:</p>
+                <div class="p-4 sm:p-6 space-y-3 sm:space-y-4">
+                    <p class="text-fluid-sm text-gray-600">Silakan pilih salah satu metode pembayaran yang Anda inginkan:</p>
 
                     @php
                         $isWajibLunas = $tagihan->isWajibLunas();
@@ -50,7 +50,7 @@
 
                     @if(!$isWajibLunas)
                     <button type="submit" name="metode" value="cicil"
-                            class="group w-full flex items-center justify-between p-4 border-2 border-purple-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200 shadow-sm hover:shadow-md">
+                            class="group w-full flex items-center justify-between gap-3 min-h-touch p-4 border-2 border-purple-200 rounded-xl sm:rounded-lg hover:border-purple-500 hover:bg-purple-50 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200 shadow-sm hover:shadow-md text-left">
                         <div class="text-left">
                             <p class="font-semibold text-gray-800 group-hover:text-purple-700">Bayar Cicilan</p>
                             <p class="text-sm text-gray-500">Bayar sebagian tagihan sesuai kemampuan Anda.</p>
@@ -66,7 +66,7 @@
 
                     {{-- Pilihan 1: Transfer --}}
                     <button type="submit" name="metode" value="transfer"
-                            class="group w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all duration-200 shadow-sm hover:shadow-md">
+                            class="group w-full flex items-center justify-between gap-3 min-h-touch p-4 border-2 border-gray-200 rounded-xl sm:rounded-lg hover:border-primary-500 hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all duration-200 shadow-sm hover:shadow-md text-left">
                         <div class="text-left">
                             <p class="font-semibold text-gray-800 group-hover:text-primary-700">Bayar {{ $isWajibLunas ? 'Penuh' : 'Lunas' }} via Transfer Bank</p>
                             <p class="text-sm text-gray-500">Upload bukti transfer untuk diverifikasi oleh kasir.</p>
@@ -78,7 +78,7 @@
 
                     {{-- Pilihan 2: Tunai --}}
                     <button type="submit" name="metode" value="tunai"
-                            class="group w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:border-success-500 hover:bg-success-50 focus:outline-none focus:ring-2 focus:ring-success-500 transition-all duration-200 shadow-sm hover:shadow-md">
+                            class="group w-full flex items-center justify-between gap-3 min-h-touch p-4 border-2 border-gray-200 rounded-xl sm:rounded-lg hover:border-success-500 hover:bg-success-50 focus:outline-none focus:ring-2 focus:ring-success-500 transition-all duration-200 shadow-sm hover:shadow-md text-left">
                         <div class="text-left">
                             <p class="font-semibold text-gray-800 group-hover:text-success-700">Bayar {{ $isWajibLunas ? 'Penuh' : 'Lunas' }} Tunai di Kasir</p>
                             <p class="text-sm text-gray-500">Pilih ini dan datang ke kasir untuk pembayaran tunai.</p>
@@ -92,8 +92,8 @@
         </div>
 
         {{-- Tombol Kembali --}}
-        <div class="mt-6 text-center">
-            <a href="{{ route('mahasiswa.pembayaran.index') }}" class="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-800 transition-colors duration-200">
+        <div class="mt-4 sm:mt-6 text-center">
+            <a href="{{ route('mahasiswa.pembayaran.index') }}" class="inline-flex items-center justify-center min-h-touch px-2 text-fluid-sm font-medium text-primary-600 hover:text-primary-800 transition-colors duration-200 rounded-lg">
                 <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                 Kembali ke Daftar Tagihan
             </a>

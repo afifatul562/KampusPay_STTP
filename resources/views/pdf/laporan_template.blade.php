@@ -34,8 +34,6 @@
         .badge { display:inline-block; font-size:10px; padding:2px 8px; border-radius:8px; font-weight:700; border:1px solid #000; }
         .badge-lunas { background:#DCFCE7; color:#166534; }
         .badge-belum { background:#FEF3C7; color:#92400E; }
-        .badge-ganjil { background:#DBEAFE; color:#1E40AF; }
-        .badge-genap { background:#E9D5FF; color:#6B21A8; }
         small { font-size: 10px; color:#000; }
         .total-row th, .total-row td { background:#F8F9FA; font-weight:700; border-top:2px solid #000; }
     </style>
@@ -62,6 +60,7 @@
     <h2>Periode: {{ $periodeFormatted }}</h2>
 
     @if($jenis === 'mahasiswa')
+        {{-- Logika Laporan Mahasiswa (Data Mahasiswa berdasarkan Angkatan) --}}
         @php $mahasiswaCount = 0; @endphp
         @if($data && count($data) > 0)
             <table>
@@ -97,62 +96,19 @@
         @endif
 
     @elseif($jenis === 'pembayaran')
-        @php
-            function parseSemesterLabel($semesterLabel) {
-                if (!$semesterLabel) {
-                    return ['tahunAkademik' => '-', 'semester' => '-'];
-                }
-                $parts = explode(' ', trim($semesterLabel));
-                if (count($parts) >= 2) {
-                    return [
-                        'tahunAkademik' => $parts[0],
-                        'semester' => $parts[1]
-                    ];
-                }
-                return ['tahunAkademik' => $semesterLabel, 'semester' => '-'];
-            }
-
-            function calculateSemesterNumber($tahunAkademik, $angkatan, $semesterType) {
-                if (!$tahunAkademik || !$angkatan || !$semesterType || $tahunAkademik === '-') {
-                    return null;
-                }
-                try {
-                    $tahunParts = explode('/', $tahunAkademik);
-                    if (count($tahunParts) < 1) return null;
-
-                    $tahunAkademikAwal = (int) $tahunParts[0];
-                    $angkatanInt = (int) $angkatan;
-
-                    if ($tahunAkademikAwal === 0 || $angkatanInt === 0) {
-                        return null;
-                    }
-
-                    $selisihTahun = $tahunAkademikAwal - $angkatanInt;
-                    $semesterTypeLower = strtolower($semesterType);
-
-                    if ($semesterTypeLower === 'ganjil') {
-                        return $selisihTahun * 2 + 1;
-                    } else if ($semesterTypeLower === 'genap') {
-                        return $selisihTahun * 2 + 2;
-                    }
-                    return null;
-                } catch (Exception $e) {
-                    return null;
-                }
-            }
-        @endphp
+        {{-- ====================================================== --}}
+        {{-- !! MODIFIKASI LAPORAN PEMBAYARAN DIMULAI DARI SINI !! --}}
+        {{-- ====================================================== --}}
         <table>
             <thead>
                 <tr>
-                    <th style="width: 4%;">No</th>
-                    <th style="width: 12%;">Kode Pembayaran</th>
-                    <th style="width: 18%;">Mahasiswa</th>
-                    <th style="width: 12%;">Tahun Akademik</th>
-                    <th style="width: 10%;" class="text-center">Semester</th>
+                    <th style="width: 5%;">No</th>
+                    <th style="width: 15%;">Kode Pembayaran</th>
+                    <th style="width: 25%;">Mahasiswa</th>
                     <th style="width: 20%;">Jenis Tagihan</th>
-                    <th style="width: 12%;" class="text-right">Jumlah</th>
-                    <th style="width: 8%;" class="text-center">Status</th>
-                    <th style="width: 12%;">Tgl Bayar</th>
+                    <th style="width: 15%;" class="text-right">Jumlah</th>
+                    <th style="width: 10%;" class="text-center">Status</th>
+                    <th style="width: 10%;">Tgl Bayar</th>
                 </tr>
             </thead>
             <tbody>
@@ -168,6 +124,7 @@
 
                 @if(isset($groupedData['Belum Lunas']) && $groupedData['Belum Lunas']->isNotEmpty())
                     @php
+                        // Pisahkan tagihan yang belum dibayar sama sekali dengan yang sudah ada cicilan
                         $belumDibayar = $groupedData['Belum Lunas']->filter(function($tagihan) {
                             $pembayaranAll = $tagihan->pembayaranAll ?? collect();
                             return $pembayaranAll->isEmpty() || ($tagihan->total_angsuran ?? 0) == 0;
@@ -180,19 +137,10 @@
 
                     @if($belumDibayar->isNotEmpty())
                         <tr class="group-header">
-                            <td colspan="9"><strong>Belum Dibayarkan</strong></td>
+                            <td colspan="7"><strong>Belum Dibayarkan</strong></td>
                         </tr>
                         @foreach ($belumDibayar as $tagihan)
-                            @php
-                                $totalBelumLunas += $tagihan->jumlah_tagihan;
-                                $semesterInfo = parseSemesterLabel($tagihan->semester_label ?? null);
-                                $angkatan = $tagihan->mahasiswa->angkatan ?? null;
-                                $semesterNumber = calculateSemesterNumber($semesterInfo['tahunAkademik'], $angkatan, $semesterInfo['semester']);
-                                if (!$semesterNumber) {
-                                    $semesterNumber = $tagihan->mahasiswa->semester_aktif ?? null;
-                                }
-                                $programStudi = $tagihan->mahasiswa->program_studi ?? null;
-                            @endphp
+                            @php $totalBelumLunas += $tagihan->jumlah_tagihan; @endphp
                             <tr>
                                 <td>{{ $rowNumber++ }}</td>
                                 <td>{{ $tagihan->kode_pembayaran ?? '-' }}</td>
@@ -200,29 +148,7 @@
                                     {{ $tagihan->mahasiswa->user->nama_lengkap ?? 'N/A' }}<br>
                                     <small>{{ $tagihan->mahasiswa->npm ?? 'N/A' }}</small>
                                 </td>
-                                <td>{{ $semesterInfo['tahunAkademik'] }}</td>
-                                <td class="text-center">
-                                    @if($semesterInfo['semester'] !== '-')
-                                        <span class="badge {{ strtolower($semesterInfo['semester']) === 'ganjil' ? 'badge-ganjil' : 'badge-genap' }}">{{ $semesterInfo['semester'] }}</span>
-                                    @else
-                                        -
-                                    @endif
-                                </td>
-                                <td>
-                                    <strong>{{ $tagihan->tarif->nama_pembayaran ?? 'N/A' }}</strong><br>
-                                    <small style="color: #666;">
-                                        @if($semesterNumber)
-                                            Semester {{ $semesterNumber }}
-                                            @if($programStudi) • @endif
-                                        @endif
-                                        @if($programStudi)
-                                            {{ $programStudi }}
-                                        @endif
-                                        @if(!$semesterNumber && !$programStudi)
-                                            -
-                                        @endif
-                                    </small>
-                                </td>
+                                <td>{{ $tagihan->jenis_tampilan ?? 'N/A' }}</td>
                                 <td class="text-right">Rp {{ number_format($tagihan->jumlah_tagihan, 0, ',', '.') }}</td>
                                 <td class="text-center">
                                     <span class="badge badge-belum">Belum Dibayarkan</span>
@@ -234,21 +160,14 @@
 
                     @if($belumLunas->isNotEmpty())
                         <tr class="group-header">
-                            <td colspan="9"><strong>Belum Lunas</strong></td>
+                            <td colspan="7"><strong>Belum Lunas</strong></td>
                         </tr>
                         @foreach ($belumLunas as $tagihan)
-                            @php
+                            @php 
                                 $totalBelumLunas += $tagihan->jumlah_tagihan;
                                 $pembayaranAll = $tagihan->pembayaranAll ?? collect();
                                 $pembayaranTerakhir = $pembayaranAll->sortByDesc('tanggal_bayar')->first();
                                 $tglBayar = $pembayaranTerakhir ? \Carbon\Carbon::parse($pembayaranTerakhir->tanggal_bayar)->isoFormat('DD MMM YYYY') : '-';
-                                $semesterInfo = parseSemesterLabel($tagihan->semester_label ?? null);
-                                $angkatan = $tagihan->mahasiswa->angkatan ?? null;
-                                $semesterNumber = calculateSemesterNumber($semesterInfo['tahunAkademik'], $angkatan, $semesterInfo['semester']);
-                                if (!$semesterNumber) {
-                                    $semesterNumber = $tagihan->mahasiswa->semester_aktif ?? null;
-                                }
-                                $programStudi = $tagihan->mahasiswa->program_studi ?? null;
                             @endphp
                             <tr>
                                 <td>{{ $rowNumber++ }}</td>
@@ -257,29 +176,7 @@
                                     {{ $tagihan->mahasiswa->user->nama_lengkap ?? 'N/A' }}<br>
                                     <small>{{ $tagihan->mahasiswa->npm ?? 'N/A' }}</small>
                                 </td>
-                                <td>{{ $semesterInfo['tahunAkademik'] }}</td>
-                                <td class="text-center">
-                                    @if($semesterInfo['semester'] !== '-')
-                                        <span class="badge {{ strtolower($semesterInfo['semester']) === 'ganjil' ? 'badge-ganjil' : 'badge-genap' }}">{{ $semesterInfo['semester'] }}</span>
-                                    @else
-                                        -
-                                    @endif
-                                </td>
-                                <td>
-                                    <strong>{{ $tagihan->tarif->nama_pembayaran ?? 'N/A' }}</strong><br>
-                                    <small style="color: #666;">
-                                        @if($semesterNumber)
-                                            Semester {{ $semesterNumber }}
-                                            @if($programStudi) • @endif
-                                        @endif
-                                        @if($programStudi)
-                                            {{ $programStudi }}
-                                        @endif
-                                        @if(!$semesterNumber && !$programStudi)
-                                            -
-                                        @endif
-                                    </small>
-                                </td>
+                                <td>{{ $tagihan->jenis_tampilan ?? 'N/A' }}</td>
                                 <td class="text-right">Rp {{ number_format($tagihan->jumlah_tagihan, 0, ',', '.') }}</td>
                                 <td class="text-center">
                                     <span class="badge badge-belum">Belum Lunas</span>
@@ -292,20 +189,13 @@
 
                 @if(isset($groupedData['Lunas']) && $groupedData['Lunas']->isNotEmpty())
                      <tr class="group-header">
-                        <td colspan="9"><strong>Lunas</strong></td>
+                        <td colspan="7"><strong>Lunas</strong></td>
                     </tr>
                     @foreach ($groupedData['Lunas'] as $tagihan)
                         @php
                             $totalLunas += $tagihan->jumlah_tagihan;
                             $pembayaran = $tagihan->pembayaran;
                             $tglBayar = $pembayaran ? \Carbon\Carbon::parse($pembayaran->tanggal_bayar)->isoFormat('DD MMM YYYY') : '-';
-                            $semesterInfo = parseSemesterLabel($tagihan->semester_label ?? null);
-                            $angkatan = $tagihan->mahasiswa->angkatan ?? null;
-                            $semesterNumber = calculateSemesterNumber($semesterInfo['tahunAkademik'], $angkatan, $semesterInfo['semester']);
-                            if (!$semesterNumber) {
-                                $semesterNumber = $tagihan->mahasiswa->semester_aktif ?? null;
-                            }
-                            $programStudi = $tagihan->mahasiswa->program_studi ?? null;
                         @endphp
                         <tr>
                             <td>{{ $rowNumber++ }}</td>
@@ -314,29 +204,7 @@
                                 {{ $tagihan->mahasiswa->user->nama_lengkap ?? 'N/A' }}<br>
                                 <small>{{ $tagihan->mahasiswa->npm ?? 'N/A' }}</small>
                             </td>
-                            <td>{{ $semesterInfo['tahunAkademik'] }}</td>
-                            <td class="text-center">
-                                @if($semesterInfo['semester'] !== '-')
-                                    <span class="badge {{ strtolower($semesterInfo['semester']) === 'ganjil' ? 'badge-ganjil' : 'badge-genap' }}">{{ $semesterInfo['semester'] }}</span>
-                                @else
-                                    -
-                                @endif
-                            </td>
-                            <td>
-                                <strong>{{ $tagihan->tarif->nama_pembayaran ?? 'N/A' }}</strong><br>
-                                <small style="color: #666;">
-                                    @if($semesterNumber)
-                                        Semester {{ $semesterNumber }}
-                                        @if($programStudi) • @endif
-                                    @endif
-                                    @if($programStudi)
-                                        {{ $programStudi }}
-                                    @endif
-                                    @if(!$semesterNumber && !$programStudi)
-                                        -
-                                    @endif
-                                </small>
-                            </td>
+                            <td>{{ $tagihan->jenis_tampilan ?? 'N/A' }}</td>
                             <td class="text-right">Rp {{ number_format($tagihan->jumlah_tagihan, 0, ',', '.') }}</td>
                             <td class="text-center">
                                 <span class="badge badge-lunas">Lunas</span>
@@ -348,18 +216,18 @@
 
                  @if(!isset($groupedData['Belum Lunas']) && !isset($groupedData['Lunas']))
                     <tr>
-                        <td colspan="9" class="text-center">Tidak ada data pembayaran/tagihan untuk periode ini.</td>
+                        <td colspan="7" class="text-center">Tidak ada data pembayaran/tagihan untuk periode ini.</td>
                     </tr>
                 @endif
 
                 @if($totalLunas > 0 || $totalBelumLunas > 0)
                     <tr class="total-row">
-                        <th colspan="6" class="text-right">Total Belum Dibayarkan:</th>
+                        <th colspan="4" class="text-right">Total Belum Dibayarkan:</th>
                         <th class="text-right">Rp {{ number_format($totalBelumLunas, 0, ',', '.') }}</th>
                         <th colspan="2"></th>
                     </tr>
                     <tr class="total-row">
-                        <th colspan="6" class="text-right">Total Lunas:</th>
+                        <th colspan="4" class="text-right">Total Lunas:</th>
                         <th class="text-right">Rp {{ number_format($totalLunas, 0, ',', '.') }}</th>
                         <th colspan="2"></th>
                     </tr>

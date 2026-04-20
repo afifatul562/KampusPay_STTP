@@ -11,6 +11,8 @@ class PrintController extends Controller
 {
     public function cetakBuktiPembayaran(Pembayaran $pembayaran)
     {
+        $this->authorize('view', $pembayaran);
+
         // Lengkapi relasi yang dibutuhkan oleh template
         $pembayaran->load('tagihan.mahasiswa.user', 'tagihan.tarif', 'verifier');
 

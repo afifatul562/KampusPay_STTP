@@ -8,7 +8,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Database\QueryException;
 
 class SettingController extends Controller
 {
@@ -30,6 +29,7 @@ class SettingController extends Controller
                 $settings['academic_year'] = $settings['academic_year'] ?? $computedYear;
                 $settings['semester'] = $settings['semester'] ?? $computedSemester;
             }
+            // Bungkus dalam 'data' agar konsisten
             return response()->json(['data' => $settings]);
         } catch (\Exception $e) {
             Log::error('Gagal mengambil system settings: ' . $e->getMessage());
@@ -91,8 +91,7 @@ class SettingController extends Controller
                 ], 500); // Internal Server Error
             }
         } catch (ValidationException $e) {
-            // Tangani error validasi
-            Log::warning('Validasi gagal saat update pengaturan: ', $e->errors());
+            Log::warning('Validasi gagal saat update pengaturan.', ['errors' => $e->errors()]);
              return response()->json([
                 'success' => false,
                 'message' => 'Validasi gagal',
@@ -111,8 +110,9 @@ class SettingController extends Controller
                 'php_version'     => PHP_VERSION,
                 'laravel_version' => app()->version(),
                 'database'        => config('database.default'),
-                'server_time'     => now()->toDateTimeString()
+                'server_time'     => now()->toDateTimeString() // Atau pakai format lain jika perlu
              ];
+             // Bungkus dalam 'data' agar konsisten
              return response()->json(['data' => $info]);
          } catch (\Exception $e) {
             Log::error('Gagal mengambil system info: ' . $e->getMessage());
@@ -131,11 +131,11 @@ class SettingController extends Controller
      */
     private function computeAcademicYearAndSemester(): array
     {
-        $now = now();
+        $now = now(); // Saat ini 1 Januari 2026
         $y = (int) $now->year;
         $m = (int) $now->month;
 
-        // Tentukan semester berdasarkan bulan
+        // SEMESTER: Januari (1) masuk ke sini -> Ganjil
         if ($m >= 10 || $m <= 2) {
             $semester = 'Ganjil';
         } elseif ($m >= 3 && $m <= 7) {
@@ -144,7 +144,7 @@ class SettingController extends Controller
             $semester = 'Libur';
         }
 
-        // Tentukan tahun akademik
+        // TAHUN AKADEMIK: Januari (1) masuk ke else -> 2025/2026
         if ($m >= 10) {
             $startYear = $y;
             $endYear = $y + 1;

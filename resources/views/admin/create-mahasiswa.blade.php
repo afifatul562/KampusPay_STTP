@@ -5,8 +5,9 @@
 
 @section('content')
     <div class="max-w-xl mx-auto">
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+        <div class="bg-white p-4 sm:p-5 md:p-6 rounded-xl shadow-sm border border-gray-200">
             <h3 class="text-xl font-semibold mb-4 text-gray-800">👨‍🎓 Formulir Registrasi Mahasiswa</h3>
+            <p class="text-sm text-gray-600 mb-4">Email tidak wajib di sini. Mahasiswa dapat melengkapi email di menu Profil setelah login.</p>
 
             {{-- Tampilkan error validasi jika ada --}}
             @if ($errors->any())
@@ -25,10 +26,6 @@
                 <div>
                     <label for="nama_lengkap" class="block text-sm font-medium text-gray-700">Nama Lengkap</label>
                     <input type="text" id="nama_lengkap" name="nama_lengkap" value="{{ old('nama_lengkap') }}" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                </div>
-                <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-                    <input type="email" id="email" name="email" value="{{ old('email') }}" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
                 <div>
                     <label for="npm" class="block text-sm font-medium text-gray-700">NPM</label>
@@ -69,6 +66,41 @@
                         </select>
                         <input type="hidden" name="semester_aktif" id="semester_hidden" value="{{ old('semester_aktif') }}">
                         <p id="semester-help" class="mt-1 text-xs text-gray-500"></p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="program_type" class="block text-sm font-medium text-gray-700">Program</label>
+                        <select id="program_type" name="program_type" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            <option value="reguler" {{ old('program_type', 'reguler') === 'reguler' ? 'selected' : '' }}>Reguler</option>
+                            <option value="eksklusif" {{ old('program_type') === 'eksklusif' ? 'selected' : '' }}>Eksklusif</option>
+                            <option value="kip" {{ old('program_type') === 'kip' ? 'selected' : '' }}>KIP</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="kip_scheme" class="block text-sm font-medium text-gray-700">Skema KIP</label>
+                        <select id="kip_scheme" name="kip_scheme" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            <option value="" {{ old('kip_scheme') ? '' : 'selected' }}>-</option>
+                            <option value="1" {{ old('kip_scheme') == 1 ? 'selected' : '' }}>Skema 1 (Full)</option>
+                            <option value="2" {{ old('kip_scheme') == 2 ? 'selected' : '' }}>Skema 2</option>
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500">Diisi hanya jika Program = KIP.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="flex items-center gap-2">
+                        <input id="is_transfer" name="is_transfer" type="checkbox" value="1" {{ old('is_transfer') ? 'checked' : '' }}>
+                        <label for="is_transfer" class="text-sm font-medium text-gray-700">Mahasiswa transfer</label>
+                    </div>
+                    <div>
+                        <label for="start_semester" class="block text-sm font-medium text-gray-700">Mulai semester (transfer)</label>
+                        <input type="number" id="start_semester" name="start_semester" min="1" max="14"
+                               value="{{ old('start_semester') }}"
+                               class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                               placeholder="Mis. 3">
+                        <p class="mt-1 text-xs text-gray-500">Jika transfer, tagihan semester di bawah ini tidak akan dibuat.</p>
                     </div>
                 </div>
                 <div class="pt-2 flex justify-end gap-3">

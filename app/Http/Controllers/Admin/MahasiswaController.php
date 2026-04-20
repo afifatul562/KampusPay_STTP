@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\MahasiswaDetail;
+use App\Models\MahasiswaProgram;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -19,6 +20,7 @@ class MahasiswaController extends Controller
     public function index()
     {
         $mahasiswa = MahasiswaDetail::with('user')->orderBy('npm', 'asc')->get();
+
         return response()->json([
             'success' => true,
             'data' => $mahasiswa
@@ -34,18 +36,20 @@ class MahasiswaController extends Controller
     }
 
     /**
-     * Menyimpan data mahasiswa baru. (Untuk Web)
+     * Menyimpan data mahasiswa baru (web: redirect + flash).
      */
     public function store(Request $request)
     {
-        // 1. Validasi input
         $validatedData = $request->validate([
             'nama_lengkap' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
             'npm' => 'required|string|unique:users,username|unique:mahasiswa_detail,npm',
             'program_studi' => 'required|string|max:100',
             'angkatan' => 'required|string|max:10',
             'semester_aktif' => 'required|integer|min:1|max:14',
+            'program_type' => 'nullable|string|in:kip,reguler,eksklusif',
+            'kip_scheme' => 'nullable|integer|in:1,2',
+            'is_transfer' => 'nullable|boolean',
+            'start_semester' => 'nullable|integer|min:1|max:14',
         ]);
 
         DB::beginTransaction();
@@ -55,20 +59,35 @@ class MahasiswaController extends Controller
             $defaultPassword = env('MAHASISWA_DEFAULT_PASSWORD', $validatedData['npm']);
             $user = User::create([
                 'nama_lengkap' => $validatedData['nama_lengkap'],
-                'email' => $validatedData['email'],
+                'email' => null,
                 'username' => $validatedData['npm'],
                 'password' => Hash::make($defaultPassword),
                 'role' => 'mahasiswa',
             ]);
 
             // Buat data di tabel 'mahasiswa_detail'
-            $user->mahasiswaDetail()->create([
+            $detail = $user->mahasiswaDetail()->create([
                 'npm' => $validatedData['npm'],
                 'program_studi' => $validatedData['program_studi'],
                 'angkatan' => $validatedData['angkatan'],
                 'semester_aktif' => $validatedData['semester_aktif'],
                 'status' => 'Aktif'
             ]);
+
+            $programType = $validatedData['program_type'] ?? 'reguler';
+            $kipScheme = $programType === 'kip' ? ($validatedData['kip_scheme'] ?? null) : null;
+            $isTransfer = (bool) ($validatedData['is_transfer'] ?? false);
+            $startSemester = $isTransfer ? (int) ($validatedData['start_semester'] ?? $detail->semester_aktif ?? 1) : 1;
+
+            MahasiswaProgram::updateOrCreate(
+                ['mahasiswa_id' => $detail->mahasiswa_id],
+                [
+                    'program_type' => $programType,
+                    'kip_scheme' => $kipScheme,
+                    'is_transfer' => $isTransfer,
+                    'start_semester' => $startSemester,
+                ]
+            );
 
             DB::commit();
 
@@ -82,8 +101,8 @@ class MahasiswaController extends Controller
         }
     }
 
- /**
-     * Mengimpor mahasiswa dari CSV. (Untuk Web)
+    /**
+     * Impor mahasiswa dari CSV (web: redirect + flash; logging di channel default).
      */
     public function import(Request $request)
     {
@@ -100,7 +119,7 @@ class MahasiswaController extends Controller
 
         $file = $request->file('file_csv');
 
-        // Validasi ekstensi file secara manual
+        // Validasi ekstensi file secara manual (lebih fleksibel)
         $extension = strtolower($file->getClientOriginalExtension());
         if (!in_array($extension, ['csv', 'txt'])) {
             Log::error('Format file tidak valid: ' . $extension);
@@ -134,20 +153,13 @@ class MahasiswaController extends Controller
         $currentMonth = (int)$today->format('m');
 
         try {
-            // Ambil semua data yang ada ke memori sebelum loop untuk validasi cepat
-            $existingEmails = array_flip(User::pluck('email')->toArray());
+            // Cache username & NPM yang sudah ada (lookup O(1) per baris CSV).
             $existingUsernames = array_flip(User::pluck('username')->toArray());
             $existingNpms = array_flip(MahasiswaDetail::pluck('npm')->toArray());
 
-            // Log untuk debug - tampilkan beberapa contoh NPM yang ada
-            Log::info('Data existing yang diambil untuk validasi:');
-            Log::info('Total emails: ' . count($existingEmails));
-            Log::info('Total usernames: ' . count($existingUsernames));
-            Log::info('Total NPMs: ' . count($existingNpms));
-
-            // Log beberapa contoh NPM untuk verifikasi
+            Log::info('Impor CSV: validasi duplikat — total username: ' . count($existingUsernames) . ', total NPM: ' . count($existingNpms));
             $sampleNpms = array_slice(array_keys($existingNpms), 0, 5);
-            Log::info('Contoh NPM yang ada di database: ' . implode(', ', $sampleNpms));
+            Log::info('Impor CSV: contoh NPM di DB: ' . implode(', ', $sampleNpms));
         } catch (\Exception $e) {
             Log::error('Gagal mengambil data awal untuk validasi impor: ' . $e->getMessage());
             fclose($handle);
@@ -159,28 +171,33 @@ class MahasiswaController extends Controller
             while (($row = fgetcsv($handle, 1000, ",")) !== FALSE) {
                 $lineNumber++;
 
-                // Cek jika baris kosong
                 if (empty(array_filter($row, 'strlen'))) {
                     Log::warning("Baris {$lineNumber} dilewati karena kosong.");
                     continue;
                 }
 
-                // Ambil data 3 kolom dan trim spasi ekstra
-                $nama_lengkap = isset($row[0]) ? trim($row[0]) : null;
-                $email = isset($row[1]) ? trim($row[1]) : null;
-                $npm = isset($row[2]) ? trim($row[2]) : null;
+                // Format: nama_lengkap, npm — baris lama nama_lengkap, email, npm tetap didukung (email diabaikan).
+                $cols = array_values(array_map(fn ($c) => is_string($c) ? trim($c) : '', $row));
+                if (count($cols) >= 3 && filter_var($cols[1], FILTER_VALIDATE_EMAIL)) {
+                    $nama_lengkap = $cols[0] !== '' ? $cols[0] : null;
+                    $npm = $cols[2] !== '' ? $cols[2] : null;
+                } elseif (count($cols) >= 2) {
+                    $nama_lengkap = $cols[0] !== '' ? $cols[0] : null;
+                    $npm = $cols[1] !== '' ? $cols[1] : null;
+                } else {
+                    $nama_lengkap = null;
+                    $npm = null;
+                }
 
-                // Log baris data mentah
-                $rowDataForLog = implode(', ', [$nama_lengkap, $email, $npm]);
+                $rowDataForLog = implode(', ', array_filter([$nama_lengkap, $npm], fn ($v) => $v !== null && $v !== ''));
                 Log::info("Memproses baris {$lineNumber}: " . $rowDataForLog);
 
                 try {
-                    // --- Validasi Data Baris ---
+                    // Validasi baris
                     if (empty($npm) || strlen($npm) < 6) { throw new \Exception("Format NPM tidak valid ('{$npm}')."); }
                     if (empty($nama_lengkap)) { throw new \Exception("Nama lengkap kosong."); }
-                    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) { throw new \Exception("Format Email tidak valid ('{$email}')."); }
 
-                    // Kalkulasi nilai turunan dari NPM
+                    // Turunan dari NPM (angkatan, prodi, semester)
                     $angkatanCode = substr($npm, 0, 2);
                     $angkatan = '20' . $angkatanCode;
                     $angkatanTahunInt = (int)$angkatan;
@@ -189,37 +206,29 @@ class MahasiswaController extends Controller
                     if (!$program_studi) { throw new \Exception("Kode prodi '{$prodiCode}' (digit 5-6 NPM) tidak dikenali."); }
                     $selisihTahun = $currentYear - $angkatanTahunInt;
                     $semesterAktif = $selisihTahun * 2;
-                    if ($currentMonth >= 10) { $semesterAktif += 1; } // Asumsi Oktober = Ganjil
-                    $semesterAktif = max(1, min($semesterAktif, 8)); // Batasi semester 1-8
-
-                    // Cek duplikat di database yang sudah ada (sebelum import)
-                    if (isset($existingEmails[$email])) {
-                        // Cek detail di database untuk informasi lebih lengkap
-                        $existingUser = User::where('email', $email)->first();
-                        $detailInfo = $existingUser ? " (User ID: {$existingUser->id}, Nama: {$existingUser->nama_lengkap})" : "";
-                        Log::warning("Baris {$lineNumber}: Email '{$email}' sudah ada di database{$detailInfo}");
-                        throw new \Exception("Email '{$email}' sudah terdaftar di database{$detailInfo}.");
+                    if ($currentMonth >= 10) {
+                        $semesterAktif += 1;
                     }
+                    $semesterAktif = max(1, min($semesterAktif, 8));
+
                     if (isset($existingUsernames[$npm])) {
-                        // Cek detail di database untuk informasi lebih lengkap
                         $existingUser = User::where('username', $npm)->first();
                         $detailInfo = $existingUser ? " (User ID: {$existingUser->id}, Nama: {$existingUser->nama_lengkap})" : "";
                         Log::warning("Baris {$lineNumber}: NPM '{$npm}' sudah ada sebagai username di database{$detailInfo}");
                         throw new \Exception("NPM '{$npm}' sudah terdaftar sebagai username di database{$detailInfo}.");
                     }
                     if (isset($existingNpms[$npm])) {
-                        // Cek detail di database untuk informasi lebih lengkap
                         $existingMhs = MahasiswaDetail::where('npm', $npm)->with('user')->first();
                         $detailInfo = $existingMhs && $existingMhs->user ? " (Mahasiswa ID: {$existingMhs->mahasiswa_id}, Nama: {$existingMhs->user->nama_lengkap})" : "";
                         Log::warning("Baris {$lineNumber}: NPM '{$npm}' sudah ada di detail mahasiswa{$detailInfo}");
                         throw new \Exception("NPM '{$npm}' sudah terdaftar di detail mahasiswa{$detailInfo}.");
                     }
 
-                    // --- Simpan ke Database ---
+                    // Simpan user + detail
                     $defaultPassword = env('MAHASISWA_DEFAULT_PASSWORD', $npm);
                     $user = User::create([
                         'nama_lengkap' => $nama_lengkap,
-                        'email' => $email,
+                        'email' => null,
                         'username' => $npm,
                         'password' => Hash::make($defaultPassword), // Default bisa diubah via env
                         'role' => 'mahasiswa',
@@ -233,53 +242,59 @@ class MahasiswaController extends Controller
                         'status' => 'Aktif'
                     ]);
 
-                    // Tambahkan data baru ke array memori untuk mencegah duplikat di dalam file CSV yang sama
-                    $existingEmails[$email] = true;
+                    // Default program untuk import: reguler, non-transfer.
+                    // Untuk mahasiswa transfer/KIP biasanya akan di-set via edit setelah import.
+                    $mhsDetail = MahasiswaDetail::where('npm', $npm)->first();
+                    if ($mhsDetail) {
+                        \App\Models\MahasiswaProgram::updateOrCreate(
+                            ['mahasiswa_id' => $mhsDetail->mahasiswa_id],
+                            [
+                                'program_type' => 'reguler',
+                                'kip_scheme' => null,
+                                'is_transfer' => false,
+                                'start_semester' => 1,
+                            ]
+                        );
+                    }
+
+                    // Perbarui cache agar baris berikutnya dalam file yang sama tidak bentrok.
                     $existingUsernames[$npm] = true;
                     $existingNpms[$npm] = true;
 
                     $berhasil++;
-                    Log::info("Baris {$lineNumber} (NPM: {$npm}) berhasil disimpan."); // Log Sukses Baris
+                    Log::info("Baris {$lineNumber} (NPM: {$npm}) berhasil disimpan.");
 
                 } catch (\Exception $e) {
                     $gagal++;
-                    // Gunakan data mentah yang sudah di-trim untuk log error
                     $errorMessage = "Baris {$lineNumber} (Data: {$rowDataForLog}): " . $e->getMessage();
                     $errors[] = $errorMessage;
-                    Log::error($errorMessage); // Log Error Baris
-                    // Jangan 'throw $e' di sini agar loop berlanjut mengumpulkan semua error
+                    Log::error($errorMessage);
                 }
-            } // End While
+            }
 
-            // Jika ada error di salah satu baris, batalkan semua
             if ($gagal > 0) {
-                // Buat pesan error utama yang akan dilempar ke 'catch' di luar
                 throw new \Exception("Terjadi {$gagal} kesalahan saat memproses baris CSV. Transaksi dibatalkan.");
             }
 
             DB::commit();
-            Log::info("Impor CSV berhasil. {$berhasil} data disimpan."); // Log Sukses Global
+            Log::info("Impor CSV berhasil. {$berhasil} data disimpan.");
 
             $message = "Impor selesai. Berhasil: {$berhasil} data.";
             return redirect()->route('admin.mahasiswa')->with('success', $message);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Impor CSV Gagal Total: ' . $e->getMessage()); // Log Error Global
-            Log::info('Jumlah error detail yang dikumpulkan: ' . count($errors ?? [])); // Debug: cek jumlah error
+            Log::error('Impor CSV Gagal Total: ' . $e->getMessage());
+            Log::info('Impor CSV: jumlah baris error: ' . count($errors ?? []));
 
-            // Siapkan pesan error untuk ditampilkan
             $errorMessage = 'Gagal melakukan impor: ' . $e->getMessage();
 
-            // Kirim detail error per baris via session terpisah
             if (isset($errors) && !empty($errors) && is_array($errors)) {
-                Log::info('Mengirim ' . count($errors) . ' error detail ke session');
                 return redirect()->route('admin.mahasiswa')
-                                 ->with('error', $errorMessage)
-                                 ->with('import_errors', $errors);
+                    ->with('error', $errorMessage)
+                    ->with('import_errors', $errors);
             }
 
-            Log::info('Tidak ada error detail, hanya mengirim pesan error utama'); // Debug
             return redirect()->route('admin.mahasiswa')->with('error', $errorMessage);
 
         } finally {
@@ -339,7 +354,7 @@ class MahasiswaController extends Controller
 
     public function edit($id)
     {
-        $mahasiswaDetail = MahasiswaDetail::with('user')->find($id);
+        $mahasiswaDetail = MahasiswaDetail::with(['user', 'program'])->find($id);
 
         if (!$mahasiswaDetail) {
             return redirect()->route('admin.mahasiswa')->with('error', 'Data mahasiswa tidak ditemukan.');
@@ -351,7 +366,7 @@ class MahasiswaController extends Controller
     }
 
     /**
-     * Memperbarui data mahasiswa. (Untuk Web)
+     * Memperbarui data mahasiswa (web: redirect + flash).
      */
     public function update(Request $request, $id)
     {
@@ -369,7 +384,7 @@ class MahasiswaController extends Controller
         $validatedData = $request->validate([
             'nama_lengkap' => 'required|string|max:255',
             'email' => [
-                'required',
+                'nullable',
                 'email',
                 Rule::unique('users')->ignore($user->id),
             ],
@@ -379,6 +394,10 @@ class MahasiswaController extends Controller
                 Rule::unique('users', 'username')->ignore($user->id),
                 Rule::unique('mahasiswa_detail', 'npm')->ignore($mahasiswaDetail->mahasiswa_id, 'mahasiswa_id'),
             ],
+            'program_type' => 'nullable|string|in:kip,reguler,eksklusif',
+            'kip_scheme' => 'nullable|integer|in:1,2',
+            'is_transfer' => 'nullable|boolean',
+            'start_semester' => 'nullable|integer|min:1|max:14',
         ]);
 
         DB::beginTransaction();
@@ -399,9 +418,13 @@ class MahasiswaController extends Controller
             $semesterAktif = max(1, min($semesterAktif, 8));
 
             // Update user (termasuk username = npm)
+            $email = isset($validatedData['email']) && $validatedData['email'] !== ''
+                ? $validatedData['email']
+                : null;
+
             $user->update([
                 'nama_lengkap' => $validatedData['nama_lengkap'],
-                'email' => $validatedData['email'],
+                'email' => $email,
                 'username' => $npm,
             ]);
 
@@ -412,6 +435,23 @@ class MahasiswaController extends Controller
                 'angkatan' => $angkatan,
                 'semester_aktif' => $semesterAktif,
             ]);
+
+            $programType = $validatedData['program_type'] ?? ($mahasiswaDetail->program?->program_type ?? 'reguler');
+            $kipScheme = $programType === 'kip' ? ($validatedData['kip_scheme'] ?? ($mahasiswaDetail->program?->kip_scheme)) : null;
+            $isTransfer = (bool) ($validatedData['is_transfer'] ?? ($mahasiswaDetail->program?->is_transfer ?? false));
+            $startSemester = $isTransfer
+                ? (int) ($validatedData['start_semester'] ?? ($mahasiswaDetail->program?->start_semester ?? $semesterAktif))
+                : 1;
+
+            MahasiswaProgram::updateOrCreate(
+                ['mahasiswa_id' => $mahasiswaDetail->mahasiswa_id],
+                [
+                    'program_type' => $programType,
+                    'kip_scheme' => $kipScheme,
+                    'is_transfer' => $isTransfer,
+                    'start_semester' => $startSemester,
+                ]
+            );
 
             DB::commit();
 

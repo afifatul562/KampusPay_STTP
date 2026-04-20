@@ -32,3 +32,4 @@ Thumbs.db
 
 # Ignore cache files
 bootstrap/cache/*.tmp
+bootstrap/cache/*.php

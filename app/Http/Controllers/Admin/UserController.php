@@ -12,7 +12,7 @@ use Illuminate\Validation\Rules\Password;
 class UserController extends Controller
 {
     /**
-     * Menampilkan semua pengguna dengan role 'kasir' atau 'admin'.
+     * Daftar pengguna ber-role kasir atau admin (JSON).
      */
     public function index()
     {
@@ -24,7 +24,7 @@ class UserController extends Controller
     }
 
     /**
-     * Mendaftarkan pengguna baru dengan role 'kasir'.
+     * Mendaftarkan pengguna baru ber-role kasir (JSON).
      */
     public function registerKasir(Request $request)
     {
@@ -33,7 +33,6 @@ class UserController extends Controller
                 'nama_lengkap' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email',
                 'username' => 'required|string|unique:users,username',
-                // Opsional: jika admin ingin set password sendiri saat registrasi
                 'password' => ['nullable', 'confirmed', Password::defaults()],
             ]);
 

@@ -8,13 +8,20 @@
     box-sizing: border-box;
 }
 
-body {
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f0f2f5;
-    color: #333;
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 }
 
-/* Sembunyikan arrow dropdown native jika diperlukan */
+body {
+    font-family: Figtree, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #f0f2f5;
+    color: #333;
+    font-size: clamp(0.9375rem, 0.88rem + 0.25vw, 1rem);
+    line-height: 1.5;
+}
+
+/* Hide native dropdown arrows when desired */
 .no-native-arrow {
     -webkit-appearance: none;
     -moz-appearance: none;
@@ -49,7 +56,35 @@ select.no-native-arrow::-ms-expand {
     background-color: #f5f5f5;
 }
 
-/* Desain Responsif */
+/* Removed legacy component classes in favor of Tailwind utilities */
+
+/* Area aman perangkat (notch / home indicator iOS, Android gesture) */
+@layer utilities {
+    .pb-safe {
+        padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+    }
+    .pt-safe {
+        padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+    }
+    .px-safe {
+        padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+        padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+    }
+}
+
+/* Target sentuh minimal ~44px (Apple HIG / Material) */
+@layer components {
+    .touch-target {
+        @apply min-h-touch min-w-touch inline-flex items-center justify-center;
+    }
+
+    /** Pembungkus tabel: scroll horizontal nyaman di HP */
+    .table-responsive {
+        @apply overflow-x-auto overscroll-x-contain touch-pan-x -mx-px;
+    }
+}
+
+/* Responsive Design */
 @media (max-width: 768px) {
     .navbar {
         flex-direction: column;

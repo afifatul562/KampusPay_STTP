@@ -28,7 +28,7 @@ class LaporanController extends Controller
         $kasirId = Auth::id();
 
         // Query dasar untuk pembayaran pada periode yang dipilih
-        $query = Pembayaran::with('tagihan.tarif')
+        $query = Pembayaran::with('tagihan.tarif', 'tagihan.mahasiswa')
             ->where('diverifikasi_oleh', $kasirId)
             ->where('status_dibatalkan', false)
             ->whereYear('tanggal_bayar', $selectedYear)
@@ -183,26 +183,13 @@ class LaporanController extends Controller
                 }
             ])
             ->whereYear('created_at', $tahun)
-            ->where(function($q) {
-                $q->where('status', 'Belum Dibayarkan')
-                  ->orWhere('status', 'Belum Lunas');
-            })
+            ->whereIn('status', ['Belum Lunas', 'Belum Dibayarkan'])
             ->orderBy('created_at')
             ->get();
 
-            // Pastikan total_angsuran dan sisa_pokok selalu ter-update
             foreach ($data as $tagihan) {
                 $tagihan->updateAngsuran();
-                // Pastikan status benar berdasarkan total_angsuran
-                if ($tagihan->status !== 'Ditolak') {
-                    if ($tagihan->total_angsuran > 0) {
-                        $tagihan->status = 'Belum Lunas';
-                    } else {
-                        $tagihan->status = 'Belum Dibayarkan';
-                    }
-                }
             }
-            // Reload relasi setelah update untuk memastikan data lengkap
             $data->load('mahasiswa.user', 'tarif', 'pembayaranAll');
 
             Log::info('Preview laporan tunggakan kasir tahun ' . $tahun . ': ' . $data->count() . ' record.');
@@ -250,19 +237,9 @@ class LaporanController extends Controller
             ->orderBy('created_at')
             ->get();
 
-            // Pastikan total_angsuran dan sisa_pokok selalu ter-update
             foreach ($data as $tagihan) {
                 $tagihan->updateAngsuran();
-                // Pastikan status benar berdasarkan total_angsuran
-                if ($tagihan->status !== 'Ditolak') {
-                    if ($tagihan->total_angsuran > 0 && $tagihan->sisa_pokok > 0) {
-                        $tagihan->status = 'Belum Lunas';
-                    } else if ($tagihan->total_angsuran === 0) {
-                        $tagihan->status = 'Belum Dibayarkan';
-                    }
-                }
             }
-            // Reload relasi setelah update untuk memastikan data lengkap
             $data->load('mahasiswa.user', 'tarif', 'pembayaranAll');
 
             Log::info('Preview laporan pembayaran kasir tahun ' . $tahun . ': ' . $data->count() . ' record.');
@@ -409,10 +386,7 @@ class LaporanController extends Controller
                 }
             ])
             ->whereYear('created_at', $tahun)
-            ->where(function($q) {
-                $q->where('status', 'Belum Dibayarkan')
-                  ->orWhere('status', 'Belum Lunas');
-            })
+            ->whereIn('status', ['Belum Lunas', 'Belum Dibayarkan'])
             ->orderBy('created_at')
             ->get();
 
@@ -420,17 +394,8 @@ class LaporanController extends Controller
                 return response()->json(['success' => false, 'message' => 'Tidak ada data tunggakan untuk tahun yang dipilih.'], 404);
             }
 
-            // Pastikan total_angsuran dan sisa_pokok selalu ter-update
             foreach ($data as $tagihan) {
                 $tagihan->updateAngsuran();
-                // Pastikan status benar berdasarkan total_angsuran
-                if ($tagihan->status !== 'Ditolak') {
-                    if ($tagihan->total_angsuran > 0) {
-                        $tagihan->status = 'Belum Lunas';
-                    } else {
-                        $tagihan->status = 'Belum Dibayarkan';
-                    }
-                }
             }
             // Reload data setelah update
             $data->load('pembayaranAll');

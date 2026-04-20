@@ -23,18 +23,18 @@
             ];
             $avatarColors = $roleColors[Auth::user()->role] ?? $roleColors['mahasiswa'];
         @endphp
-        <button @click="open = !open" class="flex items-center gap-3 text-sm text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded-lg px-2 py-1.5 transition-all">
-            <div class="relative">
-                <div class="w-10 h-10 rounded-full bg-gradient-to-br {{ $avatarColors['from'] }} {{ $avatarColors['to'] }} flex items-center justify-center text-white font-semibold text-sm shadow-md ring-2 ring-white">
+        <button type="button" @click="open = !open" class="flex items-center gap-2 sm:gap-3 text-fluid-sm text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded-xl pl-1 pr-2 py-1 sm:px-2 sm:py-1.5 min-h-touch transition-all" :aria-expanded="open" aria-haspopup="true" aria-label="Menu pengguna">
+            <div class="relative shrink-0">
+                <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br {{ $avatarColors['from'] }} {{ $avatarColors['to'] }} flex items-center justify-center text-white font-semibold text-fluid-sm shadow-md ring-2 ring-white">
                     {{ $initials }}
                 </div>
-                <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-success-500 rounded-full border-2 border-white"></div>
+                <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-success-500 rounded-full border-2 border-white"></div>
             </div>
-            <div class="hidden md:block text-left">
-                <div class="font-medium text-gray-900">{{ Auth::user()->nama_lengkap }}</div>
-                <div class="text-xs text-gray-500">{{ ucfirst(Auth::user()->role) }}</div>
+            <div class="hidden md:block text-left min-w-0 max-w-[10rem] lg:max-w-xs">
+                <div class="font-medium text-gray-900 truncate">{{ Auth::user()->nama_lengkap }}</div>
+                <div class="text-fluid-xs text-gray-500">{{ ucfirst(Auth::user()->role) }}</div>
             </div>
-            <svg class="ml-1 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <svg class="ml-0.5 h-5 w-5 shrink-0 text-gray-400 hidden sm:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
             </svg>
         </button>
@@ -46,7 +46,7 @@
                 x-transition:leave="transition ease-in duration-75"
                 x-transition:leave-start="transform opacity-100 scale-100"
                 x-transition:leave-end="transform opacity-0 scale-95"
-                class="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50"
+                class="absolute right-0 mt-2 w-[min(calc(100vw-1.5rem),16rem)] sm:w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50"
                 style="display: none;">
 
             {{-- User Info Header --}}

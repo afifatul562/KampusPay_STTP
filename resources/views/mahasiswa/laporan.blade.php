@@ -10,7 +10,7 @@
     </svg>';
 @endphp
 
-<div class="space-y-6">
+<div class="space-y-4 sm:space-y-6">
     <x-breadcrumbs :items="[
         ['label' => 'Dashboard', 'url' => route('mahasiswa.dashboard')],
         ['label' => 'Laporan']

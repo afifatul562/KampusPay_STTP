@@ -3,28 +3,18 @@
 namespace App\Notifications;
 
 use App\Models\Tagihan;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class TagihanBaruCreated extends Notification implements ShouldQueue
+class TagihanBaruCreated extends Notification
 {
-    use Queueable;
-
     public $tagihan;
 
-    /**
-     * Membuat instance notifikasi baru.
-     */
     public function __construct(Tagihan $tagihan)
     {
-        $this->tagihan = $tagihan->load('tarif');
+        $this->tagihan = $tagihan->load('tarif', 'mahasiswa');
     }
 
     /**
-     * Mengambil saluran pengiriman notifikasi.
-     *
      * @return array<int, string>
      */
     public function via(object $notifiable): array
@@ -33,19 +23,17 @@ class TagihanBaruCreated extends Notification implements ShouldQueue
     }
 
     /**
-     * Mengambil representasi array dari notifikasi.
-     *
      * @return array<string, mixed>
      */
     public function toArray(object $notifiable): array
     {
         return [
             'tagihan_id' => $this->tagihan->tagihan_id,
-            'nama_tagihan' => $this->tagihan->tarif->nama_pembayaran ?? 'Tagihan Baru',
+            'nama_tagihan' => $this->tagihan->jenis_tampilan,
             'jumlah' => $this->tagihan->jumlah_tagihan,
-            'message' => "Tagihan baru '{$this->tagihan->tarif->nama_pembayaran}' sejumlah Rp " . number_format($this->tagihan->jumlah_tagihan, 0, ',', '.') . " telah dibuat.",
-            'link' => route('mahasiswa.pembayaran.show', $this->tagihan->tagihan_id)
+            'message' => "Tagihan baru '{$this->tagihan->jenis_tampilan}' sejumlah Rp ".number_format($this->tagihan->jumlah_tagihan, 0, ',', '.').' telah dibuat.',
+            'link' => rtrim(config('app.public_url'), '/')
+                .route('mahasiswa.pembayaran.show', $this->tagihan->tagihan_id, false),
         ];
     }
 }
-

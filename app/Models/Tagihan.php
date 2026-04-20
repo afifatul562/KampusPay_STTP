@@ -10,6 +10,14 @@ class Tagihan extends Model
 {
     use HasFactory;
 
+    /**
+     * Label jenis tagihan untuk UI/API.
+     * Untuk Uang Semester, kemahasiswaan, atau ujian akhir: pakai nama di tarif_master + angka semester
+     * perkuliahan mahasiswa dalam kurung, mis. "Uang Semester (8)", "Uang Kemahasiswaan (8)".
+     * Jenis lain: hanya nama tarif (tanpa semester_label).
+     */
+    protected $appends = ['jenis_tampilan'];
+
     protected $table = 'tagihan';
     protected $primaryKey = 'tagihan_id';
     protected $fillable = [
@@ -20,14 +28,51 @@ class Tagihan extends Model
         'total_angsuran',
         'sisa_pokok',
         'tanggal_jatuh_tempo',
+        'available_from',
         'semester_label',
         'is_bss',
         'status'
     ];
 
+    protected $casts = [
+        'tanggal_jatuh_tempo' => 'date',
+        'available_from' => 'date',
+    ];
+
     public function mahasiswa()
     {
         return $this->belongsTo(MahasiswaDetail::class, 'mahasiswa_id');
+    }
+
+    public function getJenisTampilanAttribute(): string
+    {
+        $nama = trim((string) (optional($this->tarif)->nama_pembayaran ?? 'Tagihan'));
+        $namaLower = strtolower($nama);
+        $semNum = $this->semesterAktifMahasiswa();
+
+        $pakaiKurungSemester = str_contains($namaLower, 'uang semester')
+            || str_contains($namaLower, 'kemahasiswaan')
+            || str_contains($namaLower, 'ujian akhir');
+
+        if ($pakaiKurungSemester && $semNum !== null) {
+            return $nama . ' (' . $semNum . ')';
+        }
+
+        return $nama;
+    }
+
+    /**
+     * Angka semester perkuliahan mahasiswa (1, 2, …) atau null jika tidak ada.
+     */
+    protected function semesterAktifMahasiswa(): ?int
+    {
+        $m = $this->mahasiswa;
+        if (!$m || $m->semester_aktif === null || $m->semester_aktif === '') {
+            return null;
+        }
+        $n = (int) $m->semester_aktif;
+
+        return $n > 0 ? $n : null;
     }
 
     public function tarif()
@@ -87,34 +132,58 @@ class Tagihan extends Model
     }
 
     /**
-     * Update total angsuran dan sisa pokok setelah pembayaran
+     * Status antrian yang tidak boleh ditimpa hanya oleh hitungan angsuran (masih proses bisnis).
      */
-    public function updateAngsuran()
+    public static function waitingPaymentStatuses(): array
     {
-        // Hitung total dari semua pembayaran yang tidak dibatalkan (termasuk cicilan dan lunas)
-        $totalAngsuran = $this->pembayaranAll()
+        return [
+            'Menunggu Verifikasi Transfer',
+            'Menunggu Pembayaran Tunai',
+        ];
+    }
+
+    /**
+     * Label tampilan: di DB semua "belum ada/setengah bayar" disimpan sebagai Belum Lunas;
+     * UI boleh bedakan "belum pernah bayar" lewat total_angsuran.
+     */
+    public function displayStatusLabel(): string
+    {
+        if ($this->status === 'Lunas') {
+            return 'Lunas';
+        }
+        $paid = (float) ($this->total_angsuran ?? 0);
+        if (($this->status === 'Belum Lunas' || $this->status === 'Belum Dibayarkan') && $paid <= 0) {
+            return 'Belum Dibayarkan';
+        }
+
+        return (string) $this->status;
+    }
+
+    /**
+     * Update total angsuran dan sisa pokok setelah pembayaran.
+     * Satu nilai status untuk "belum lunas": Belum Lunas (sinkron admin/kasir/mahasiswa).
+     */
+    public function updateAngsuran(): void
+    {
+        $totalAngsuran = (float) ($this->pembayaranAll()
             ->where('status_dibatalkan', false)
-            ->sum('jumlah_bayar') ?? 0;
+            ->sum('jumlah_bayar') ?? 0);
 
         $this->total_angsuran = $totalAngsuran;
-        $this->sisa_pokok = max(0, $this->jumlah_tagihan - $totalAngsuran);
+        $this->sisa_pokok = max(0, (float) $this->jumlah_tagihan - $totalAngsuran);
 
-        // Status penyesuaian otomatis
+        $waiting = in_array($this->status, self::waitingPaymentStatuses(), true);
+
         if ($this->sisa_pokok <= 0) {
-            // Lunas jika sudah tidak ada sisa
             $this->status = 'Lunas';
+        } elseif ($totalAngsuran > 0) {
+            $this->status = 'Belum Lunas';
+        } elseif ($waiting) {
+            // Masih menunggu verifikasi/tunai; belum ada pembayaran terverifikasi
+        } elseif ($this->status === 'Ditolak') {
+            // Tetap ditolak sampai mahasiswa mengunggah ulang / admin mengubah
         } else {
-            // Jika masih ada sisa, tentukan status berdasarkan total_angsuran
-            // kecuali jika status 'Ditolak' (biarkan ditolak sampai ada aksi ulang)
-            if ($this->status !== 'Ditolak') {
-                if ($totalAngsuran > 0) {
-                    // Sudah ada pembayaran tapi belum lunas
-                    $this->status = 'Belum Lunas';
-                } else {
-                    // Belum ada pembayaran sama sekali
-                    $this->status = 'Belum Dibayarkan';
-                }
-            }
+            $this->status = 'Belum Lunas';
         }
 
         $this->save();

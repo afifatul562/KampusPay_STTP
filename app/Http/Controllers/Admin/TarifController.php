@@ -27,7 +27,7 @@ class TarifController extends Controller
                 'nama_pembayaran' => 'required|string|max:255',
                 'nominal'         => 'required|numeric|min:0',
                 'program_studi'   => 'nullable|string|max:255',
-                'angkatan'        => 'nullable|string|max:10'
+                'angkatan'        => 'nullable|string|max:10',
             ]);
 
             $tarif = TarifMaster::create($validatedData);
@@ -61,7 +61,7 @@ class TarifController extends Controller
                 'nama_pembayaran' => 'sometimes|required|string|max:255',
                 'nominal'         => 'sometimes|required|numeric|min:0',
                 'program_studi'   => 'nullable|string|max:255',
-                'angkatan'        => 'nullable|string|max:10'
+                'angkatan'        => 'nullable|string|max:10',
             ]);
 
             $tarif = TarifMaster::findOrFail($id);

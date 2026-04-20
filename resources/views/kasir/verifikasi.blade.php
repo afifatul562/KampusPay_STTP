@@ -13,7 +13,7 @@
     </svg>';
 @endphp
 
-<div class="space-y-6">
+<div class="space-y-4 sm:space-y-6">
     <x-page-header
         title="Verifikasi Pembayaran Transfer"
         subtitle="Daftar pembayaran via transfer yang perlu diperiksa dan dikonfirmasi"
@@ -35,7 +35,7 @@
                         <div class="text-gray-500">{{ optional($item->tagihan->mahasiswa)->npm ?? 'N/A' }}</div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-gray-700">
-                        {{ optional($item->tagihan->tarif)->nama_pembayaran ?? 'N/A' }}
+                        {{ optional($item->tagihan)->jenis_tampilan ?? optional($item->tagihan->tarif)->nama_pembayaran ?? 'N/A' }}
                         @if($item->is_cicilan)
                             <div class="text-xs text-purple-700 font-semibold mt-1">Pengajuan: Cicilan</div>
                             @if($item->jumlah_bayar)

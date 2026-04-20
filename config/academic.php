@@ -12,5 +12,8 @@ return [
 
     // Nama tarif BSS (akan dibuat jika belum ada)
     'bss_tarif_name' => env('BSS_TARIF_NAME', 'Administrasi BSS'),
+
+    // Jarak jatuh tempo tagihan normal dalam hari (untuk auto-generate saat status aktif)
+    'default_due_in_days' => (int) env('DEFAULT_DUE_IN_DAYS', 30),
 ];
 

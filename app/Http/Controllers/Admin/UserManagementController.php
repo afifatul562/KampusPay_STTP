@@ -12,40 +12,18 @@ use Illuminate\Support\Facades\Auth;
 class UserManagementController extends Controller
 {
     /**
-     * Menampilkan daftar pengguna.
+     * Display a listing of the resource.
      */
     public function index()
-    {   $mahasiswa = User::where('role', 'mahasiswa')->latest()->get();
+    {
+        $mahasiswa = User::where('role', 'mahasiswa')->latest()->get();
         $staff = User::where('role', '!=', 'mahasiswa')->latest()->get();
+
         return view('admin.users.index', compact('mahasiswa', 'staff'));
     }
 
     /**
-     * Menampilkan form untuk membuat pengguna baru.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Menyimpan data pengguna baru.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Menampilkan detail pengguna.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Menampilkan form untuk mengedit pengguna.
+     * Show the form for editing the specified resource.
      */
     public function edit(User $user)
     {
@@ -53,7 +31,7 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Memperbarui data pengguna.
+     * Update the specified resource in storage.
      */
     public function update(Request $request, User $user)
     {
@@ -67,7 +45,7 @@ class UserManagementController extends Controller
                 'max:255',
                 Rule::unique('users')->ignore($user->id), // Cek email unik, KECUALI untuk user ini
             ],
-            'role' => 'required|string',
+            'role' => ['required', 'string', Rule::in(['admin', 'kasir', 'mahasiswa'])],
 
             // Validasi password HANYA JIKA diisi
             'password' => 'nullable|string|min:8|confirmed',
@@ -78,8 +56,9 @@ class UserManagementController extends Controller
         $user->nama_lengkap = $request->nama_lengkap;
         $user->email = $request->email;
         $user->role = $request->role;
+        // Tambahkan field lain jika ada (misal: npm, dll)
 
-        // Cek apakah admin ingin mengganti password
+        // 3. Cek apakah admin ingin mengganti password
         if ($request->filled('password')) {
             // Jika field password diisi, hash dan update passwordnya
             $user->password = Hash::make($request->password);
@@ -94,7 +73,7 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Menghapus pengguna.
+     * Remove the specified resource from storage.
      */
     public function destroy(User $user)
     {
@@ -107,4 +86,4 @@ class UserManagementController extends Controller
         return redirect()->route('admin.users.index')
                          ->with('success', 'User (' . $namaUser . ') berhasil dihapus.');
     }
-    }
+}

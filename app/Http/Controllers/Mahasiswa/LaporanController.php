@@ -21,8 +21,10 @@ class LaporanController extends Controller
         $mahasiswaId = Auth::user()->mahasiswaDetail->mahasiswa_id;
 
         // Ambil data tunggakan untuk ditampilkan di kartu Laporan Data Tunggakan
-        $tunggakan = \App\Models\Tagihan::where('mahasiswa_id', $mahasiswaId)
-            ->where('status', 'Belum Lunas')
+        // Termasuk status 'Ditolak' karena perlu dibayar ulang
+        $tunggakan = \App\Models\Tagihan::with('tarif', 'mahasiswa')
+            ->where('mahasiswa_id', $mahasiswaId)
+            ->whereIn('status', ['Belum Lunas', 'Ditolak'])
             ->get();
 
         // Ambil jenis tarif untuk dropdown filter
@@ -40,7 +42,7 @@ class LaporanController extends Controller
         $mahasiswa = $user->mahasiswaDetail;
         $mahasiswaId = $mahasiswa?->mahasiswa_id;
 
-        $query = Pembayaran::with('tagihan.tarif', 'userKasir')
+        $query = Pembayaran::with('tagihan.tarif', 'tagihan.mahasiswa', 'userKasir')
             ->whereHas('tagihan', function ($q) use ($mahasiswaId) {
                 $q->where('mahasiswa_id', $mahasiswaId);
             });
@@ -101,9 +103,9 @@ class LaporanController extends Controller
         $mahasiswa = $user->mahasiswaDetail;
         $mahasiswaId = $mahasiswa?->mahasiswa_id;
 
-        $tunggakan = \App\Models\Tagihan::with('tarif')
+        $tunggakan = \App\Models\Tagihan::with('tarif', 'mahasiswa')
             ->where('mahasiswa_id', $mahasiswaId)
-            ->where('status', 'Belum Lunas')
+            ->whereIn('status', ['Belum Lunas', 'Ditolak'])
             ->get();
 
         $settings = Setting::getCachedMap();

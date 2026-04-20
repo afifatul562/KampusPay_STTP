@@ -82,7 +82,7 @@
                         <td>{{ \Carbon\Carbon::parse($item->tanggal_bayar)->format('d-m-Y') }}</td>
                         <td>{{ $item->tagihan->mahasiswa_detail->npm }}</td>
                         <td>{{ $item->tagihan->mahasiswa_detail->user->nama_lengkap }}</td>
-                        <td>{{ $item->tagihan->tarif->nama_pembayaran }}</td>
+                        <td>{{ $item->tagihan->jenis_tampilan }}</td>
                         <td>Rp {{ number_format($item->tagihan->jumlah_tagihan, 0, ',', '.') }}</td>
                     @elseif ($jenis_laporan_title === 'Mahasiswa')
                         <td>{{ $item->npm }}</td>

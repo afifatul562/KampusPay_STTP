@@ -54,20 +54,11 @@
     <h2>Periode: {{ $periodeFormatted }} | Kasir: {{ $kasir->nama_lengkap ?? $kasir->username }}</h2>
 
     @php
-        // Pastikan status benar berdasarkan total_angsuran
-        foreach ($data as $tagihan) {
-            if ($tagihan->status !== 'Ditolak') {
-                if ($tagihan->total_angsuran > 0) {
-                    $tagihan->status = 'Belum Lunas';
-                } else {
-                    $tagihan->status = 'Belum Dibayarkan';
-                }
-            }
-        }
-
-        $groupedData = $data->sortBy(function($tagihan) {
-            return $tagihan->status === 'Belum Lunas' ? 1 : 0;
-        })->groupBy('status');
+        $groupedData = $data->sortBy(function ($tagihan) {
+            return ((float) ($tagihan->total_angsuran ?? 0)) > 0 ? 1 : 0;
+        })->groupBy(function ($tagihan) {
+            return ((float) ($tagihan->total_angsuran ?? 0)) > 0 ? 'Belum Lunas' : 'Belum Dibayarkan';
+        });
 
         $rowNumber = 1;
         $totalBelumDibayar = 0;
@@ -103,7 +94,7 @@
                             {{ $tagihan->mahasiswa->user->nama_lengkap ?? 'N/A' }}<br>
                             <small>{{ $tagihan->mahasiswa->npm ?? 'N/A' }}</small>
                         </td>
-                        <td>{{ $tagihan->tarif->nama_pembayaran ?? 'N/A' }}</td>
+                        <td>{{ $tagihan->jenis_tampilan ?? 'N/A' }}</td>
                         <td class="text-right">Rp {{ number_format($sisaPokok, 0, ',', '.') }}</td>
                         <td class="text-center">
                             <span class="badge badge-belum">Belum Dibayarkan</span>
@@ -133,7 +124,7 @@
                             {{ $tagihan->mahasiswa->user->nama_lengkap ?? 'N/A' }}<br>
                             <small>{{ $tagihan->mahasiswa->npm ?? 'N/A' }}</small>
                         </td>
-                        <td>{{ $tagihan->tarif->nama_pembayaran ?? 'N/A' }}</td>
+                        <td>{{ $tagihan->jenis_tampilan ?? 'N/A' }}</td>
                         <td class="text-right">
                             <div>Total: Rp {{ number_format($tagihan->jumlah_tagihan, 0, ',', '.') }}</div>
                             <small style="color:#666;">Sudah dibayar: Rp {{ number_format($totalAngsuran, 0, ',', '.') }}</small><br>
@@ -147,7 +138,11 @@
                 @endforeach
             @endif
 
-            @if(!isset($groupedData['Belum Dibayarkan']) && !isset($groupedData['Belum Lunas']))
+            @php
+                $adaBelumDibayar = isset($groupedData['Belum Dibayarkan']) && $groupedData['Belum Dibayarkan']->isNotEmpty();
+                $adaBelumLunas = isset($groupedData['Belum Lunas']) && $groupedData['Belum Lunas']->isNotEmpty();
+            @endphp
+            @if(!$adaBelumDibayar && !$adaBelumLunas)
                 <tr>
                     <td colspan="7" class="text-center">Tidak ada data tunggakan untuk periode ini.</td>
                 </tr>

@@ -14,25 +14,29 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Log;
 use App\Models\TarifMaster;
 use App\Models\Tagihan;
+use App\Models\Setting;
+use App\Models\User;
 use App\Services\PaymentCodeGenerator;
 use Carbon\Carbon;
 
 class AktivasiController extends Controller
 {
-    /**
-     * Menampilkan halaman aktivasi mahasiswa.
-     */
-    public function show()
+    public function show(Request $request)
     {
+        // Pastikan token API ada di session untuk JavaScript
+        if (!session('api_token')) {
+            $user = Auth::user();
+            $user->tokens()->where('name', 'api-token')->delete(); // Hapus token lama dengan nama yang sama
+            $token = $user->createToken('api-token')->plainTextToken;
+            $request->session()->put('api_token', $token);
+        }
+
         return view('mahasiswa.aktivasi');
     }
 
-    /**
-     * Mengambil status aktivasi mahasiswa untuk semester saat ini.
-     */
     public function current(Request $request)
     {
-        $semester = config('academic.current_semester');
+        $semester = Setting::currentSemesterLabel();
         $mhsId = $request->user()->mahasiswaDetail?->mahasiswa_id;
 
         $status = AktivasiStatus::where('mahasiswa_id', $mhsId)
@@ -47,9 +51,6 @@ class AktivasiController extends Controller
         ]);
     }
 
-    /**
-     * Menyimpan status aktivasi mahasiswa untuk semester saat ini.
-     */
     public function store(Request $request)
     {
         $request->validate([
@@ -63,7 +64,7 @@ class AktivasiController extends Controller
             return response()->json(['message' => 'Mahasiswa tidak ditemukan.'], 404);
         }
 
-        $semester = config('academic.current_semester');
+        $semester = Setting::currentSemesterLabel();
 
         // Cek apakah sudah ada status (tidak peduli siapa yang pilih)
         $existingStatus = AktivasiStatus::where('mahasiswa_id', $mhsId)
@@ -95,9 +96,8 @@ class AktivasiController extends Controller
                 ]
             );
 
-            // Kirim notifikasi ke semua kasir
-            $kasir = \App\Models\User::where('role', 'kasir')->get();
-            Notification::send($kasir, new AktivasiStatusChanged($aktivasi));
+            $staff = User::query()->whereIn('role', ['admin', 'kasir'])->get();
+            Notification::send($staff, new AktivasiStatusChanged($aktivasi));
 
             if ($request->status === 'bss') {
                 $this->ensureBssTagihan($aktivasi);
@@ -116,9 +116,6 @@ class AktivasiController extends Controller
         }
     }
 
-    /**
-     * Memastikan tagihan BSS dibuat jika status adalah BSS.
-     */
     protected function ensureBssTagihan(AktivasiStatus $aktivasi): void
     {
         $amount = config('academic.bss_amount');
@@ -153,5 +150,6 @@ class AktivasiController extends Controller
             'status' => 'Belum Lunas',
         ]);
     }
+
 }
 

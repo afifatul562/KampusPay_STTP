@@ -4,7 +4,7 @@
 @section('page-title', 'Ubah Password')
 
 @section('content')
-<div class="space-y-6">
+<div class="space-y-4 sm:space-y-6">
     {{-- Header Section --}}
     <div class="bg-white rounded-xl shadow-md border border-gray-200 p-6">
         <div class="flex items-center gap-4">

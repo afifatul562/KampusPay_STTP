@@ -4,10 +4,10 @@
 @section('page-title', 'Profil Mahasiswa')
 
 @section('content')
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
 
         {{-- Kolom Kiri: Informasi Pribadi --}}
-        <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-md border border-gray-200 text-center">
+        <div class="lg:col-span-1 bg-white p-4 sm:p-5 md:p-6 rounded-xl shadow-md border border-gray-200 text-center">
             {{-- Foto Profil & Nama --}}
             <div class="mb-4">
                 <div class="w-24 h-24 rounded-full mx-auto bg-gray-200 flex items-center justify-center mb-2">
@@ -33,16 +33,32 @@
                     <span class="text-gray-500">Semester Aktif</span>
                     <span class="font-semibold text-gray-800">{{ $detail->semester_aktif ?? 'N/A' }}</span>
                 </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-500">Email</span>
-                    <span class="font-semibold text-gray-800">{{ $user->email ?? 'N/A' }}</span>
+                <div class="border-t border-gray-100 pt-3 mt-3">
+                    <p class="text-xs text-gray-500 mb-2">Email untuk notifikasi dan kontak (boleh diubah kapan saja).</p>
+                    @if (session('status') === 'email-updated')
+                        <div class="mb-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-2 py-1.5" role="status">Email berhasil disimpan.</div>
+                    @endif
+                    <form action="{{ route('mahasiswa.profil.email.update') }}" method="POST" class="space-y-2 text-left">
+                        @csrf
+                        @method('PATCH')
+                        <label for="email" class="sr-only">Email</label>
+                        <input type="email" name="email" id="email" value="{{ old('email', $user->email) }}" required autocomplete="email"
+                               placeholder="nama@email.com"
+                               class="block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500 @error('email') border-red-500 @enderror">
+                        @error('email')
+                            <p class="text-xs text-red-600">{{ $message }}</p>
+                        @enderror
+                        <button type="submit" class="w-full sm:w-auto min-h-touch px-3 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+                            Simpan email
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
 
         {{-- Kolom Kanan: Ringkasan Keuangan --}}
-        <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-md border border-gray-200">
-            <h3 class="text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
+        <div class="lg:col-span-2 bg-white p-4 sm:p-5 md:p-6 rounded-xl shadow-md border border-gray-200">
+            <h3 class="text-fluid-lg sm:text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
                 Ringkasan Keuangan
             </h3>

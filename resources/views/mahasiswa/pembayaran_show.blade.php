@@ -7,9 +7,9 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
         {{-- Kolom Kiri: Instruksi & Detail --}}
-        <div class="space-y-6">
+        <div class="space-y-4 sm:space-y-6">
             {{-- Instruksi Pembayaran --}}
-            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+            <div class="bg-white p-4 sm:p-5 md:p-6 rounded-xl shadow-md border border-gray-200">
                 <h3 class="text-lg font-semibold mb-4 border-b pb-3 flex items-center gap-2 text-gray-800">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
                     1. Instruksi Pembayaran
@@ -38,7 +38,7 @@
             </div>
 
             {{-- Detail Tagihan --}}
-            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+            <div class="bg-white p-4 sm:p-5 md:p-6 rounded-xl shadow-md border border-gray-200">
                  <h3 class="text-lg font-semibold mb-4 border-b pb-3 flex items-center gap-2 text-gray-800">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                     Detail Tagihan
@@ -46,7 +46,7 @@
                 <div class="space-y-4 text-sm">
                     <div class="flex justify-between">
                         <span class="text-gray-500">Jenis Pembayaran</span>
-                        <span class="font-semibold text-gray-800">{{ $tagihan->tarif->nama_pembayaran }}</span>
+                        <span class="font-semibold text-gray-800">{{ $tagihan->jenis_tampilan }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-500">Jatuh Tempo</span>
@@ -65,7 +65,7 @@
         </div>
 
         {{-- Kolom Kanan: Form Upload --}}
-        <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+        <div class="bg-white p-4 sm:p-5 md:p-6 rounded-xl shadow-md border border-gray-200">
             <h3 class="text-lg font-semibold mb-4 border-b pb-3 flex items-center gap-2 text-gray-800">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                 2. Upload Bukti Transfer

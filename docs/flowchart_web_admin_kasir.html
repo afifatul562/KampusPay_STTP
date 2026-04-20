@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alur Proses - Aplikasi Web KampusPay (Admin & Kasir)</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #eff6ff; padding: 24px; }
+        h1 { color: #1e40af; margin-bottom: 8px; font-size: 1.5em; }
+        .subtitle { color: #2563eb; margin-bottom: 24px; font-size: 0.95em; }
+        .platform-badge { display: inline-block; background: #3b82f6; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.85em; margin-bottom: 16px; }
+        .diagram { background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px; overflow-x: auto; border: 1px solid #bfdbfe; }
+        .diagram-title { font-weight: 600; color: #1e40af; margin-bottom: 12px; font-size: 1.05em; }
+        .mermaid { display: flex; justify-content: center; min-height: 150px; }
+    </style>
+</head>
+<body>
+    <span class="platform-badge">Platform: Web saja</span>
+    <h1>Alur Proses - Aplikasi Web KampusPay (Admin & Kasir)</h1>
+    <p class="subtitle">Flowchart dipisah per alur supaya jelas saat dicetak.</p>
+
+    <!-- FLOW 1: Login & Role -->
+    <div class="diagram" id="web-flow-1">
+        <div class="diagram-title">
+            Flowchart Web 1 - Login & Penentuan Role
+            <button onclick="saveFlowAsImage('web-flow-1','flowchart_web_1_login_role.png')" style="margin-left:12px;padding:4px 10px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;">
+                💾 Download
+            </button>
+        </div>
+        <div class="mermaid">
+flowchart TD
+    Start([Mulai])
+    Start --> A[Halaman Login Web]
+    A --> B[/Input Username & Password/]
+    B --> C{Validasi}
+    C -->|Tidak| A
+    C -->|Ya| D{Role?}
+    D -->|Admin| E[Dashboard Admin]
+    D -->|Kasir| F[Dashboard Kasir]
+        </div>
+    </div>
+
+    <!-- FLOW 2: Admin -->
+    <div class="diagram" id="web-flow-2">
+        <div class="diagram-title">
+            Flowchart Web 2 - Alur Admin
+            <button onclick="saveFlowAsImage('web-flow-2','flowchart_web_2_admin.png')" style="margin-left:12px;padding:4px 10px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;">
+                💾 Download
+            </button>
+        </div>
+        <div class="mermaid">
+flowchart TD
+    E[Dashboard Admin]
+    E --> E1[Data Mahasiswa]
+    E --> E2[Data Tarif]
+    E --> E3[Data Tagihan]
+    E --> E4[Data Pembayaran]
+    E --> E5[Laporan]
+    E --> E6[Pengaturan]
+    E --> E7[Data User]
+    E --> E8[Logout]
+
+    E1 --> CRUD[Proses CRUD]
+    E2 --> CRUD
+    E3 --> CRUD
+    E4 --> CRUD
+    E6 --> CRUD
+    E7 --> CRUD
+
+    CRUD --> V{Validasi}
+    V -->|Tidak| CRUD
+    V -->|Ya| DB[(Database)]
+
+    E5 --> Laporan[Generate Laporan PDF/Excel]
+    Laporan --> E
+
+    E8 --> End([Selesai])
+        </div>
+    </div>
+
+    <!-- FLOW 3: Kasir -->
+    <div class="diagram" id="web-flow-3">
+        <div class="diagram-title">
+            Flowchart Web 3 - Alur Kasir
+            <button onclick="saveFlowAsImage('web-flow-3','flowchart_web_3_kasir.png')" style="margin-left:12px;padding:4px 10px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;">
+                💾 Download
+            </button>
+        </div>
+        <div class="mermaid">
+flowchart TD
+    F[Dashboard Kasir]
+    F --> F1[Proses Bayar Tunai]
+    F --> F2[Tagihan]
+    F --> F3[Verifikasi Transfer]
+    F --> F4[Aktivasi Mahasiswa]
+    F --> F5[Riwayat Pembayaran]
+    F --> F6[Laporan]
+    F --> F7[Logout]
+
+    F1 --> CRUD1[Input kode pembayaran, Proses full/cicilan]
+    F2 --> CRUD1
+    F3 --> CRUD1
+    F4 --> CRUD1
+
+    CRUD1 --> V1{Validasi}
+    V1 -->|Tidak| CRUD1
+    V1 -->|Ya| DB1[(Database)]
+
+    F5 --> Riwayat[Lihat Riwayat / Export CSV]
+    Riwayat --> F
+
+    F6 --> Laporan2[Generate Laporan PDF]
+    Laporan2 --> F
+
+    F7 --> End([Selesai])
+        </div>
+    </div>
+
+    <!-- FLOW 4: Notifikasi -->
+    <div class="diagram" id="web-flow-4">
+        <div class="diagram-title">
+            Flowchart Web 4 - Alur Notifikasi
+            <button onclick="saveFlowAsImage('web-flow-4','flowchart_web_4_notifikasi.png')" style="margin-left:12px;padding:4px 10px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;">
+                💾 Download
+            </button>
+        </div>
+        <div class="mermaid">
+flowchart TD
+    subgraph TagihanBaru["Notifikasi ke Mahasiswa (Tagihan Baru)"]
+        A1[Admin/Kasir buat tagihan di Web]
+        A1 --> Save[(Simpan Database)]
+        Save --> Gen[Generate Kode Pembayaran]
+        Gen --> Email[Kirim Email ke Mahasiswa]
+        Save --> Notif[Notifikasi Database ke Mahasiswa]
+
+        Email --> E1[Inbox Mahasiswa - Detail tagihan, Kode, Link Bayar]
+        Notif --> N1[Notifikasi di App/Web Mahasiswa]
+    end
+
+    subgraph Aktivasi["Notifikasi ke Kasir (Aktivasi Mahasiswa)"]
+        M1[Mahasiswa pilih Aktivasi di Android]
+        M1 --> API[API request]
+        API --> DB2[(Database)]
+        DB2 --> N2[AktivasiStatusChanged]
+        N2 --> K1[Notifikasi ke semua user Kasir]
+        K1 --> K2[Bell icon di Dashboard Kasir]
+        K2 --> K3[Kasir buka & proses di menu Aktivasi]
+    end
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { useMaxWidth: true, htmlLabels: true } });
+
+        function saveFlowAsImage(containerId, fileName) {
+            var el = document.getElementById(containerId);
+            if (!el) return;
+            if (typeof html2canvas === 'undefined') {
+                alert('Tunggu sebentar, library belum selesai dimuat. Coba lagi.');
+                return;
+            }
+            html2canvas(el, { scale: 2, useCORS: true }).then(function(canvas) {
+                var link = document.createElement('a');
+                link.download = fileName;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+    </script>
+</body>
+</html>

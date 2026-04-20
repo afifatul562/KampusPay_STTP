@@ -89,7 +89,7 @@
                 @forelse($tunggakan as $index => $item)
                     <tr>
                         <td class="text-center">{{ $index + 1 }}</td>
-                        <td>{{ $item->tarif->nama_pembayaran ?? 'N/A' }}</td>
+                        <td>{{ $item->jenis_tampilan ?? 'N/A' }}</td>
                         <td>{{ $item->kode_pembayaran }}</td>
                         <td class="{{ \Carbon\Carbon::parse($item->tanggal_jatuh_tempo)->isPast() ? 'overdue' : '' }}">
                             {{ \Carbon\Carbon::parse($item->tanggal_jatuh_tempo)->isoFormat('D MMM Y') }}

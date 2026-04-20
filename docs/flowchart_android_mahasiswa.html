@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alur Proses - Aplikasi Android KampusPay (Mahasiswa)</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0fdf4; padding: 24px; }
+        h1 { color: #166534; margin-bottom: 8px; font-size: 1.5em; }
+        .subtitle { color: #15803d; margin-bottom: 24px; font-size: 0.95em; }
+        .platform-badge { display: inline-block; background: #22c55e; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.85em; margin-bottom: 16px; }
+        .diagram { background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px; overflow-x: auto; border: 1px solid #bbf7d0; }
+        .diagram-title { font-weight: 600; color: #166534; margin-bottom: 12px; font-size: 1.05em; }
+        .mermaid { display: flex; justify-content: center; min-height: 150px; }
+    </style>
+</head>
+<body>
+    <span class="platform-badge">Platform: Android saja</span>
+    <h1>Alur Proses - Aplikasi Android KampusPay (Mahasiswa)</h1>
+    <p class="subtitle">Flowchart dipisah per alur supaya jelas saat dicetak dan mudah dijelaskan.</p>
+
+    <!-- FLOW ANDROID 1: Login & Dashboard -->
+    <div class="diagram" id="android-flow-1">
+        <div class="diagram-title">
+            Flowchart Android 1 - Login & Dashboard
+            <button onclick="saveFlowAsImage('android-flow-1','flowchart_android_1_login_dashboard.png')" style="margin-left:12px;padding:4px 10px;background:#22c55e;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;">
+                💾 Download
+            </button>
+        </div>
+        <div class="mermaid">
+flowchart TD
+    Start([Mulai])
+    Start --> A[Halaman Login Android]
+    A --> B[/Input Username & Password/]
+    B --> C{Validasi API}
+    C -->|Tidak| A
+    C -->|Ya| D[Dashboard Mahasiswa]
+
+    D --> M1[Pembayaran / Tagihan]
+    D --> M2[Riwayat]
+    D --> M3[Laporan]
+    D --> M4[Kwitansi]
+    D --> M5[Aktivasi]
+    D --> M6[Profil & Ubah Password]
+    D --> M7[Logout]
+
+    M7 --> End([Selesai])
+        </div>
+    </div>
+
+    <!-- FLOW ANDROID 2: Pembayaran -->
+    <div class="diagram" id="android-flow-2">
+        <div class="diagram-title">
+            Flowchart Android 2 - Alur Pembayaran Mahasiswa
+            <button onclick="saveFlowAsImage('android-flow-2','flowchart_android_2_pembayaran.png')" style="margin-left:12px;padding:4px 10px;background:#22c55e;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;">
+                💾 Download
+            </button>
+        </div>
+        <div class="mermaid">
+flowchart TD
+    D[Dashboard Mahasiswa]
+    D --> M1[Pembayaran / Tagihan]
+    M1 --> Tag[Lihat Daftar Tagihan]
+    Tag --> PilihTagihan[Pilih Tagihan]
+    PilihTagihan --> Metode[Pilih Metode Pembayaran]
+
+    Metode --> T1[Tunai]
+    Metode --> T2[Transfer]
+    Metode --> T3[Cicilan]
+
+    T1 --> S1[Status: Menunggu Bayar di Kasir]
+    S1 --> K1[Simpan Kode Pembayaran]
+    K1 --> K2[Datang ke Kasir dengan Kode]
+
+    T2 --> U1[Upload Bukti Transfer]
+    T3 --> U2[Input Jumlah Cicilan]
+    U2 --> U1
+    U1 --> V1[Kirim via API]
+    V1 --> V2[Menunggu Verifikasi Kasir di Web]
+
+    V2 --> R{Kasir Verifikasi}
+    R -->|Setujui| OK[Pembayaran Tercatat]
+    R -->|Tolak| Reject[Status Ditolak - Upload ulang]
+
+    OK --> End([Selesai])
+        </div>
+    </div>
+
+    <!-- FLOW ANDROID 3: Notifikasi Tagihan -->
+    <div class="diagram" id="android-flow-3">
+        <div class="diagram-title">
+            Flowchart Android 3 - Notifikasi Tagihan ke Mahasiswa
+            <button onclick="saveFlowAsImage('android-flow-3','flowchart_android_3_notifikasi_tagihan.png')" style="margin-left:12px;padding:4px 10px;background:#22c55e;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;">
+                💾 Download
+            </button>
+        </div>
+        <div class="mermaid">
+flowchart TD
+    A[Admin atau kasir membuat tagihan di web]
+    A --> B[Simpan tagihan ke database]
+    B --> C[Generate kode pembayaran]
+    B --> D[Notifikasi in-app ke mahasiswa]
+
+    C --> E[Kirim email ke mahasiswa]
+    E --> F[Mahasiswa membaca email]
+
+    D --> G[Mahasiswa melihat notifikasi di aplikasi]
+    G --> H[Mahasiswa membuka detail tagihan]
+        </div>
+    </div>
+
+    <!-- FLOW ANDROID 4: Aktivasi Mahasiswa -->
+    <div class="diagram" id="android-flow-4">
+        <div class="diagram-title">
+            Flowchart Android 4 - Alur Aktivasi Mahasiswa
+            <button onclick="saveFlowAsImage('android-flow-4','flowchart_android_4_aktivasi.png')" style="margin-left:12px;padding:4px 10px;background:#22c55e;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;">
+                💾 Download
+            </button>
+        </div>
+        <div class="mermaid">
+flowchart TD
+    D2[Dashboard Mahasiswa]
+    D2 --> M5[Aktivasi]
+    M5 --> A1[Buka Menu Aktivasi]
+    A1 --> A2[Pilih Status: Aktif atau BSS]
+    A2 --> A3[Submit via API]
+    A3 --> DB[(Database)]
+    DB --> A4[Data Aktivasi Tersimpan]
+    DB -.-> N[Notifikasi ke Kasir Web]
+
+    N --> K1[Kasir lihat di Menu Aktivasi]
+    A4 --> End([Proses Aktivasi Selesai])    
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { useMaxWidth: true, htmlLabels: true } });
+
+        function saveFlowAsImage(containerId, fileName) {
+            var el = document.getElementById(containerId);
+            if (!el) return;
+            if (typeof html2canvas === 'undefined') {
+                alert('Tunggu sebentar, library belum selesai dimuat. Coba lagi.');
+                return;
+            }
+            html2canvas(el, { scale: 2, useCORS: true }).then(function(canvas) {
+                var link = document.createElement('a');
+                link.download = fileName;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+    </script>
+</body>
+</html>

@@ -27,4 +27,18 @@ class Setting extends Model
             return static::all()->pluck('value', 'key')->toArray();
         });
     }
+
+    /**
+     * Label semester aktif untuk dipakai lintas fitur.
+     * Mengikuti Pengaturan Sistem: academic_year + semester (mis: "2025/2026 Genap").
+     */
+    public static function currentSemesterLabel(): string
+    {
+        $settings = static::getCachedMap();
+        $year = (string) ($settings['academic_year'] ?? '');
+        $sem = (string) ($settings['semester'] ?? '');
+        $label = trim(trim($year) . ' ' . trim($sem));
+
+        return $label !== '' ? $label : (string) config('academic.current_semester');
+    }
 }

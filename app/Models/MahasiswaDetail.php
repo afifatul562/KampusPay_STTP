@@ -10,7 +10,7 @@ class MahasiswaDetail extends Model
     use HasFactory;
 
     protected $table = 'mahasiswa_detail';
-    protected $primaryKey = 'mahasiswa_id';
+    protected $primaryKey = 'mahasiswa_id'; // <-- PERBAIKAN: Sesuaikan dengan migrasi
     protected $fillable = [
         'user_id',
         'npm',
@@ -31,5 +31,10 @@ class MahasiswaDetail extends Model
     public function tagihan()
     {
         return $this->hasMany(Tagihan::class, 'mahasiswa_id', 'mahasiswa_id');
+    }
+
+    public function program()
+    {
+        return $this->hasOne(MahasiswaProgram::class, 'mahasiswa_id', 'mahasiswa_id');
     }
 }

@@ -7,11 +7,11 @@
 ])
 
 @php
-    $baseClasses = 'inline-flex items-center justify-center border border-transparent font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
+    $baseClasses = 'inline-flex items-center justify-center border border-transparent font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]';
     $sizeClasses = [
-        'sm' => 'px-3 py-1.5 text-xs',
-        'md' => 'px-4 py-2 text-sm',
-        'lg' => 'px-5 py-2.5 text-base',
+        'sm' => 'min-h-10 px-3 py-2 text-fluid-xs sm:text-xs',
+        'md' => 'min-h-touch px-4 py-2.5 text-fluid-sm sm:text-sm',
+        'lg' => 'min-h-12 px-5 py-3 text-fluid-base sm:text-base',
     ][$size];
     $variantClasses = [
         'primary' => 'text-white bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 focus:ring-primary-500',

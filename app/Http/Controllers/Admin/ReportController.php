@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use App\Models\Report;
 use App\Models\MahasiswaDetail;
 use App\Models\Tagihan;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +24,7 @@ class ReportController extends Controller
     {
         try {
             $reports = Report::latest()->get();
+            // Konsisten dengan format { data: [...] }
             return response()->json(['data' => $reports]);
         } catch (\Exception $e) {
             Log::error('Gagal ambil riwayat laporan: ' . $e->getMessage());
@@ -49,6 +49,7 @@ class ReportController extends Controller
                             ->where('angkatan', $tahun)
                             ->orderBy('npm', 'asc')
                             ->get();
+            // Kembalikan sebagai array biasa (tidak perlu grouping berdasarkan semester)
             $data = $mahasiswaList;
             Log::info('Mengambil data laporan mahasiswa angkatan ' . $tahun . ': ' . $mahasiswaList->count() . ' record.');
 
@@ -62,28 +63,19 @@ class ReportController extends Controller
                     }
                 ]) // Eager load kasir dan semua pembayaran
                         ->whereYear('created_at', $tahun);
-
-            // Filter berdasarkan semester jika dipilih
+            
             if ($semester) {
-                // Format semester_label: "2025/2026 Ganjil" atau "2025/2026 Genap"
-                // Untuk tahun 2026:
-                //   - Semester Ganjil: bisa "2025/2026 Ganjil" atau "2026/2027 Ganjil"
-                //   - Semester Genap: bisa "2025/2026 Genap" atau "2026/2027 Genap"
-                // Kita filter dengan mencari semester_label yang:
-                //   1. Berakhiran dengan semester yang dipilih (Ganjil atau Genap)
-                //   2. Tahun akademik yang sesuai dengan tahun yang dipilih
-                // Format: "YYYY/YYYY+1 Semester" atau "YYYY-1/YYYY Semester"
+                // semester_label contoh: "2025/2026 Ganjil" — cocokkan tahun ajaran ±1 dan sufiks Ganjil/Genap.
                 $tahunNext = $tahun + 1;
                 $tahunPrev = $tahun - 1;
                 $query->where(function($q) use ($semester, $tahun, $tahunNext, $tahunPrev) {
-                    // Format "YYYY/YYYY+1 Semester" atau "YYYY-1/YYYY Semester"
                     $q->where('semester_label', 'LIKE', "{$tahunPrev}/{$tahun} {$semester}")
                       ->orWhere('semester_label', 'LIKE', "{$tahun}/{$tahunNext} {$semester}")
-                      ->orWhere('semester_label', 'LIKE', "% {$semester}"); // Fallback: cari yang berakhiran dengan semester
+                      ->orWhere('semester_label', 'LIKE', "% {$semester}");
                 });
             }
 
-            $data = $query->orderBy('created_at') // Urutkan tagihan
+            $data = $query->orderBy('created_at')
                         ->get();
             Log::info('Mengambil data laporan pembayaran tahun ' . $tahun . ($semester ? " semester {$semester}" : '') . ': ' . $data->count() . ' record.');
         }
@@ -107,11 +99,13 @@ class ReportController extends Controller
         Log::info("Preview Jenis: {$jenis}, Tahun: {$tahun}, Semester: " . ($semester ?? 'Semua'));
 
         try {
+            // Panggil method refactor dengan parameter semester
             $data = $this->getReportData($jenis, $tahun, $semester);
 
             if ($data === null || ($data instanceof \Illuminate\Support\Collection && $data->isEmpty()) || (is_array($data) && empty($data))) {
                 Log::warning("Tidak ada data preview untuk {$jenis} tahun {$tahun}.");
-                return response()->json(['data' => []]);
+                 // Kembalikan data kosong agar frontend tahu tidak ada data
+                 return response()->json(['data' => []]);
             }
 
             return response()->json(['data' => $data]);
@@ -141,22 +135,25 @@ class ReportController extends Controller
         $fileName = "laporan_{$jenis}_{$tahun}" . ($semester ? "_{$semester}" : '') . "_" . time() . ".pdf";
         $data = null;
 
+        // 1. Ambil Data (gunakan method refactor dengan parameter semester)
         try {
             $data = $this->getReportData($jenis, $tahun, $semester);
             if ($data === null || ($data instanceof \Illuminate\Support\Collection && $data->isEmpty()) || (is_array($data) && empty($data))) {
                 Log::warning("Tidak ada data untuk generate PDF {$jenis} tahun {$tahun}.");
-                return response()->json(['success' => false, 'message' => 'Tidak ada data untuk periode yang dipilih.'], 404);
+                // Kembalikan error agar user tahu tidak ada data
+                return response()->json(['success' => false, 'message' => 'Tidak ada data untuk periode yang dipilih.'], 404); // 404 Not Found or 400 Bad Request
             }
         } catch (\Exception $e) {
             Log::error("Error ambil data untuk PDF: " . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Gagal mengambil data laporan.'], 500);
         }
 
-        // Generate PDF & Simpan File + Riwayat (Dalam Transaksi)
+        // 2. Generate PDF & Simpan File + Riwayat (Dalam Transaksi)
         $filePath = null;
         DB::beginTransaction();
         try {
             $pdf = app('dompdf.wrapper');
+            // Load view PDF template (pastikan view ini ada: resources/views/pdf/laporan_template.blade.php)
             $pdf->loadView('pdf.laporan_template', compact('data', 'jenis', 'periodeFormatted'));
 
             $directory = 'public/reports'; // Simpan di storage/app/public/reports
@@ -175,7 +172,7 @@ class ReportController extends Controller
             // Simpan riwayat ke database
             Report::create([
                 'jenis_laporan' => $jenis,
-                'periode' => (string) $tahun,
+                'periode' => $periodeFormatted,
                 'file_name' => $fileName,
             ]);
             Log::info("Riwayat laporan disimpan ke database.");
@@ -189,15 +186,10 @@ class ReportController extends Controller
 
             Log::error("Error saat store laporan PDF: " . $e->getMessage());
 
-            // Hapus file PDF jika sudah terlanjur dibuat tapi gagal simpan DB
-            if ($filePath && Storage::exists($filePath) && $e instanceof QueryException) {
+            if ($filePath && Storage::exists($filePath)) {
                 Storage::delete($filePath);
-                Log::warning("File PDF {$fileName} dihapus karena gagal menyimpan riwayat ke DB.");
-            }
-            // Hapus juga jika gagal saat proses penyimpanan file itu sendiri
-             else if ($filePath && Storage::exists($filePath)) {
-                Storage::delete($filePath);
-                Log::warning("File PDF {$fileName} dihapus karena error saat proses penyimpanan file.");
+                $reason = $e instanceof QueryException ? 'gagal menyimpan riwayat ke DB' : 'error saat proses penyimpanan';
+                Log::warning("File PDF {$fileName} dihapus karena {$reason}.");
             }
 
             return response()->json(['success' => false, 'message' => 'Gagal membuat file PDF atau menyimpan riwayat: ' . $e->getMessage()], 500);
@@ -212,6 +204,8 @@ class ReportController extends Controller
     {
         Log::info("Mencoba akses laporan ID: {$reportId}");
         try {
+            // Gunakan Route Model Binding jika memungkinkan (jika parameter di route adalah {report})
+            // Jika tidak, pakai findOrFail
             $report = Report::findOrFail($reportId);
             $this->authorize('view', $report);
             $fileName = $report->file_name;
@@ -232,13 +226,17 @@ class ReportController extends Controller
 
             // Cek apakah request minta view inline
             if ($request->has('view') && $request->input('view') == '1') {
+                // Tampilkan Inline (View)
                 Log::info("Menampilkan file inline: {$fileName}");
+                // response()->file() lebih cocok untuk menampilkan file
                 return response()->file($absolutePath, [
                     'Content-Type' => 'application/pdf',
                     'Content-Disposition' => 'inline; filename="' . $fileName . '"'
                 ]);
             } else {
+                // Paksa Download
                 Log::info("Memulai download file: {$fileName}");
+                // Streaming download agar hemat memori
                 $stream = Storage::readStream($storagePath);
                 return response()->streamDownload(function () use ($stream) {
                     fpassthru($stream);
@@ -258,9 +256,9 @@ class ReportController extends Controller
     }
 
     /**
-     * Menghapus riwayat laporan dan file PDF terkait.
+     * Menghapus riwayat laporan dan file PDF terkait (sudah bagus).
      */
-    public function destroy(Report $report)
+    public function destroy(Report $report) // Menggunakan Route Model Binding
     {
         Log::info("Mencoba hapus laporan ID: {$report->id}, File: {$report->file_name}");
         $this->authorize('delete', $report);
