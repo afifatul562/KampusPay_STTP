@@ -58,7 +58,7 @@ class DashboardApiController extends Controller
             'success' => true,
             'mahasiswa' => [
                 'id' => $mahasiswa->mahasiswa_id,
-                'nim' => $mahasiswa->nim ?? null,
+                'npm' => $mahasiswa->npm,
                 'nama' => $mahasiswa->nama ?? $user->name,
                 'angkatan' => $mahasiswa->angkatan ?? null,
                 'semester_aktif' => $mahasiswa->semester_aktif ?? null,

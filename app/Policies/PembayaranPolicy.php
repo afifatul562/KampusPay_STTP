@@ -16,7 +16,9 @@ class PembayaranPolicy
             return true;
         }
         if ($user->isMahasiswa() && $user->mahasiswaDetail && $pembayaran->tagihan) {
-            return $user->mahasiswaDetail->mahasiswa_id === $pembayaran->tagihan->mahasiswa_id;
+            // Beberapa driver/konfigurasi DB dapat mengembalikan numeric sebagai string,
+            // sehingga perbandingan strict (===) bisa gagal walau nilainya sama.
+            return (string) $user->mahasiswaDetail->mahasiswa_id === (string) $pembayaran->tagihan->mahasiswa_id;
         }
         return false;
     }

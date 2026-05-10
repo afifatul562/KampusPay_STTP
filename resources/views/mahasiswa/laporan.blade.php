@@ -144,6 +144,11 @@ document.addEventListener('DOMContentLoaded', function(){
         const submitButton = form.querySelector('button[type="submit"]');
         if (submitButton) {
             setButtonLoading(submitButton, true, 'Mengunduh PDF...');
+            // Download PDF (response attachment) tidak memberi event "selesai" ke JS.
+            // Jadi kita reset loading saat user kembali fokus ke tab, plus fallback timeout.
+            const reset = () => setButtonLoading(submitButton, false);
+            window.addEventListener('focus', reset, { once: true });
+            setTimeout(reset, 8000);
         }
     });
 });

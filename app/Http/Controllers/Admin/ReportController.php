@@ -23,7 +23,7 @@ class ReportController extends Controller
     public function index()
     {
         try {
-            $reports = Report::latest()->get();
+            $reports = Report::latest('created_at')->get(['*']);
             // Konsisten dengan format { data: [...] }
             return response()->json(['data' => $reports]);
         } catch (\Exception $e) {
@@ -40,18 +40,24 @@ class ReportController extends Controller
      * @param string|null $semester Semester (Ganjil/Genap) - hanya untuk pembayaran
      * @return \Illuminate\Support\Collection|null
      */
-    private function getReportData($jenis, int $tahun, $semester = null)
+    private function getReportData($jenis, int $tahun, $semester = null, array $filters = [])
     {
         $data = null;
+        $tahunAkademik = isset($filters['tahun_akademik']) ? trim((string) $filters['tahun_akademik']) : '';
+        $angkatan = isset($filters['angkatan']) ? trim((string) $filters['angkatan']) : '';
+        $programStudi = isset($filters['program_studi']) ? trim((string) $filters['program_studi']) : '';
+
         if ($jenis === 'mahasiswa') {
-            // Filter mahasiswa berdasarkan angkatan (tahun yang dipilih)
+            // Filter mahasiswa berdasarkan angkatan (tahun yang dipilih / filter angkatan)
+            $angkatanDipakai = $angkatan !== '' ? $angkatan : $tahun;
             $mahasiswaList = MahasiswaDetail::with('user')
-                            ->where('angkatan', $tahun)
+                            ->where('angkatan', $angkatanDipakai)
+                            ->when($programStudi !== '', fn($q) => $q->where('program_studi', $programStudi))
                             ->orderBy('npm', 'asc')
                             ->get();
             // Kembalikan sebagai array biasa (tidak perlu grouping berdasarkan semester)
             $data = $mahasiswaList;
-            Log::info('Mengambil data laporan mahasiswa angkatan ' . $tahun . ': ' . $mahasiswaList->count() . ' record.');
+            Log::info('Mengambil data laporan mahasiswa angkatan ' . $angkatanDipakai . ($programStudi ? " prodi {$programStudi}" : '') . ': ' . $mahasiswaList->count() . ' record.');
 
         } elseif ($jenis === 'pembayaran') {
             $query = Tagihan::with([
@@ -61,18 +67,41 @@ class ReportController extends Controller
                     'pembayaranAll' => function($q) {
                         $q->where('status_dibatalkan', false);
                     }
-                ]) // Eager load kasir dan semua pembayaran
-                        ->whereYear('created_at', $tahun);
+                ]); // Eager load kasir dan semua pembayaran
+
+            // Jika tahun akademik tersedia, jangan kunci ke created_at year (karena tagihan TA 2025/2026 bisa dibuat di 2026).
+            // Jika tidak ada tahun akademik, fallback ke filter tahun kalender created_at.
+            if ($tahunAkademik === '') {
+                $query->whereYear('created_at', $tahun);
+            } else {
+                $query->where('semester_label', 'LIKE', $tahunAkademik . '%');
+            }
+
+            if ($angkatan !== '' || $programStudi !== '') {
+                $query->whereHas('mahasiswa', function($mq) use ($angkatan, $programStudi) {
+                    if ($angkatan !== '') {
+                        $mq->where('angkatan', $angkatan);
+                    }
+                    if ($programStudi !== '') {
+                        $mq->where('program_studi', $programStudi);
+                    }
+                });
+            }
             
             if ($semester) {
-                // semester_label contoh: "2025/2026 Ganjil" — cocokkan tahun ajaran ±1 dan sufiks Ganjil/Genap.
-                $tahunNext = $tahun + 1;
-                $tahunPrev = $tahun - 1;
-                $query->where(function($q) use ($semester, $tahun, $tahunNext, $tahunPrev) {
-                    $q->where('semester_label', 'LIKE', "{$tahunPrev}/{$tahun} {$semester}")
-                      ->orWhere('semester_label', 'LIKE', "{$tahun}/{$tahunNext} {$semester}")
-                      ->orWhere('semester_label', 'LIKE', "% {$semester}");
-                });
+                // semester_label contoh: "2025/2026 Ganjil"
+                if ($tahunAkademik !== '') {
+                    $query->where('semester_label', 'LIKE', "{$tahunAkademik} {$semester}%");
+                } else {
+                    // fallback lama jika hanya punya tahun kalender
+                    $tahunNext = $tahun + 1;
+                    $tahunPrev = $tahun - 1;
+                    $query->where(function($q) use ($semester, $tahun, $tahunNext, $tahunPrev) {
+                        $q->where('semester_label', 'LIKE', "{$tahunPrev}/{$tahun} {$semester}")
+                          ->orWhere('semester_label', 'LIKE', "{$tahun}/{$tahunNext} {$semester}")
+                          ->orWhere('semester_label', 'LIKE', "% {$semester}");
+                    });
+                }
             }
 
             $data = $query->orderBy('created_at')
@@ -92,15 +121,23 @@ class ReportController extends Controller
             'jenis_laporan' => 'required|string|in:mahasiswa,pembayaran',
             'tahun' => 'required|digits:4',
             'semester' => 'nullable|string|in:Ganjil,Genap',
+            'tahun_akademik' => 'nullable|string|max:20',
+            'angkatan' => 'nullable|string|max:10',
+            'program_studi' => 'nullable|string|max:100',
         ]);
         $jenis = $validated['jenis_laporan'];
         $tahun = (int) $validated['tahun'];
         $semester = $validated['semester'] ?? null;
+        $filters = [
+            'tahun_akademik' => $validated['tahun_akademik'] ?? null,
+            'angkatan' => $validated['angkatan'] ?? null,
+            'program_studi' => $validated['program_studi'] ?? null,
+        ];
         Log::info("Preview Jenis: {$jenis}, Tahun: {$tahun}, Semester: " . ($semester ?? 'Semua'));
 
         try {
             // Panggil method refactor dengan parameter semester
-            $data = $this->getReportData($jenis, $tahun, $semester);
+            $data = $this->getReportData($jenis, $tahun, $semester, $filters);
 
             if ($data === null || ($data instanceof \Illuminate\Support\Collection && $data->isEmpty()) || (is_array($data) && empty($data))) {
                 Log::warning("Tidak ada data preview untuk {$jenis} tahun {$tahun}.");
@@ -127,17 +164,25 @@ class ReportController extends Controller
             'jenis_laporan' => 'required|string|in:mahasiswa,pembayaran',
             'tahun' => 'required|digits:4',
             'semester' => 'nullable|string|in:Ganjil,Genap',
+            'tahun_akademik' => 'nullable|string|max:20',
+            'angkatan' => 'nullable|string|max:10',
+            'program_studi' => 'nullable|string|max:100',
         ]);
         $jenis = $validated['jenis_laporan'];
         $tahun = (int) $validated['tahun'];
         $semester = $validated['semester'] ?? null;
+        $filters = [
+            'tahun_akademik' => $validated['tahun_akademik'] ?? null,
+            'angkatan' => $validated['angkatan'] ?? null,
+            'program_studi' => $validated['program_studi'] ?? null,
+        ];
         $periodeFormatted = (string) $tahun . ($semester ? " {$semester}" : '');
         $fileName = "laporan_{$jenis}_{$tahun}" . ($semester ? "_{$semester}" : '') . "_" . time() . ".pdf";
         $data = null;
 
         // 1. Ambil Data (gunakan method refactor dengan parameter semester)
         try {
-            $data = $this->getReportData($jenis, $tahun, $semester);
+            $data = $this->getReportData($jenis, $tahun, $semester, $filters);
             if ($data === null || ($data instanceof \Illuminate\Support\Collection && $data->isEmpty()) || (is_array($data) && empty($data))) {
                 Log::warning("Tidak ada data untuk generate PDF {$jenis} tahun {$tahun}.");
                 // Kembalikan error agar user tahu tidak ada data
@@ -200,7 +245,7 @@ class ReportController extends Controller
     /**
      * Mendownload file laporan atau menampilkannya inline.
      */
-    public function download(Request $request, $reportId)
+    public function download(Request $request, int|string $reportId)
     {
         Log::info("Mencoba akses laporan ID: {$reportId}");
         try {
@@ -275,11 +320,11 @@ class ReportController extends Controller
             }
 
             // Hapus record dari database
-            $report->delete();
+            Report::destroy($report->getKey());
             Log::info("Riwayat laporan ID {$report->id} berhasil dihapus dari database.");
 
             DB::commit();
-            return response()->noContent(); // Standar response untuk DELETE sukses
+            return response()->noContent(204); // Standar response untuk DELETE sukses
 
         } catch (\Exception $e) {
             DB::rollBack();

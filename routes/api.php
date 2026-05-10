@@ -14,6 +14,15 @@ use App\Http\Controllers\Kasir\DashboardController as KasirDashboardController;
 use App\Http\Controllers\Kasir\VerifikasiController as KasirVerifikasiController;
 use App\Http\Controllers\Kasir\AktivasiKasirController;
 use App\Http\Controllers\Mahasiswa\AktivasiController as MahasiswaAktivasiController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\Mahasiswa\DashboardApiController;
+use App\Http\Controllers\Api\Mahasiswa\DeviceTokenApiController;
+use App\Http\Controllers\Api\Mahasiswa\KwitansiApiController;
+use App\Http\Controllers\Api\Mahasiswa\LaporanApiController;
+use App\Http\Controllers\Api\Mahasiswa\PembayaranApiController;
+use App\Http\Controllers\Api\Mahasiswa\ProfilApiController;
+use App\Http\Controllers\Api\Mahasiswa\RiwayatApiController;
+use App\Http\Controllers\Api\Mahasiswa\TagihanApiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,12 +30,12 @@ use App\Http\Controllers\Mahasiswa\AktivasiController as MahasiswaAktivasiContro
 |--------------------------------------------------------------------------
 */
 
-// Rute Publik (jika ada)
-// Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])
+    ->middleware('throttle:10,1');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', fn(Request $request) => $request->user());
-    // Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/logout', [AuthController::class, 'logout']);
 
     // --- RUTE KHUSUS UNTUK ADMIN ---
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
@@ -126,6 +135,24 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // --- RUTE KHUSUS UNTUK MAHASISWA ---
     Route::middleware('role:mahasiswa')->prefix('mahasiswa')->name('mahasiswa.')->group(function () {
+        Route::get('/dashboard', DashboardApiController::class)->name('mobile.dashboard');
+        Route::post('/device-token', [DeviceTokenApiController::class, 'store'])->name('mobile.device-token');
+        Route::get('/tagihan', [TagihanApiController::class, 'index'])->name('mobile.tagihan.index');
+        Route::get('/tagihan/{tagihan}', [TagihanApiController::class, 'show'])->name('mobile.tagihan.show');
+        Route::post('/tagihan/{tagihan}/pilih-metode', [PembayaranApiController::class, 'pilihMetode'])->name('mobile.tagihan.pilih-metode');
+        Route::post('/tagihan/{tagihan}/konfirmasi-transfer', [PembayaranApiController::class, 'konfirmasiTransfer'])->name('mobile.tagihan.konfirmasi-transfer');
+        Route::post('/tagihan/{tagihan}/konfirmasi-cicilan', [PembayaranApiController::class, 'konfirmasiCicilan'])->name('mobile.tagihan.konfirmasi-cicilan');
+        Route::get('/riwayat', [RiwayatApiController::class, 'index'])->name('mobile.riwayat');
+        Route::get('/profil', [ProfilApiController::class, 'show'])->name('mobile.profil.show');
+        Route::patch('/profil/email', [ProfilApiController::class, 'updateEmail'])->name('mobile.profil.email');
+        Route::post('/profil/password', [ProfilApiController::class, 'updatePassword'])->name('mobile.profil.password');
+        Route::get('/laporan', [LaporanApiController::class, 'ringkasan'])->name('mobile.laporan.ringkasan');
+        Route::get('/laporan/histori/pdf', [LaporanApiController::class, 'historiPdf'])->name('mobile.laporan.histori.pdf');
+        Route::get('/laporan/tunggakan/pdf', [LaporanApiController::class, 'tunggakanPdf'])->name('mobile.laporan.tunggakan.pdf');
+        Route::get('/laporan/histori', [LaporanApiController::class, 'histori'])->name('mobile.laporan.histori');
+        Route::get('/laporan/tunggakan', [LaporanApiController::class, 'tunggakan'])->name('mobile.laporan.tunggakan');
+        Route::get('/kwitansi/{pembayaran}', [KwitansiApiController::class, 'download'])->name('mobile.kwitansi');
+
         Route::get('/aktivasi', [MahasiswaAktivasiController::class, 'current'])->name('aktivasi.current');
         Route::post('/aktivasi', [MahasiswaAktivasiController::class, 'store'])->name('aktivasi.store');
     });

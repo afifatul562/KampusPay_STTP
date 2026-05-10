@@ -28,16 +28,30 @@
                     <option value="pembayaran">Laporan Pembayaran</option>
                 </select>
             </div>
-            <div>
-                <label for="tahun" class="block text-fluid-sm font-medium text-gray-700">Tahun</label>
-                <select id="tahun" name="tahun" required class="mt-1 block w-full min-h-touch border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500 text-base sm:text-sm"></select>
-            </div>
+            {{-- Tahun dihitung otomatis dari Tahun Akademik --}}
+            <input type="hidden" id="tahun" name="tahun" value="">
             <div id="semester_pembayaran_wrap" class="hidden">
                 <label for="semester_pembayaran" class="block text-fluid-sm font-medium text-gray-700">Semester <span class="text-gray-500 font-normal">(opsional, laporan pembayaran)</span></label>
                 <select id="semester_pembayaran" name="semester" class="mt-1 block w-full min-h-touch border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500 text-base sm:text-sm">
                     <option value="" selected>Semua semester</option>
                     <option value="Ganjil">Ganjil</option>
                     <option value="Genap">Genap</option>
+                </select>
+            </div>
+            <div>
+                <label for="tahun_akademik" class="block text-fluid-sm font-medium text-gray-700">Tahun Akademik</label>
+                <select id="tahun_akademik" name="tahun_akademik" required class="mt-1 block w-full min-h-touch border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500 text-base sm:text-sm"></select>
+            </div>
+            <div>
+                <label for="angkatan" class="block text-fluid-sm font-medium text-gray-700">Angkatan <span class="text-gray-500 font-normal">(opsional)</span></label>
+                <select id="angkatan" name="angkatan" class="mt-1 block w-full min-h-touch border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500 text-base sm:text-sm">
+                    <option value="" selected>Semua angkatan</option>
+                </select>
+            </div>
+            <div>
+                <label for="program_studi" class="block text-fluid-sm font-medium text-gray-700">Program Studi <span class="text-gray-500 font-normal">(opsional)</span></label>
+                <select id="program_studi" name="program_studi" class="mt-1 block w-full min-h-touch border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500 text-base sm:text-sm">
+                    <option value="" selected>Semua program studi</option>
                 </select>
             </div>
             {{-- Tombol View --}}
@@ -85,6 +99,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const tahunSelect = document.getElementById('tahun');
         const jenisLaporanSelect = document.getElementById('jenis_laporan');
         const semesterPembayaranWrap = document.getElementById('semester_pembayaran_wrap');
+        const tahunAkademikSelect = document.getElementById('tahun_akademik');
+        const angkatanSelect = document.getElementById('angkatan');
+        const prodiSelect = document.getElementById('program_studi');
 
         let currentPreviewData = null;
         let currentReportParams = null;
@@ -94,18 +111,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const historyUrl = "{{ route('admin.reports.index') }}";
         const deleteReportUrlTpl = "{{ route('admin.reports.destroy', ['report' => ':id']) }}";
 
-        (function populateYears() {
-            if (!tahunSelect) return;
-            const currentYear = new Date().getFullYear();
-            const startYear = currentYear - 4;
-            tahunSelect.innerHTML = '<option value="" disabled selected>Pilih Tahun</option>';
-            for (let y = currentYear; y >= startYear; y--) {
-                const opt = document.createElement('option');
-                opt.value = String(y);
-                opt.textContent = String(y);
-                tahunSelect.appendChild(opt);
-            }
-        })();
+        // Tahun tidak dipilih manual; diset dari Tahun Akademik (2026/2027 -> 2026)
 
         function syncSemesterFieldVisibility() {
             if (!semesterPembayaranWrap || !jenisLaporanSelect) return;
@@ -118,13 +124,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function buildReportPayload(form) {
             const jenis = form.elements.jenis_laporan.value;
-            const tahun = form.elements.tahun.value;
-            const payload = { jenis_laporan: jenis, tahun: tahun };
+            const ay = tahunAkademikSelect && tahunAkademikSelect.value ? String(tahunAkademikSelect.value).trim() : '';
+            const matchAy = /^(\d{4})\/(\d{4})$/.exec(ay);
+            const tahun = matchAy ? matchAy[1] : '';
+            if (tahunSelect) tahunSelect.value = tahun;
+
+            const payload = { jenis_laporan: jenis, tahun: tahun, tahun_akademik: ay };
             if (jenis === 'pembayaran') {
                 const semEl = document.getElementById('semester_pembayaran');
                 const s = semEl && semEl.value ? String(semEl.value).trim() : '';
                 if (s) payload.semester = s;
             }
+            const ang = angkatanSelect && angkatanSelect.value ? String(angkatanSelect.value).trim() : '';
+            const prodi = prodiSelect && prodiSelect.value ? String(prodiSelect.value).trim() : '';
+            if (ang) payload.angkatan = ang;
+            if (prodi) payload.program_studi = prodi;
             return payload;
         }
 
@@ -133,6 +147,55 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('apiRequest util tidak tersedia');
             return;
         }
+
+        (function populateAcademicYears() {
+            if (!tahunAkademikSelect) return;
+            const nowYear = new Date().getFullYear();
+            const startYear = nowYear - 4;
+            tahunAkademikSelect.innerHTML = '';
+            for (let y = nowYear; y >= startYear; y--) {
+                const ay = `${y}/${y + 1}`;
+                const opt = document.createElement('option');
+                opt.value = ay;
+                opt.textContent = ay;
+                tahunAkademikSelect.appendChild(opt);
+            }
+            // Default: tahun akademik berjalan
+            tahunAkademikSelect.value = `${nowYear}/${nowYear + 1}`;
+        })();
+
+        (async function populateAngkatanProdi() {
+            if (!angkatanSelect || !prodiSelect) return;
+            try {
+                const mahasiswaUrl = "{{ route('admin.mahasiswa.index') }}";
+                const resp = await apiRequest(mahasiswaUrl);
+                const list = resp.data || resp || [];
+                const angkatanSet = new Set();
+                const prodiSet = new Set();
+                list.forEach(m => {
+                    if (m && m.angkatan) angkatanSet.add(String(m.angkatan));
+                    if (m && m.program_studi) prodiSet.add(String(m.program_studi));
+                });
+                const angkatan = Array.from(angkatanSet).sort().reverse();
+                const prodi = Array.from(prodiSet).sort();
+                angkatanSelect.innerHTML = '<option value="" selected>Semua angkatan</option>';
+                angkatan.forEach(a => {
+                    const opt = document.createElement('option');
+                    opt.value = a;
+                    opt.textContent = a;
+                    angkatanSelect.appendChild(opt);
+                });
+                prodiSelect.innerHTML = '<option value="" selected>Semua program studi</option>';
+                prodi.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p;
+                    opt.textContent = p;
+                    prodiSelect.appendChild(opt);
+                });
+            } catch (e) {
+                console.warn('Gagal memuat master mahasiswa untuk filter laporan', e);
+            }
+        })();
 
         function loadReportHistory() {
             if (!reportHistoryTable) return;
@@ -375,8 +438,8 @@ document.addEventListener('DOMContentLoaded', function() {
             reportForm.addEventListener('submit', function(event) {
                 event.preventDefault();
                 const formData = buildReportPayload(this);
-                if (!formData.jenis_laporan || !formData.tahun) {
-                    Swal.fire({ icon: 'warning', title: 'Input Tidak Lengkap', text: 'Harap pilih jenis laporan dan tahun.' });
+                if (!formData.jenis_laporan || !formData.tahun_akademik || !formData.tahun) {
+                    Swal.fire({ icon: 'warning', title: 'Input Tidak Lengkap', text: 'Harap pilih jenis laporan dan Tahun Akademik.' });
                     return;
                 }
                 currentReportParams = formData;

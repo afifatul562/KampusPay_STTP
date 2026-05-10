@@ -22,9 +22,9 @@
         :icon="$headerIcon">
     </x-page-header>
 
-    <div class="text-xs text-gray-500">
+    {{-- <div class="text-xs text-gray-500">
         Template CSV ada di folder <code class="text-gray-700">docs/import-templates/</code>.
-    </div>
+    </div> --}}
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <x-card title="Import Tagihan (CSV)" subtitle="Wajib: kode_pembayaran, npm, nama_pembayaran. Disarankan: tanggal_jatuh_tempo, status, semester_label.">
@@ -33,7 +33,7 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1" for="tagihan_csv">File CSV</label>
                     <input id="tagihan_csv" name="file_csv" type="file" accept=".csv,.txt" class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" required>
-                    <p class="mt-2 text-xs text-gray-500">Gunakan template: <code class="text-gray-700">docs/import-templates/tagihan_template.csv</code></p>
+                    {{-- <p class="mt-2 text-xs text-gray-500">Gunakan template: <code class="text-gray-700">docs/import-templates/tagihan_template.csv</code></p> --}}
                 </div>
                 <button type="submit" class="inline-flex items-center justify-center min-h-touch px-4 py-2.5 rounded-lg bg-gradient-to-r from-primary-600 to-primary-700 text-white text-sm font-semibold hover:from-primary-700 hover:to-primary-800 shadow-md hover:shadow-lg transition-all duration-200">
                     Upload & Import Tagihan
@@ -47,7 +47,7 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1" for="pembayaran_csv">File CSV</label>
                     <input id="pembayaran_csv" name="file_csv" type="file" accept=".csv,.txt" class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" required>
-                    <p class="mt-2 text-xs text-gray-500">Gunakan template: <code class="text-gray-700">docs/import-templates/pembayaran_template.csv</code></p>
+                    {{-- <p class="mt-2 text-xs text-gray-500">Gunakan template: <code class="text-gray-700">docs/import-templates/pembayaran_template.csv</code></p> --}}
                 </div>
                 <button type="submit" class="inline-flex items-center justify-center min-h-touch px-4 py-2.5 rounded-lg bg-gradient-to-r from-success-600 to-success-700 text-white text-sm font-semibold hover:from-success-700 hover:to-success-800 shadow-md hover:shadow-lg transition-all duration-200">
                     Upload & Import Pembayaran

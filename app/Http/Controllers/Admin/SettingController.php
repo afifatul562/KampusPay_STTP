@@ -23,12 +23,11 @@ class SettingController extends Controller
 
             $settings['app_name'] = self::DEFAULT_APP_NAME;
 
-            // Tambahkan computed defaults jika belum ada: academic_year & semester
-            if (!isset($settings['academic_year']) || !isset($settings['semester'])) {
-                [$computedYear, $computedSemester] = $this->computeAcademicYearAndSemester();
-                $settings['academic_year'] = $settings['academic_year'] ?? $computedYear;
-                $settings['semester'] = $settings['semester'] ?? $computedSemester;
-            }
+            // Academic year & semester dihitung otomatis dari waktu server.
+            // Agar konsisten dengan tampilan dan tidak "nyangkut" nilai lama, selalu tampilkan hasil hitungan terbaru.
+            [$computedYear, $computedSemester] = $this->computeAcademicYearAndSemester();
+            $settings['academic_year'] = $computedYear;
+            $settings['semester'] = $computedSemester;
             // Bungkus dalam 'data' agar konsisten
             return response()->json(['data' => $settings]);
         } catch (\Exception $e) {
@@ -122,10 +121,13 @@ class SettingController extends Controller
 
     /**
      * Hitung Tahun Akademik dan Semester aktif otomatis.
-     * Aturan kampus: Tahun ajaran aktif dimulai Oktober s/d pertengahan Juli.
-     * - Semester Ganjil: Okt (10) s/d Feb (2)
-     * - Semester Genap: Mar (3) s/d Jul (7)
-     * Libur: Agustus-September.
+     * Aturan kampus (disederhanakan): Tahun akademik mengikuti format YYYY/YYYY+1
+     * berdasarkan tahun kalender saat ini (contoh: 2026 => 2026/2027).
+     *
+     * Semester:
+     * - Ganjil: Okt (10) s/d Feb (2)
+     * - Genap: Mar (3) s/d Jul (7)
+     * - Libur: Agustus-September.
      *
      * @return array{0:string,1:string} ["YYYY/YYYY+1", "Ganjil|Genap"]
      */
@@ -144,14 +146,9 @@ class SettingController extends Controller
             $semester = 'Libur';
         }
 
-        // TAHUN AKADEMIK: Januari (1) masuk ke else -> 2025/2026
-        if ($m >= 10) {
-            $startYear = $y;
-            $endYear = $y + 1;
-        } else {
-            $startYear = $y - 1; // 2026 - 1 = 2025
-            $endYear = $y;     // 2026
-        }
+        // TAHUN AKADEMIK: selalu tahun kalender saat ini / tahun berikutnya (2026/2027)
+        $startYear = $y;
+        $endYear = $y + 1;
 
         return [sprintf('%d/%d', $startYear, $endYear), $semester];
     }

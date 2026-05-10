@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    /*
+    | Path ke file JSON service account Firebase (Project settings > Service accounts).
+    | Dipakai server untuk mengirim FCM ke token yang didaftarkan app mobile.
+    */
+    'firebase' => [
+        'credentials' => env('FIREBASE_CREDENTIALS', storage_path('firebase/service-account.json')),
+    ],
+
 ];

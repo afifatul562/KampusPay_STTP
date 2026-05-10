@@ -60,6 +60,26 @@
     {{-- Filter Dropdowns --}}
     <x-card title="Filter">
         <div class="flex flex-col sm:flex-row gap-4">
+            {{-- Filter Tahun Akademik --}}
+            <div class="flex-1">
+                <label for="filterTahunAkademik" class="block text-sm font-medium text-gray-700 mb-1">Tahun Akademik</label>
+                <select id="filterTahunAkademik" required class="block w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:text-sm">
+                </select>
+            </div>
+            {{-- Filter Angkatan --}}
+            <div class="flex-1">
+                <label for="filterAngkatan" class="block text-sm font-medium text-gray-700 mb-1">Angkatan</label>
+                <select id="filterAngkatan" class="block w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:text-sm">
+                    <option value="">Semua Angkatan</option>
+                </select>
+            </div>
+            {{-- Filter Program Studi --}}
+            <div class="flex-1">
+                <label for="filterProgramStudi" class="block text-sm font-medium text-gray-700 mb-1">Program Studi</label>
+                <select id="filterProgramStudi" class="block w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:text-sm">
+                    <option value="">Semua Program Studi</option>
+                </select>
+            </div>
             {{-- Filter Pencarian Nama Mahasiswa --}}
             <div class="flex-1">
                 <label for="filterNamaMahasiswa" class="block text-sm font-medium text-gray-700 mb-1">Cari Nama Mahasiswa</label>
@@ -221,9 +241,76 @@
         const filterStatusSelect = document.getElementById('filterStatus');
         const filterJenisSelect = document.getElementById('filterJenis');
         const filterNamaMahasiswaInput = document.getElementById('filterNamaMahasiswa');
+        const filterTahunAkademikSelect = document.getElementById('filterTahunAkademik');
+        const filterAngkatanSelect = document.getElementById('filterAngkatan');
+        const filterProgramStudiSelect = document.getElementById('filterProgramStudi');
         let currentFilters = { status: '', jenis: '', namaMahasiswa: '' };
+        let currentServerFilters = { tahunAkademik: '', angkatan: '', programStudi: '' };
         let aktivasiNotifs = [];
         let notifTimer = null;
+        function buildQueryString(params) {
+            const qp = new URLSearchParams();
+            Object.entries(params || {}).forEach(([k, v]) => {
+                if (v === undefined || v === null) return;
+                const s = String(v).trim();
+                if (!s) return;
+                qp.set(k, s);
+            });
+            const str = qp.toString();
+            return str ? `?${str}` : '';
+        }
+
+        function populateAcademicYears() {
+            if (!filterTahunAkademikSelect) return;
+            const nowYear = new Date().getFullYear();
+            const startYear = nowYear - 4;
+            // Tahun akademik WAJIB dipilih: tidak ada opsi "Semua"
+            filterTahunAkademikSelect.innerHTML = '';
+            for (let y = nowYear; y >= startYear; y--) {
+                const ay = `${y}/${y + 1}`;
+                const opt = document.createElement('option');
+                opt.value = ay;
+                opt.textContent = ay;
+                filterTahunAkademikSelect.appendChild(opt);
+            }
+            // Default: tahun akademik berjalan
+            filterTahunAkademikSelect.value = `${nowYear}/${nowYear + 1}`;
+        }
+
+        async function loadMasterMahasiswaForFilters() {
+            // Ambil master mahasiswa agar bisa isi dropdown angkatan & prodi
+            if (!filterAngkatanSelect || !filterProgramStudiSelect) return;
+            const mahasiswaUrl = "{{ route($mahasiswaIndexRouteName) }}";
+            try {
+                const mahasiswaResponse = await apiRequest(mahasiswaUrl);
+                const list = mahasiswaResponse.data || mahasiswaResponse || [];
+                const angkatanSet = new Set();
+                const prodiSet = new Set();
+                list.forEach(m => {
+                    if (m && m.angkatan) angkatanSet.add(String(m.angkatan));
+                    if (m && m.program_studi) prodiSet.add(String(m.program_studi));
+                });
+                const angkatan = Array.from(angkatanSet).sort().reverse();
+                const prodi = Array.from(prodiSet).sort();
+                filterAngkatanSelect.innerHTML = '<option value="">Semua Angkatan</option>';
+                angkatan.forEach(a => {
+                    const opt = document.createElement('option');
+                    opt.value = a;
+                    opt.textContent = a;
+                    filterAngkatanSelect.appendChild(opt);
+                });
+                filterProgramStudiSelect.innerHTML = '<option value="">Semua Program Studi</option>';
+                prodi.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p;
+                    opt.textContent = p;
+                    filterProgramStudiSelect.appendChild(opt);
+                });
+            } catch (e) {
+                console.warn('Gagal memuat master mahasiswa untuk filter', e);
+            }
+        }
+
 
         // Cleave.js format nominal (fallback jika library tidak ada)
         const cleaveJumlah = (window.Cleave)
@@ -561,7 +648,12 @@
 
         function loadPayments() {
             renderTable([]);
-            const url = "{{ route($tagihanIndexRouteName) }}";
+            const baseUrl = "{{ route($tagihanIndexRouteName) }}";
+            const url = baseUrl + buildQueryString({
+                tahun_akademik: currentServerFilters.tahunAkademik,
+                angkatan: currentServerFilters.angkatan,
+                program_studi: currentServerFilters.programStudi,
+            });
             apiRequest(url).then(response => {
                 allTagihanData = response.data || response;
                 populateTableFilters();
@@ -1120,6 +1212,17 @@
              });
          }
 
+         // Listener untuk filter server-side (tahun akademik / angkatan / prodi)
+        function syncServerFiltersAndReload() {
+             currentServerFilters.tahunAkademik = filterTahunAkademikSelect ? filterTahunAkademikSelect.value : '';
+             currentServerFilters.angkatan = filterAngkatanSelect ? filterAngkatanSelect.value : '';
+             currentServerFilters.programStudi = filterProgramStudiSelect ? filterProgramStudiSelect.value : '';
+             loadPayments();
+         }
+         filterTahunAkademikSelect?.addEventListener('change', syncServerFiltersAndReload);
+         filterAngkatanSelect?.addEventListener('change', syncServerFiltersAndReload);
+         filterProgramStudiSelect?.addEventListener('change', syncServerFiltersAndReload);
+
         try {
             const urlParams = new URLSearchParams(window.location.search);
             const statusFilter = urlParams.get('status');
@@ -1132,7 +1235,10 @@
             console.warn("Gagal membaca URL parameter.", e);
         }
 
-        loadPayments();
+        populateAcademicYears();
+        // Pastikan request pertama sudah membawa tahun akademik default
+        syncServerFiltersAndReload();
+        loadMasterMahasiswaForFilters();
         if (isKasir) {
             loadAktivasiNotifs();
             notifTimer = setInterval(loadAktivasiNotifs, 20000);

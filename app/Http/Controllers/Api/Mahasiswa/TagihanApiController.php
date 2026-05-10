@@ -113,7 +113,7 @@ class TagihanApiController extends Controller
                 'kode_pembayaran' => $tagihan->kode_pembayaran,
                 'nama_pembayaran' => $tagihan->tarif?->nama_pembayaran,
                 'jenis_tampilan' => $tagihan->jenis_tampilan,
-                'deskripsi' => $tagihan->tarif->keterangan ?? null,
+                'deskripsi' => $tagihan->tarif?->keterangan ?? null,
                 'jumlah_tagihan' => $tagihan->jumlah_tagihan,
                 'sisa_pokok' => $tagihan->sisa_pokok,
                 'status' => $tagihan->status,

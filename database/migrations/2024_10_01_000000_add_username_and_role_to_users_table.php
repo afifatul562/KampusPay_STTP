@@ -11,15 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Kolom username & role sudah didefinisikan di 0001_01_01_000000_create_users_table.
     }
 
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColum
-    /**
-     * Reverse the migrations.
-     */n(['username', 'role']);
-        });
+        //
     }
 };

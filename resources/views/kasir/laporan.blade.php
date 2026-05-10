@@ -39,13 +39,13 @@
     <x-card title="Pilih Periode Laporan">
         <x-slot:header>
             <div class="flex gap-2 w-full sm:w-auto">
-                <a href="{{ route('kasir.laporan.exportCsv', ['bulan' => $selectedMonth, 'tahun' => $selectedYear]) }}">
+                <a href="{{ route('kasir.laporan.exportCsv', ['bulan' => $selectedMonth, 'tahun' => $selectedYear, 'tahun_akademik' => $selectedTahunAkademik, 'angkatan' => $selectedAngkatan, 'program_studi' => $selectedProgramStudi]) }}">
                     <x-gradient-button variant="success" size="md">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm7-14a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                         Ekspor CSV
                     </x-gradient-button>
                 </a>
-                <a href="{{ route('kasir.laporan.exportPdf', ['bulan' => $selectedMonth, 'tahun' => $selectedYear]) }}">
+                <a href="{{ route('kasir.laporan.exportPdf', ['bulan' => $selectedMonth, 'tahun' => $selectedYear, 'tahun_akademik' => $selectedTahunAkademik, 'angkatan' => $selectedAngkatan, 'program_studi' => $selectedProgramStudi]) }}">
                     <x-gradient-button variant="danger" size="md">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         Ekspor PDF
@@ -53,7 +53,7 @@
                 </a>
             </div>
         </x-slot:header>
-        <form action="{{ route('kasir.laporan.index') }}" method="GET" class="flex flex-col sm:flex-row items-end gap-4">
+        <form action="{{ route('kasir.laporan.index') }}" method="GET" class="flex flex-col sm:flex-row items-end gap-4 flex-wrap">
             <div class="w-full sm:w-auto">
                 <label for="bulan" class="block text-sm font-medium text-gray-700">Bulan</label>
                 <select name="bulan" id="bulan" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500">
@@ -62,12 +62,39 @@
                     @endfor
                 </select>
             </div>
-            <div class="w-full sm:w-auto">
-                <label for="tahun" class="block text-sm font-medium text-gray-700">Tahun</label>
+                <div class="w-full sm:w-auto">
+                <label for="tahun" class="block text-sm font-medium text-gray-700">Tahun (kalender)</label>
                 <select name="tahun" id="tahun" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500">
                     @for ($i = date('Y'); $i >= date('Y') - 5; $i--)
                         <option value="{{ $i }}" {{ $selectedYear == $i ? 'selected' : '' }}>{{ $i }}</option>
                     @endfor
+                </select>
+            </div>
+            <div class="w-full sm:w-auto">
+                <label for="tahun_akademik" class="block text-sm font-medium text-gray-700">Tahun Akademik</label>
+                <select name="tahun_akademik" id="tahun_akademik" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                    @for ($y = date('Y'); $y >= date('Y') - 4; $y--)
+                        @php($ay = $y . '/' . ($y + 1))
+                        <option value="{{ $ay }}" {{ $selectedTahunAkademik == $ay ? 'selected' : '' }}>{{ $ay }}</option>
+                    @endfor
+                </select>
+            </div>
+            <div class="w-full sm:w-auto">
+                <label for="angkatan" class="block text-sm font-medium text-gray-700">Angkatan</label>
+                <select name="angkatan" id="angkatan" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                    <option value="" {{ $selectedAngkatan ? '' : 'selected' }}>Semua</option>
+                    @foreach(($masterAngkatan ?? []) as $a)
+                        <option value="{{ $a }}" {{ (string)$selectedAngkatan === (string)$a ? 'selected' : '' }}>{{ $a }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="w-full sm:w-auto">
+                <label for="program_studi" class="block text-sm font-medium text-gray-700">Program Studi</label>
+                <select name="program_studi" id="program_studi" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                    <option value="" {{ $selectedProgramStudi ? '' : 'selected' }}>Semua</option>
+                    @foreach(($masterProdi ?? []) as $p)
+                        <option value="{{ $p }}" {{ (string)$selectedProgramStudi === (string)$p ? 'selected' : '' }}>{{ $p }}</option>
+                    @endforeach
                 </select>
             </div>
             <div class="w-full sm:w-auto">
@@ -133,9 +160,23 @@
                         <option value="tunggakan">Laporan Tunggakan</option>
                     </select>
                 </div>
+                {{-- Tahun dihitung otomatis dari Tahun Akademik --}}
+                <input type="hidden" id="tahun_pembayaran" name="tahun" value="">
                 <div>
-                    <label for="tahun_pembayaran" class="block text-sm font-medium text-gray-700">Tahun</label>
-                    <select id="tahun_pembayaran" name="tahun" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"></select>
+                    <label for="tahun_akademik_pembayaran" class="block text-sm font-medium text-gray-700">Tahun Akademik</label>
+                    <select id="tahun_akademik_pembayaran" name="tahun_akademik" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"></select>
+                </div>
+                <div>
+                    <label for="angkatan_pembayaran" class="block text-sm font-medium text-gray-700">Angkatan <span class="text-gray-500 font-normal">(opsional)</span></label>
+                    <select id="angkatan_pembayaran" name="angkatan" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                        <option value="" selected>Semua</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="prodi_pembayaran" class="block text-sm font-medium text-gray-700">Program Studi <span class="text-gray-500 font-normal">(opsional)</span></label>
+                    <select id="prodi_pembayaran" name="program_studi" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                        <option value="" selected>Semua</option>
+                    </select>
                 </div>
                 <x-gradient-button type="submit" id="viewReportBtn" variant="primary" size="md" class="w-full" aria-label="Tampilkan Laporan">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
@@ -205,18 +246,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const reportPreviewArea = document.getElementById('reportPreviewArea');
     const reportPreviewContent = document.getElementById('reportPreviewContent');
     const tahunSelect = document.getElementById('tahun_pembayaran');
+    const tahunAkademikSelect = document.getElementById('tahun_akademik_pembayaran');
+    const angkatanSelect = document.getElementById('angkatan_pembayaran');
+    const prodiSelect = document.getElementById('prodi_pembayaran');
 
-    (function populateYears(){
-        const currentYear = new Date().getFullYear();
-        const startYear = currentYear - 4;
-        tahunSelect.innerHTML = '<option value="" disabled selected>Pilih Tahun</option>';
-        for (let y = currentYear; y >= startYear; y--) {
-            const opt = document.createElement('option');
-            opt.value = String(y);
-            opt.textContent = String(y);
-            tahunSelect.appendChild(opt);
-        }
-    })();
+    // Tahun tidak dipilih manual; diset dari Tahun Akademik (2026/2027 -> 2026)
 
     const apiToken = document.querySelector('meta[name="api-token"]')?.getAttribute('content');
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
@@ -242,6 +276,54 @@ document.addEventListener('DOMContentLoaded', function() {
         return data;
     }
 
+    (function populateAcademicYears(){
+        if (!tahunAkademikSelect) return;
+        const nowYear = new Date().getFullYear();
+        const startYear = nowYear - 4;
+        tahunAkademikSelect.innerHTML = '';
+        for (let y = nowYear; y >= startYear; y--) {
+            const ay = `${y}/${y+1}`;
+            const opt = document.createElement('option');
+            opt.value = ay;
+            opt.textContent = ay;
+            tahunAkademikSelect.appendChild(opt);
+        }
+        tahunAkademikSelect.value = `${nowYear}/${nowYear + 1}`;
+    })();
+
+    async function populateAngkatanProdi() {
+        if (!angkatanSelect || !prodiSelect) return;
+        try {
+            const resp = await apiRequest('/api/kasir/mahasiswa');
+            const list = resp.data || resp || [];
+            const angkatanSet = new Set();
+            const prodiSet = new Set();
+            list.forEach(m => {
+                if (m && m.angkatan) angkatanSet.add(String(m.angkatan));
+                if (m && m.program_studi) prodiSet.add(String(m.program_studi));
+            });
+            const angkatan = Array.from(angkatanSet).sort().reverse();
+            const prodi = Array.from(prodiSet).sort();
+            angkatanSelect.innerHTML = '<option value="" selected>Semua</option>';
+            angkatan.forEach(a => {
+                const opt = document.createElement('option');
+                opt.value = a;
+                opt.textContent = a;
+                angkatanSelect.appendChild(opt);
+            });
+            prodiSelect.innerHTML = '<option value="" selected>Semua</option>';
+            prodi.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p;
+                opt.textContent = p;
+                prodiSelect.appendChild(opt);
+            });
+        } catch (e) {
+            console.warn('Gagal memuat master mahasiswa untuk filter laporan kasir', e);
+        }
+    }
+    populateAngkatanProdi();
+
     let currentPreviewData = null;
     let currentReportParams = null;
 
@@ -249,10 +331,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     reportForm.addEventListener('submit', async function(e) {
         e.preventDefault();
-        const tahun = tahunSelect.value;
+        const ay = tahunAkademikSelect && tahunAkademikSelect.value ? String(tahunAkademikSelect.value).trim() : '';
+        const matchAy = /^(\d{4})\/(\d{4})$/.exec(ay);
+        const tahun = matchAy ? matchAy[1] : '';
+        if (tahunSelect) tahunSelect.value = tahun;
         const jenisLaporan = jenisLaporanSelect.value;
-        if (!tahun) {
-            Swal.fire({ icon: 'warning', title: 'Peringatan', text: 'Silakan pilih tahun terlebih dahulu.' });
+        if (!ay || !tahun) {
+            Swal.fire({ icon: 'warning', title: 'Peringatan', text: 'Silakan pilih Tahun Akademik terlebih dahulu.' });
             return;
         }
 
@@ -260,12 +345,26 @@ document.addEventListener('DOMContentLoaded', function() {
         viewReportBtn.innerHTML = '<svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Memuat...';
 
         try {
+            const ta = ay;
+            const ang = angkatanSelect && angkatanSelect.value ? String(angkatanSelect.value).trim() : '';
+            const prodi = prodiSelect && prodiSelect.value ? String(prodiSelect.value).trim() : '';
+            const qs = new URLSearchParams();
+            qs.set('tahun', String(tahun));
+            if (ta) qs.set('tahun_akademik', ta);
+            if (ang) qs.set('angkatan', ang);
+            if (prodi) qs.set('program_studi', prodi);
             const endpoint = jenisLaporan === 'tunggakan'
-                ? `/api/kasir/reports/tunggakan/preview?tahun=${encodeURIComponent(tahun)}`
-                : `/api/kasir/reports/preview?tahun=${encodeURIComponent(tahun)}`;
+                ? `/api/kasir/reports/tunggakan/preview?${qs.toString()}`
+                : `/api/kasir/reports/preview?${qs.toString()}`;
             const response = await apiRequest(endpoint);
             currentPreviewData = response.data || [];
-            currentReportParams = { tahun: parseInt(tahun), jenis_laporan: jenisLaporan };
+            currentReportParams = {
+                tahun: parseInt(tahun),
+                jenis_laporan: jenisLaporan,
+                tahun_akademik: ta,
+                angkatan: ang,
+                program_studi: prodi,
+            };
 
             if (currentPreviewData.length === 0) {
                 reportPreviewContent.innerHTML = '<p class="text-gray-500 text-center py-8">Tidak ada data untuk tahun yang dipilih.</p>';
@@ -424,7 +523,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 ? `/api/kasir/reports/tunggakan/generate`
                 : `/api/kasir/reports/generate`;
             const response = await apiRequest(endpoint, 'POST', {
-                tahun: String(currentReportParams.tahun)
+                tahun: String(currentReportParams.tahun),
+                tahun_akademik: currentReportParams.tahun_akademik || '',
+                angkatan: currentReportParams.angkatan || '',
+                program_studi: currentReportParams.program_studi || '',
             });
 
             if (response.success || response.message?.includes('berhasil')) {

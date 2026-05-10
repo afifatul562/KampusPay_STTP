@@ -27,7 +27,7 @@
             <div class="text-fluid-sm font-medium text-gray-500 mb-1">Total uang masuk</div>
             <div id="total-pembayaran-value" class="font-bold text-gray-900 mt-1 text-left whitespace-nowrap tabular-nums leading-tight max-w-full text-fluid-lg lg:text-fluid-xl">...</div>
             <div id="total-pembayaran-skeleton" class="w-36 h-8 bg-gray-200 rounded-md animate-pulse mt-1"></div>
-            <p class="text-fluid-xs text-gray-400 mt-1.5 leading-snug">Jumlah terbayar (cicilan), pembayaran tidak dibatalkan</p>
+            {{-- <p class="text-fluid-xs text-gray-400 mt-1.5 leading-snug">Jumlah terbayar (cicilan), pembayaran tidak dibatalkan</p> --}}
         </div>
         <div class="relative z-10 bg-gradient-to-br from-success-400 to-success-600 p-3 sm:p-4 rounded-xl shadow-lg group-hover:shadow-xl sm:group-hover:scale-110 transition-all duration-300 shrink-0">
             <svg class="w-7 h-7 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
@@ -40,7 +40,7 @@
             <div class="text-fluid-sm font-medium text-gray-500 mb-1">Tingkat pembayaran</div>
             <div id="tingkat-pembayaran-value" class="text-fluid-2xl lg:text-fluid-3xl font-bold text-gray-900 mt-1">...</div>
             <div id="tingkat-pembayaran-skeleton" class="w-36 h-8 bg-gray-200 rounded-md animate-pulse mt-1"></div>
-            <p class="text-fluid-xs text-gray-400 mt-1.5 leading-snug">Terbayar dibanding total nominal tagihan</p>
+            {{-- <p class="text-fluid-xs text-gray-400 mt-1.5 leading-snug">Terbayar dibanding total nominal tagihan</p> --}}
         </div>
         <div class="relative z-10 bg-gradient-to-br from-warning-400 to-warning-600 p-3 sm:p-4 rounded-xl shadow-lg sm:group-hover:scale-110 transition-all duration-300 shrink-0">
             <svg class="w-7 h-7 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -56,7 +56,7 @@
             <div class="text-fluid-sm font-medium text-gray-500 mb-1">Tagihan belum lunas</div>
             <div id="pending-payment-value" class="text-fluid-2xl lg:text-fluid-3xl font-bold text-gray-900 mt-1">...</div>
             <div id="pending-payment-skeleton" class="w-36 h-8 bg-gray-200 rounded-md animate-pulse mt-1"></div>
-            <p class="text-fluid-xs text-gray-400 mt-1.5 leading-snug">Jumlah tagihan dengan status bukan Lunas</p>
+            {{-- <p class="text-fluid-xs text-gray-400 mt-1.5 leading-snug">Jumlah tagihan dengan status bukan Lunas</p> --}}
         </div>
         <div class="relative z-10 bg-gradient-to-br from-purple-400 to-purple-600 p-3 sm:p-4 rounded-xl shadow-lg group-hover:shadow-xl sm:group-hover:scale-110 transition-all duration-300 shrink-0">
             <svg class="w-7 h-7 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -76,7 +76,7 @@
                 </div>
                 <div class="min-w-0">
                     <h2 class="text-fluid-xl sm:text-fluid-2xl font-bold text-gray-900">Pembayaran terbaru</h2>
-                    <p class="text-fluid-sm text-gray-500 mt-1">Maks. 10 transaksi terakhir; kolom jumlah = nominal pada transaksi tersebut</p>
+                    {{-- <p class="text-fluid-sm text-gray-500 mt-1">Maks. 10 transaksi terakhir; kolom jumlah = nominal pada transaksi tersebut</p> --}}
                 </div>
             </div>
         </div>

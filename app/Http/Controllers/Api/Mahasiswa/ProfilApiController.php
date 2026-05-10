@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
 class ProfilApiController extends Controller
@@ -91,14 +92,57 @@ class ProfilApiController extends Controller
         ]);
     }
 
+    public function updateEmail(Request $request)
+    {
+        $user = $request->user();
+        if (!$user instanceof User) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.',
+            ], 401);
+        }
+
+        $validated = $request->validate([
+            'email' => [
+                'required',
+                'email',
+                Rule::unique('users', 'email')->ignore($user->id),
+            ],
+        ]);
+
+        $user->update([
+            'email' => $validated['email'],
+            'email_verified_at' => null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Email berhasil diperbarui.',
+            'user' => [
+                'id' => $user->id,
+                'nama' => $user->name,
+                'username' => $user->username,
+                'email' => $user->email,
+            ],
+        ]);
+    }
+
     public function updatePassword(Request $request)
     {
+        $user = $request->user();
+        if (!$user instanceof User) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.',
+            ], 401);
+        }
+
         $validated = $request->validate([
             'current_password' => ['required', 'current_password'],
             'password' => ['required', Password::defaults(), 'confirmed'],
         ]);
 
-        $request->user()->update([
+        $user->update([
             'password' => Hash::make($validated['password']),
         ]);
 

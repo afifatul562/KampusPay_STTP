@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Pembayaran;
 use App\Models\Tagihan;
 use App\Models\Report;
+use App\Models\MahasiswaDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -13,9 +14,35 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Builder;
 
 class LaporanController extends Controller
 {
+    private function applyMahasiswaFiltersToPembayaranQuery(Builder $query, Request $request): Builder
+    {
+        $tahunAkademik = trim((string) $request->input('tahun_akademik', ''));
+        $angkatan = trim((string) $request->input('angkatan', ''));
+        $programStudi = trim((string) $request->input('program_studi', ''));
+
+        if ($tahunAkademik !== '') {
+            $query->whereHas('tagihan', function($tq) use ($tahunAkademik) {
+                $tq->where('semester_label', 'LIKE', $tahunAkademik . '%');
+            });
+        }
+        if ($angkatan !== '' || $programStudi !== '') {
+            $query->whereHas('tagihan.mahasiswa', function($mq) use ($angkatan, $programStudi) {
+                if ($angkatan !== '') {
+                    $mq->where('angkatan', $angkatan);
+                }
+                if ($programStudi !== '') {
+                    $mq->where('program_studi', $programStudi);
+                }
+            });
+        }
+
+        return $query;
+    }
+
     /**
      * Menampilkan halaman laporan kasir.
      */
@@ -29,10 +56,12 @@ class LaporanController extends Controller
 
         // Query dasar untuk pembayaran pada periode yang dipilih
         $query = Pembayaran::with('tagihan.tarif', 'tagihan.mahasiswa')
-            ->where('diverifikasi_oleh', $kasirId)
-            ->where('status_dibatalkan', false)
-            ->whereYear('tanggal_bayar', $selectedYear)
-            ->whereMonth('tanggal_bayar', $selectedMonth);
+            ->where('diverifikasi_oleh', '=', $kasirId, 'and')
+            ->where('status_dibatalkan', '=', false, 'and')
+            ->whereYear('tanggal_bayar', '=', $selectedYear, 'and')
+            ->whereMonth('tanggal_bayar', '=', $selectedMonth, 'and');
+
+        $this->applyMahasiswaFiltersToPembayaranQuery($query, $request);
 
         // 1. Data untuk Kartu Statistik
         $totalPenerimaan = $query->clone()->get()->sum('jumlah_bayar') ?? 0;
@@ -40,8 +69,19 @@ class LaporanController extends Controller
 
         // 2. Data untuk Tabel Rangkuman & Grafik
         $laporanPerJenis = $query->clone()
-            ->join('tagihan', 'pembayaran.tagihan_id', '=', 'tagihan.tagihan_id')
-            ->join('tarif_master', 'tagihan.tarif_id', '=', 'tarif_master.tarif_id')
+            ->join('tagihan', 'pembayaran.tagihan_id', '=', 'tagihan.tagihan_id', 'inner', false)
+            ->join('mahasiswa_detail', 'tagihan.mahasiswa_id', '=', 'mahasiswa_detail.mahasiswa_id', 'inner', false)
+            ->join('tarif_master', 'tagihan.tarif_id', '=', 'tarif_master.tarif_id', 'inner', false)
+            ->when(trim((string) $request->input('tahun_akademik', '')) !== '', function($q) use ($request) {
+                $ta = trim((string) $request->input('tahun_akademik', ''));
+                $q->where('tagihan.semester_label', 'LIKE', $ta . '%');
+            })
+            ->when(trim((string) $request->input('angkatan', '')) !== '', function($q) use ($request) {
+                $q->where('mahasiswa_detail.angkatan', trim((string) $request->input('angkatan')));
+            })
+            ->when(trim((string) $request->input('program_studi', '')) !== '', function($q) use ($request) {
+                $q->where('mahasiswa_detail.program_studi', trim((string) $request->input('program_studi')));
+            })
             ->select(
                 'tarif_master.nama_pembayaran',
                 DB::raw('SUM(pembayaran.jumlah_bayar) as total_nominal'),
@@ -55,9 +95,31 @@ class LaporanController extends Controller
         $chartLabels = $laporanPerJenis->pluck('nama_pembayaran');
         $chartData = $laporanPerJenis->pluck('total_nominal');
 
+        $masterAngkatan = MahasiswaDetail::query()
+            ->select('angkatan')
+            ->whereNotNull('angkatan', 'and')
+            ->distinct()
+            ->orderBy('angkatan', 'desc')
+            ->pluck('angkatan');
+        $masterProdi = MahasiswaDetail::query()
+            ->select('program_studi')
+            ->whereNotNull('program_studi', 'and')
+            ->distinct()
+            ->orderBy('program_studi', 'asc')
+            ->pluck('program_studi');
+
+        $selectedTahunAkademik = (string) $request->input('tahun_akademik', '');
+        $selectedAngkatan = (string) $request->input('angkatan', '');
+        $selectedProgramStudi = (string) $request->input('program_studi', '');
+
         return view('kasir.laporan', compact(
             'selectedYear',
             'selectedMonth',
+            'selectedTahunAkademik',
+            'selectedAngkatan',
+            'selectedProgramStudi',
+            'masterAngkatan',
+            'masterProdi',
             'totalPenerimaan',
             'jumlahTransaksi',
             'laporanPerJenis',
@@ -75,12 +137,23 @@ class LaporanController extends Controller
         $selectedMonth = (int) $request->input('bulan', Carbon::now()->month);
         $kasirId = Auth::id();
 
-        $rows = Pembayaran::join('tagihan', 'pembayaran.tagihan_id', '=', 'tagihan.tagihan_id')
-            ->join('tarif_master', 'tagihan.tarif_id', '=', 'tarif_master.tarif_id')
-            ->where('pembayaran.diverifikasi_oleh', $kasirId)
-            ->where('pembayaran.status_dibatalkan', false)
-            ->whereYear('pembayaran.tanggal_bayar', $selectedYear)
-            ->whereMonth('pembayaran.tanggal_bayar', $selectedMonth)
+        $rows = Pembayaran::join('tagihan', 'pembayaran.tagihan_id', '=', 'tagihan.tagihan_id', 'inner', false)
+            ->join('mahasiswa_detail', 'tagihan.mahasiswa_id', '=', 'mahasiswa_detail.mahasiswa_id', 'inner', false)
+            ->join('tarif_master', 'tagihan.tarif_id', '=', 'tarif_master.tarif_id', 'inner', false)
+            ->where('pembayaran.diverifikasi_oleh', '=', $kasirId, 'and')
+            ->where('pembayaran.status_dibatalkan', '=', false, 'and')
+            ->whereYear('pembayaran.tanggal_bayar', '=', $selectedYear, 'and')
+            ->whereMonth('pembayaran.tanggal_bayar', '=', $selectedMonth, 'and')
+            ->when(trim((string) $request->input('tahun_akademik', '')) !== '', function($q) use ($request) {
+                $ta = trim((string) $request->input('tahun_akademik', ''));
+                $q->where('tagihan.semester_label', 'LIKE', $ta . '%');
+            })
+            ->when(trim((string) $request->input('angkatan', '')) !== '', function($q) use ($request) {
+                $q->where('mahasiswa_detail.angkatan', trim((string) $request->input('angkatan')));
+            })
+            ->when(trim((string) $request->input('program_studi', '')) !== '', function($q) use ($request) {
+                $q->where('mahasiswa_detail.program_studi', trim((string) $request->input('program_studi')));
+            })
             ->groupBy('tarif_master.nama_pembayaran')
             ->select(
                 'tarif_master.nama_pembayaran as jenis_pembayaran',
@@ -131,12 +204,23 @@ class LaporanController extends Controller
         $selectedMonth = (int) $request->input('bulan', Carbon::now()->month);
         $kasirId = Auth::id();
 
-        $laporanPerJenis = Pembayaran::join('tagihan', 'pembayaran.tagihan_id', '=', 'tagihan.tagihan_id')
-            ->join('tarif_master', 'tagihan.tarif_id', '=', 'tarif_master.tarif_id')
-            ->where('pembayaran.diverifikasi_oleh', $kasirId)
-            ->where('pembayaran.status_dibatalkan', false)
-            ->whereYear('pembayaran.tanggal_bayar', $selectedYear)
-            ->whereMonth('pembayaran.tanggal_bayar', $selectedMonth)
+        $laporanPerJenis = Pembayaran::join('tagihan', 'pembayaran.tagihan_id', '=', 'tagihan.tagihan_id', 'inner', false)
+            ->join('mahasiswa_detail', 'tagihan.mahasiswa_id', '=', 'mahasiswa_detail.mahasiswa_id', 'inner', false)
+            ->join('tarif_master', 'tagihan.tarif_id', '=', 'tarif_master.tarif_id', 'inner', false)
+            ->where('pembayaran.diverifikasi_oleh', '=', $kasirId, 'and')
+            ->where('pembayaran.status_dibatalkan', '=', false, 'and')
+            ->whereYear('pembayaran.tanggal_bayar', '=', $selectedYear, 'and')
+            ->whereMonth('pembayaran.tanggal_bayar', '=', $selectedMonth, 'and')
+            ->when(trim((string) $request->input('tahun_akademik', '')) !== '', function($q) use ($request) {
+                $ta = trim((string) $request->input('tahun_akademik', ''));
+                $q->where('tagihan.semester_label', 'LIKE', $ta . '%');
+            })
+            ->when(trim((string) $request->input('angkatan', '')) !== '', function($q) use ($request) {
+                $q->where('mahasiswa_detail.angkatan', trim((string) $request->input('angkatan')));
+            })
+            ->when(trim((string) $request->input('program_studi', '')) !== '', function($q) use ($request) {
+                $q->where('mahasiswa_detail.program_studi', trim((string) $request->input('program_studi')));
+            })
             ->groupBy('tarif_master.nama_pembayaran')
             ->select(
                 'tarif_master.nama_pembayaran as nama_pembayaran',
@@ -168,10 +252,14 @@ class LaporanController extends Controller
     {
         $request->validate([
             'tahun' => 'required|digits:4',
+            'tahun_akademik' => 'nullable|string|max:20',
+            'angkatan' => 'nullable|string|max:10',
+            'program_studi' => 'nullable|string|max:100',
         ]);
 
         $tahun = (int) $request->tahun;
         $kasirId = Auth::id();
+        $tahunAkademik = trim((string) $request->input('tahun_akademik', ''));
 
         try {
             $data = Tagihan::with([
@@ -182,7 +270,22 @@ class LaporanController extends Controller
                       ->where('diverifikasi_oleh', $kasirId);
                 }
             ])
-            ->whereYear('created_at', $tahun)
+            // Jika tahun akademik ada, jangan kunci created_at per tahun.
+            ->when($tahunAkademik === '', function($q) use ($tahun) {
+                $q->whereYear('created_at', '=', $tahun, 'and');
+            })
+            ->when(trim((string) $request->input('tahun_akademik', '')) !== '', function($q) use ($request) {
+                $ta = trim((string) $request->input('tahun_akademik', ''));
+                $q->where('semester_label', 'LIKE', $ta . '%');
+            })
+            ->when(trim((string) $request->input('angkatan', '')) !== '' || trim((string) $request->input('program_studi', '')) !== '', function($q) use ($request) {
+                $angkatan = trim((string) $request->input('angkatan', ''));
+                $prodi = trim((string) $request->input('program_studi', ''));
+                $q->whereHas('mahasiswa', function($mq) use ($angkatan, $prodi) {
+                    if ($angkatan !== '') $mq->where('angkatan', $angkatan);
+                    if ($prodi !== '') $mq->where('program_studi', $prodi);
+                });
+            })
             ->whereIn('status', ['Belum Lunas', 'Belum Dibayarkan'])
             ->orderBy('created_at')
             ->get();
@@ -208,10 +311,14 @@ class LaporanController extends Controller
     {
         $request->validate([
             'tahun' => 'required|digits:4',
+            'tahun_akademik' => 'nullable|string|max:20',
+            'angkatan' => 'nullable|string|max:10',
+            'program_studi' => 'nullable|string|max:100',
         ]);
 
         $tahun = (int) $request->tahun;
         $kasirId = Auth::id();
+        $tahunAkademik = trim((string) $request->input('tahun_akademik', ''));
 
         try {
             $data = Tagihan::with([
@@ -222,7 +329,22 @@ class LaporanController extends Controller
                       ->where('diverifikasi_oleh', $kasirId);
                 }
             ])
-            ->whereYear('created_at', $tahun)
+            // Jika tahun akademik ada, jangan kunci created_at per tahun.
+            ->when($tahunAkademik === '', function($q) use ($tahun) {
+                $q->whereYear('created_at', '=', $tahun, 'and');
+            })
+            ->when(trim((string) $request->input('tahun_akademik', '')) !== '', function($q) use ($request) {
+                $ta = trim((string) $request->input('tahun_akademik', ''));
+                $q->where('semester_label', 'LIKE', $ta . '%');
+            })
+            ->when(trim((string) $request->input('angkatan', '')) !== '' || trim((string) $request->input('program_studi', '')) !== '', function($q) use ($request) {
+                $angkatan = trim((string) $request->input('angkatan', ''));
+                $prodi = trim((string) $request->input('program_studi', ''));
+                $q->whereHas('mahasiswa', function($mq) use ($angkatan, $prodi) {
+                    if ($angkatan !== '') $mq->where('angkatan', $angkatan);
+                    if ($prodi !== '') $mq->where('program_studi', $prodi);
+                });
+            })
             ->whereHas('pembayaranAll', function($q) use ($kasirId) {
                 $q->where('status_dibatalkan', false)
                   ->where('diverifikasi_oleh', $kasirId);
@@ -258,11 +380,15 @@ class LaporanController extends Controller
     {
         $request->validate([
             'tahun' => 'required|digits:4',
+            'tahun_akademik' => 'nullable|string|max:20',
+            'angkatan' => 'nullable|string|max:10',
+            'program_studi' => 'nullable|string|max:100',
         ]);
 
         $tahun = (int) $request->tahun;
         $kasirId = Auth::id();
         $kasir = Auth::user();
+        $tahunAkademik = trim((string) $request->input('tahun_akademik', ''));
 
         try {
             $data = Tagihan::with([
@@ -273,7 +399,22 @@ class LaporanController extends Controller
                       ->where('diverifikasi_oleh', $kasirId);
                 }
             ])
-            ->whereYear('created_at', $tahun)
+            // Jika tahun akademik ada, jangan kunci created_at per tahun.
+            ->when($tahunAkademik === '', function($q) use ($tahun) {
+                $q->whereYear('created_at', '=', $tahun, 'and');
+            })
+            ->when(trim((string) $request->input('tahun_akademik', '')) !== '', function($q) use ($request) {
+                $ta = trim((string) $request->input('tahun_akademik', ''));
+                $q->where('semester_label', 'LIKE', $ta . '%');
+            })
+            ->when(trim((string) $request->input('angkatan', '')) !== '' || trim((string) $request->input('program_studi', '')) !== '', function($q) use ($request) {
+                $angkatan = trim((string) $request->input('angkatan', ''));
+                $prodi = trim((string) $request->input('program_studi', ''));
+                $q->whereHas('mahasiswa', function($mq) use ($angkatan, $prodi) {
+                    if ($angkatan !== '') $mq->where('angkatan', $angkatan);
+                    if ($prodi !== '') $mq->where('program_studi', $prodi);
+                });
+            })
             ->whereHas('pembayaranAll', function($q) use ($kasirId) {
                 $q->where('status_dibatalkan', false)
                   ->where('diverifikasi_oleh', $kasirId);
@@ -370,11 +511,15 @@ class LaporanController extends Controller
     {
         $request->validate([
             'tahun' => 'required|digits:4',
+            'tahun_akademik' => 'nullable|string|max:20',
+            'angkatan' => 'nullable|string|max:10',
+            'program_studi' => 'nullable|string|max:100',
         ]);
 
         $tahun = (int) $request->tahun;
         $kasirId = Auth::id();
         $kasir = Auth::user();
+        $tahunAkademik = trim((string) $request->input('tahun_akademik', ''));
 
         try {
             $data = Tagihan::with([
@@ -385,7 +530,22 @@ class LaporanController extends Controller
                       ->where('diverifikasi_oleh', $kasirId);
                 }
             ])
-            ->whereYear('created_at', $tahun)
+            // Jika tahun akademik ada, jangan kunci created_at per tahun.
+            ->when($tahunAkademik === '', function($q) use ($tahun) {
+                $q->whereYear('created_at', '=', $tahun, 'and');
+            })
+            ->when(trim((string) $request->input('tahun_akademik', '')) !== '', function($q) use ($request) {
+                $ta = trim((string) $request->input('tahun_akademik', ''));
+                $q->where('semester_label', 'LIKE', $ta . '%');
+            })
+            ->when(trim((string) $request->input('angkatan', '')) !== '' || trim((string) $request->input('program_studi', '')) !== '', function($q) use ($request) {
+                $angkatan = trim((string) $request->input('angkatan', ''));
+                $prodi = trim((string) $request->input('program_studi', ''));
+                $q->whereHas('mahasiswa', function($mq) use ($angkatan, $prodi) {
+                    if ($angkatan !== '') $mq->where('angkatan', $angkatan);
+                    if ($prodi !== '') $mq->where('program_studi', $prodi);
+                });
+            })
             ->whereIn('status', ['Belum Lunas', 'Belum Dibayarkan'])
             ->orderBy('created_at')
             ->get();
@@ -470,10 +630,10 @@ class LaporanController extends Controller
     public function indexRiwayat(Request $request)
     {
         $kasirId = Auth::id();
-        $reports = Report::where('user_id', $kasirId)
-            ->whereIn('jenis_laporan', ['pembayaran-kasir', 'tunggakan-kasir'])
-            ->latest()
-            ->get();
+        $reports = Report::where('user_id', '=', $kasirId, 'and')
+            ->whereIn('jenis_laporan', ['pembayaran-kasir', 'tunggakan-kasir'], 'and', false)
+            ->latest('created_at')
+            ->get(['*']);
 
         return response()->json(['data' => $reports]);
     }
@@ -481,12 +641,12 @@ class LaporanController extends Controller
     /**
      * Download atau view laporan kasir
      */
-    public function downloadRiwayat(Request $request, $reportId)
+    public function downloadRiwayat(Request $request, int|string $reportId)
     {
         $kasirId = Auth::id();
-        $report = Report::where('id', $reportId)
-            ->where('user_id', $kasirId)
-            ->whereIn('jenis_laporan', ['pembayaran-kasir', 'tunggakan-kasir'])
+        $report = Report::where('id', '=', $reportId, 'and')
+            ->where('user_id', '=', $kasirId, 'and')
+            ->whereIn('jenis_laporan', ['pembayaran-kasir', 'tunggakan-kasir'], 'and', false)
             ->firstOrFail();
 
         $storagePath = 'public/reports/' . $report->file_name;
@@ -516,12 +676,12 @@ class LaporanController extends Controller
     /**
      * Hapus laporan kasir
      */
-    public function destroyRiwayat($reportId)
+    public function destroyRiwayat(int|string $reportId)
     {
         $kasirId = Auth::id();
-        $report = Report::where('id', $reportId)
-            ->where('user_id', $kasirId)
-            ->whereIn('jenis_laporan', ['pembayaran-kasir', 'tunggakan-kasir'])
+        $report = Report::where('id', '=', $reportId, 'and')
+            ->where('user_id', '=', $kasirId, 'and')
+            ->whereIn('jenis_laporan', ['pembayaran-kasir', 'tunggakan-kasir'], 'and', false)
             ->firstOrFail();
 
         $storagePath = 'public/reports/' . $report->file_name;
@@ -534,7 +694,7 @@ class LaporanController extends Controller
             }
 
             // Hapus riwayat
-            $report->delete();
+            Report::destroy($report->getKey());
 
             DB::commit();
 

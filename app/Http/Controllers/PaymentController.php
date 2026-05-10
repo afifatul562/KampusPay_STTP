@@ -9,7 +9,7 @@ use App\Models\AktivasiStatus;
 use App\Models\Pembayaran;
 use App\Models\User;
 use App\Models\TarifMaster;
-use App\Models\MahasiswaDetail; // <-- 1. TAMBAHKAN IMPORT INI
+use App\Models\MahasiswaDetail;
 use App\Models\Setting;
 use App\Mail\TagihanBaruNotification; // <-- 2. TAMBAHKAN IMPORT INI
 use App\Notifications\TagihanBaruCreated;
@@ -51,10 +51,14 @@ class PaymentController extends Controller
      /**
       * BARU: Menampilkan SEMUA data TAGIHAN (untuk tabel utama admin).
       */
-     public function indexTagihan()
+     public function indexTagihan(Request $request)
      {
          Log::info('Mengambil data semua tagihan untuk admin.');
          try {
+             $tahunAkademik = trim((string) $request->query('tahun_akademik', ''));
+             $angkatan = trim((string) $request->query('angkatan', ''));
+             $programStudi = trim((string) $request->query('program_studi', ''));
+
              $tagihan = Tagihan::with([
                      'mahasiswa.user', // Eager load user melalui mahasiswa
                      'tarif',
@@ -65,6 +69,20 @@ class PaymentController extends Controller
                          $query->select('id', 'nama_lengkap');
                      }
                  ])
+                 ->when($tahunAkademik !== '', function ($q) use ($tahunAkademik) {
+                     // semester_label contoh: "2025/2026 Ganjil"
+                     $q->where('semester_label', 'LIKE', $tahunAkademik . '%');
+                 })
+                 ->when($angkatan !== '' || $programStudi !== '', function ($q) use ($angkatan, $programStudi) {
+                     $q->whereHas('mahasiswa', function ($mq) use ($angkatan, $programStudi) {
+                         if ($angkatan !== '') {
+                             $mq->where('angkatan', $angkatan);
+                         }
+                         if ($programStudi !== '') {
+                             $mq->where('program_studi', $programStudi);
+                         }
+                     });
+                 })
                  ->latest('created_at') // Urutkan berdasarkan tagihan terbaru
                  ->get();
              Log::info('Berhasil mengambil ' . count($tagihan) . ' tagihan.');
@@ -80,7 +98,7 @@ class PaymentController extends Controller
     /**
      * Menampilkan detail satu pembayaran.
      */
-    public function show($id)
+    public function show(int|string $id)
     {
         $payment = Pembayaran::with('tagihan.mahasiswa.user', 'tagihan.tarif', 'verifier')
             ->findOrFail($id);
@@ -90,7 +108,7 @@ class PaymentController extends Controller
     /**
      * BARU: Menampilkan detail satu TAGIHAN.
      */
-    public function showTagihan($id)
+    public function showTagihan(int|string $id)
     {
         Log::info("Mencari detail tagihan ID: {$id}");
         try {
@@ -140,9 +158,9 @@ class PaymentController extends Controller
         $currentSemester = Setting::currentSemesterLabel();
 
         // 1.b: Cek status aktivasi semester
-        $aktivasi = AktivasiStatus::where('mahasiswa_id', $validatedData['mahasiswa_id'])
-            ->where('semester_label', $currentSemester)
-            ->latest()
+        $aktivasi = AktivasiStatus::where('mahasiswa_id', '=', $validatedData['mahasiswa_id'], 'and')
+            ->where('semester_label', '=', $currentSemester, 'and')
+            ->latest('created_at')
             ->first();
 
         $tarifBssName = config('academic.bss_tarif_name', 'Administrasi BSS');
@@ -165,8 +183,8 @@ class PaymentController extends Controller
         // 2. Cek duplikat yang tidak dibatalkan (baik yang Lunas maupun belum)
         //    Admin TIDAK boleh membuat tagihan sejenis lagi jika pernah dibuat,
         //    kecuali tagihan sebelumnya dibatalkan secara resmi.
-        $existingTagihan = Tagihan::where('mahasiswa_id', $validatedData['mahasiswa_id'])
-            ->where('tarif_id', $validatedData['tarif_id'])
+        $existingTagihan = Tagihan::where('mahasiswa_id', '=', $validatedData['mahasiswa_id'], 'and')
+            ->where('tarif_id', '=', $validatedData['tarif_id'], 'and')
             ->whereDoesntHave('pembayaran', function($q) {
                 $q->where('status_dibatalkan', true);
             })
@@ -241,15 +259,18 @@ class PaymentController extends Controller
      /**
       * BARU: Memperbarui data TAGIHAN.
       */
-     public function updateTagihan(Request $request, $id)
+     public function updateTagihan(Request $request, int|string $id)
      {
         Log::info("Mencoba update tagihan ID: {$id}", $request->all());
-        $tagihan = Tagihan::find($id);
+        $tagihan = Tagihan::find($id, ['*']);
+
+        if (!$tagihan instanceof Tagihan) {
+            Log::error("Update gagal: Tagihan ID {$id} tidak ditemukan.");
+            return response()->json(['message' => 'Tagihan tidak ditemukan.'], 404);
+        }
 
         // Otorisasi update tagihan
         $this->authorize('update', $tagihan);
-
-         if (!$tagihan) { Log::error("Update gagal: Tagihan ID {$id} tidak ditemukan."); return response()->json(['message' => 'Tagihan tidak ditemukan.'], 404); }
          if ($tagihan->status === 'Lunas') { Log::warning("Update ditolak: Tagihan ID {$id} sudah lunas."); return response()->json(['message' => 'Tagihan yang sudah lunas tidak dapat diubah.'], 403); }
 
          $validatedData = $request->validate([
@@ -263,7 +284,7 @@ class PaymentController extends Controller
          try {
              // Jika tarif_id diubah, update juga jumlah_tagihan dari tarif baru (jika tidak dikirim manual)
              if (isset($validatedData['tarif_id']) && !isset($validatedData['jumlah_tagihan'])) {
-                 $tarif = \App\Models\TarifMaster::find($validatedData['tarif_id']);
+                 $tarif = \App\Models\TarifMaster::find($validatedData['tarif_id'], ['*']);
                  if ($tarif) {
                      $validatedData['jumlah_tagihan'] = $tarif->nominal;
                  }
@@ -282,12 +303,15 @@ class PaymentController extends Controller
      /**
       * BARU: Menghapus data TAGIHAN.
       */
-     public function destroyTagihan($id)
+     public function destroyTagihan(int|string $id)
      {
         Log::info("Mencoba hapus tagihan ID: {$id}");
-        $tagihan = Tagihan::find($id);
+        $tagihan = Tagihan::find($id, ['*']);
 
-        if (!$tagihan) { Log::error("Hapus gagal: Tagihan ID {$id} tidak ditemukan."); return response()->json(['message' => 'Tagihan tidak ditemukan.'], 404); }
+        if (!$tagihan instanceof Tagihan) {
+            Log::error("Hapus gagal: Tagihan ID {$id} tidak ditemukan.");
+            return response()->json(['message' => 'Tagihan tidak ditemukan.'], 404);
+        }
 
         // Otorisasi hapus tagihan
         $this->authorize('delete', $tagihan);
@@ -301,10 +325,10 @@ class PaymentController extends Controller
 
          DB::beginTransaction();
          try {
-             $tagihan->delete();
+             Tagihan::destroy($tagihan->getKey());
              DB::commit();
              Log::info("Tagihan ID {$id} berhasil dihapus.");
-             return response()->noContent(); // Sukses 204
+             return response()->noContent(204); // Sukses 204
          } catch (\Exception $e) {
              DB::rollBack();
              Log::error("Error hapus tagihan ID {$id}: " . $e->getMessage());

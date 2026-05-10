@@ -77,7 +77,7 @@
                            placeholder="Mengikuti CURRENT_SEMESTER"
                            readonly
                            class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-gray-100 cursor-default">
-                    <p class="mt-1 text-xs text-gray-500">Otomatis mengikuti Pengaturan Sistem (Tahun Akademik + Semester).</p>
+                    {{-- <p class="mt-1 text-xs text-gray-500">Otomatis mengikuti Pengaturan Sistem (Tahun Akademik + Semester).</p> --}}
                 </div>
 
                 <div>
