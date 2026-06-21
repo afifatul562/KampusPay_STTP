@@ -1,161 +1,122 @@
-# 🎓 KampusPay STTP
+# KampusPay STTP
 
-[![Laravel Version](https://img.shields.io/badge/Laravel-12.0-red?style=flat-square&logo=laravel)](https://laravel.com)
-[![PHP Version](https://img.shields.io/badge/PHP-8.2%2B-blue?style=flat-square&logo=php)](https://www.php.net)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
-[![Author](https://img.shields.io/badge/Maintainer-afifatul562-black?style=flat-square&logo=github)](https://github.com/afifatul562)
+Sistem pembayaran kampus untuk **Sekolah Tinggi Teknologi Payakumbuh**. Mahasiswa membayar dan memantau tagihan secara daring; admin dan kasir mengelola data, verifikasi, serta laporan keuangan.
 
-**KampusPay STTP** adalah sistem manajemen pembayaran non-tunai yang dirancang khusus untuk digitalisasi proses administrasi keuangan di lingkungan **Sekolah Tinggi Teknologi Payakumbuh**. Aplikasi ini mendukung pembayaran fleksibel, sistem cicilan, dan verifikasi otomatis.
-
-🔗 **Repository:** [https://github.com/afifatul562/KampusPay_STTP](https://github.com/afifatul562/KampusPay_STTP)
+**Repository:** [github.com/afifatul562/KampusPay_STTP](https://github.com/afifatul562/KampusPay_STTP)
 
 ---
 
-## 📌 Daftar Isi
-- [📖 Deskripsi / Overview](#-deskripsi--overview)
-- [✨ Fitur Utama](#-fitur-utama)
-- [🛠 Teknologi](#-teknologi-yang-digunakan)
-- [📁 Struktur Direktori](#-struktur-direktori)
-- [🚀 Instalasi & Setup](#-cara-instalasi--menjalankan-proyek)
-- [⚙️ Konfigurasi](#️-konfigurasi)
-- [🧪 Testing](#-testing)
-- [👨‍💻 Author](#-author)
+## Fitur
+
+### Admin
+- Dashboard statistik keuangan
+- Kelola mahasiswa (tambah, edit, import/export CSV)
+- Kelola tarif, tagihan, dan kalender akademik
+- Import data legacy (tagihan & pembayaran)
+- Laporan pembayaran & tunggakan (PDF)
+- Kelola akun kasir dan yayasan
+
+### Kasir
+- Verifikasi bukti transfer mahasiswa
+- Pembayaran tunai di loket
+- Aktivasi semester mahasiswa
+- Riwayat transaksi, pembatalan, dan cetak kwitansi
+- Laporan (PDF/CSV)
+
+### Mahasiswa
+- Lihat tagihan aktif dan riwayat pembayaran
+- Bayar tunai atau transfer (upload bukti)
+- Cicilan tagihan yang diizinkan
+- Download kwitansi & laporan (histori/tunggakan)
+- Request aktivasi semester
+- Pendaftaran wisuda (jika memenuhi syarat)
+- Notifikasi tagihan (web & push FCM via API mobile)
+
+### Yayasan
+- Dashboard monitoring (read-only)
+- Laporan tunggakan (PDF)
+
+### API Mobile (Mahasiswa)
+- Autentikasi Sanctum
+- Tagihan, pembayaran, riwayat, profil, kwitansi, laporan, wisuda
+- Registrasi token FCM untuk notifikasi push
 
 ---
 
-## 📖 Deskripsi / Overview
-Sistem ini hadir untuk menggantikan pengelolaan pembayaran manual. Dengan KampusPay, mahasiswa dapat memantau tagihan secara *real-time*, melakukan pembayaran via transfer, dan mengelola administrasi semester secara mandiri.
+## Teknologi
 
-**Ruang Lingkup:**
-* Pengelolaan data mahasiswa & tarif (Uang Semester, BSS, dll).
-* Sistem cicilan tagihan yang fleksibel.
-* Verifikasi pembayaran oleh kasir secara digital.
-* Pelaporan keuangan otomatis (PDF/CSV).
-
----
-
-## ✨ Fitur Utama
-
-### 👨‍💼 Admin (Manajer Sistem)
-* **Dashboard:** Statistik keuangan & registrasi mahasiswa.
-* **Master Data:** CRUD Mahasiswa (Import/Export CSV) & Tarif Pembayaran.
-* **Reporting:** Laporan tunggakan & pembayaran (PDF).
-* **Manajemen User:** Pengaturan akses untuk akun Kasir.
-
-### 💰 Kasir (Operasional)
-* **Verifikasi:** Persetujuan atau penolakan bukti transfer mahasiswa.
-* **Pembayaran Tunai:** Proses pembayaran langsung di loket kampus.
-* **Aktivasi:** Melakukan override status aktivasi semester.
-* **Log Transaksi:** Riwayat lengkap & fitur pembatalan transaksi.
-
-### 🎓 Mahasiswa (User)
-* **Finance Hub:** Cek tagihan aktif & riwayat pembayaran lengkap.
-* **Payment:** Pilih metode (Tunai/Transfer) & Upload bukti bayar.
-* **Cicilan:** Pembayaran bertahap untuk tagihan yang diizinkan.
-* **Self-Service:** Download kwitansi PDF & Request aktivasi semester.
+| Komponen | Stack |
+| --- | --- |
+| Backend | PHP 8.2+, Laravel 12, Sanctum, Breeze |
+| Frontend | Tailwind CSS, Alpine.js, Vite |
+| Database | SQLite (dev), MySQL/MariaDB (prod) |
+| Lainnya | DomPDF, Laravel Excel, Firebase FCM |
 
 ---
 
-## 🛠 Teknologi yang Digunakan
+## Instalasi
 
-| Komponen | Teknologi |
-| :--- | :--- |
-| **Backend** | PHP 8.2+, Laravel 12.0 (Sanctum, Breeze) |
-| **Frontend** | Tailwind CSS 3.4, Alpine.js 3.4, Vite 7.0 |
-| **Database** | SQLite (Dev), MySQL/MariaDB (Prod) |
-| **Library** | DomPDF, Laravel Excel, SweetAlert2, Flatpickr |
-| **Testing** | Pest PHP 4.1, PHPUnit |
-
----
-
-## 📁 Struktur Direktori
-```text
-KampusPay_STTP/
-├── app/               # Logic: Controllers, Models, Services, Exports
-├── database/          # Migrations, Seeders, & SQLite DB
-├── resources/         # Frontend: Views (Blade), CSS (Tailwind), JS
-├── routes/            # Web, API, & Auth Routes
-├── storage/           # Logs, Bukti Transfer, & Generated PDF
-└── tests/             # Pest & Unit Testing
-
-```
-
----
-
-## 🚀 Cara Instalasi & Menjalankan Proyek
-
-### 1. Persiapan
-
-Pastikan Anda memiliki **PHP 8.2+**, **Composer**, dan **Node.js 18+**.
-
-### 2. Langkah Instalasi
+**Prasyarat:** PHP 8.2+, Composer, Node.js 18+
 
 ```bash
-# Clone repository
-git clone [https://github.com/afifatul562/KampusPay_STTP.git](https://github.com/afifatul562/KampusPay_STTP.git)
+git clone https://github.com/afifatul562/KampusPay_STTP.git
 cd KampusPay_STTP
 
-# Install dependensi
 composer install
 npm install
 
-# Setup environment
 cp .env.example .env
 php artisan key:generate
 
-# Database & Storage
-touch database/database.sqlite  # Jika menggunakan SQLite
+touch database/database.sqlite   # jika pakai SQLite
 php artisan migrate --seed
 php artisan storage:link
-
 ```
 
-### 3. Menjalankan Aplikasi
+Jalankan:
 
 ```bash
-# Terminal 1: Laravel Server
-php artisan serve
-
-# Terminal 2: Vite (Frontend)
-npm run dev
-
+php artisan serve      # terminal 1
+npm run dev            # terminal 2
 ```
 
-Akses di: `http://localhost:8000` | Akun Default: `admin` / `password123`
+Buka `http://localhost:8000`
+
+> **Penting:** Setelah `migrate --seed`, ganti password default sebelum dipakai di production. Jangan gunakan kredensial bawaan di lingkungan live.
 
 ---
 
-## ⚙️ Konfigurasi `.env` Penting
+## Konfigurasi `.env`
 
-| Key | Deskripsi |
+| Key | Keterangan |
 | --- | --- |
-| `DB_CONNECTION` | Gunakan `sqlite` (dev) atau `mysql` (prod). |
-| `PAYMENT_CODE_PREFIX` | Default: `KP`. Prefix untuk kode invoice. |
-| `CURRENT_SEMESTER` | Mengatur periode semester aktif saat ini. |
-| `BSS_AMOUNT` | Nominal standar biaya studi semester. |
+| `DB_CONNECTION` | `sqlite` (dev) atau `mysql` (prod) |
+| `APP_URL` | URL aplikasi (harus sama dengan browser) |
+| `APP_PUBLIC_URL` | URL publik untuk link di email (prod) |
+| `MAIL_*` | SMTP untuk email notifikasi tagihan |
+| `FIREBASE_CREDENTIALS` | Path JSON service account Firebase (push notifikasi) |
+| `MAHASISWA_DEFAULT_PASSWORD` | Password awal mahasiswa hasil import |
+| `KASIR_DEFAULT_PASSWORD` | Password awal akun kasir |
+| `YAYASAN_DEFAULT_PASSWORD` | Password awal akun yayasan |
+
+Untuk push notifikasi, letakkan file service account di `storage/firebase/service-account.json` (folder ini tidak di-commit).
 
 ---
 
-## 🧪 Testing
-
-Aplikasi telah melalui pengujian menggunakan **Pest PHP**.
+## Testing
 
 ```bash
 php artisan test
-
 ```
 
 ---
 
-## 👨‍💻 Author
+## Author
 
-* **Afifatul Mawaddah** - [afifatul562](https://github.com/afifatul562)
-* **Dinda Apriona Putri Adryan** - [dindaaprionaa](https://github.com/dindaaprionaa)
+- **Afifatul Mawaddah** — [afifatul562](https://github.com/afifatul562)
 
 ---
 
-## 📄 Lisensi
+## Lisensi
 
-Didistribusikan di bawah **MIT License**. Lihat file `LICENSE` untuk informasi lebih lanjut.
-
-**Selamat menggunakan KampusPay STTP! 🎓💳**
+MIT License — lihat file `LICENSE`.
