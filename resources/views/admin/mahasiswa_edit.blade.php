@@ -92,45 +92,6 @@
                     <input type="hidden" name="angkatan" id="angkatan_hidden" value="{{ old('angkatan', $mahasiswa->angkatan) }}">
                 </div>
 
-                {{-- Program (manual) --}}
-                <div>
-                    <label for="program_type" class="block text-sm font-medium text-gray-700">Program</label>
-                    @php $programType = old('program_type', $mahasiswa->program?->program_type ?? 'reguler'); @endphp
-                    <select id="program_type" name="program_type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                        <option value="reguler" {{ $programType === 'reguler' ? 'selected' : '' }}>Reguler</option>
-                        <option value="eksklusif" {{ $programType === 'eksklusif' ? 'selected' : '' }}>Eksklusif</option>
-                        <option value="kip" {{ $programType === 'kip' ? 'selected' : '' }}>KIP</option>
-                    </select>
-                </div>
-
-                {{-- Skema KIP (jika program = kip) --}}
-                <div>
-                    <label for="kip_scheme" class="block text-sm font-medium text-gray-700">Skema KIP</label>
-                    @php $kipScheme = old('kip_scheme', $mahasiswa->program?->kip_scheme); @endphp
-                    <select id="kip_scheme" name="kip_scheme" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                        <option value="" {{ $kipScheme ? '' : 'selected' }}>-</option>
-                        <option value="1" {{ (string)$kipScheme === '1' ? 'selected' : '' }}>Skema 1 (Full)</option>
-                        <option value="2" {{ (string)$kipScheme === '2' ? 'selected' : '' }}>Skema 2</option>
-                    </select>
-                    <p class="mt-1 text-xs text-gray-500">Diisi hanya jika Program = KIP.</p>
-                </div>
-
-                {{-- Transfer --}}
-                <div class="flex items-center gap-2">
-                    @php $isTransfer = (bool) old('is_transfer', $mahasiswa->program?->is_transfer ?? false); @endphp
-                    <input id="is_transfer" name="is_transfer" type="checkbox" value="1" {{ $isTransfer ? 'checked' : '' }}>
-                    <label for="is_transfer" class="text-sm font-medium text-gray-700">Mahasiswa transfer</label>
-                </div>
-
-                {{-- Mulai semester transfer --}}
-                <div>
-                    <label for="start_semester" class="block text-sm font-medium text-gray-700">Mulai semester (transfer)</label>
-                    <input type="number" id="start_semester" name="start_semester" min="1" max="14"
-                           value="{{ old('start_semester', $mahasiswa->program?->start_semester) }}"
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                           placeholder="Mis. 3">
-                    <p class="mt-1 text-xs text-gray-500">Jika transfer, tagihan semester di bawah ini tidak akan dibuat.</p>
-                </div>
             </div>
 
             <div class="mt-8 flex justify-end gap-3">

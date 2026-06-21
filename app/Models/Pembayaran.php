@@ -52,4 +52,18 @@ class Pembayaran extends Model
         'tanggal_pembatalan' => 'datetime',
         'status_dibatalkan' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        $syncTagihan = static function (Pembayaran $pembayaran): void {
+            $tagihan = $pembayaran->relationLoaded('tagihan')
+                ? $pembayaran->tagihan
+                : $pembayaran->tagihan()->first();
+
+            $tagihan?->updateAngsuran();
+        };
+
+        static::saved($syncTagihan);
+        static::deleted($syncTagihan);
+    }
 }

@@ -267,7 +267,8 @@ return [
          *
          * @var bool
          */
-        'enable_remote' => false,
+        // Diperlukan agar kwitansi PDF bisa memuat logo via URL absolut (fallback saat file besar / open_basedir).
+        'enable_remote' => env('DOMPDF_ENABLE_REMOTE', true),
 
         /**
          * List of allowed remote hosts

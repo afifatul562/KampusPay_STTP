@@ -47,9 +47,7 @@
     <header>
         <table class="header-table">
             <tr>
-                <td style="width: 80px;">
-                    <img src="{{ public_path('images/logo_kampus.png') }}" alt="Logo" class="logo">
-                </td>
+                @include('partials.pdf_kampus_logo_cell', ['tdStyle' => 'width: 80px;'])
                 <td class="institute-details">
                     <div class="yayasan">Yayasan Pendidikan Tinggi Payakumbuh</div>
                     <div class="nama-kampus">SEKOLAH TINGGI TEKNOLOGI PAYAKUMBUH</div>

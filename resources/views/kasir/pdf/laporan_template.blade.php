@@ -195,9 +195,7 @@
     <header>
         <table class="header-table">
             <tr>
-                <td class="logo-container">
-                    <img src="{{ public_path('images/logo_kampus.png') }}" alt="Logo" class="logo">
-                </td>
+                @include('partials.pdf_kampus_logo_cell', ['tdClass' => 'logo-container'])
                 <td class="institute-details">
                     <div class="yayasan">YAYASAN PENDIDIKAN TINGGI PAYAKUMBUH</div>
                     <div class="nama-kampus">SEKOLAH TINGGI TEKNOLOGI PAYAKUMBUH</div>

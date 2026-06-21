@@ -20,15 +20,16 @@ class LaporanController extends Controller
     {
         $mahasiswaId = Auth::user()->mahasiswaDetail->mahasiswa_id;
 
-        // Ambil data tunggakan untuk ditampilkan di kartu Laporan Data Tunggakan
-        // Termasuk status 'Ditolak' karena perlu dibayar ulang
-        $tunggakan = \App\Models\Tagihan::with('tarif', 'mahasiswa')
-            ->where('mahasiswa_id', $mahasiswaId)
-            ->whereIn('status', ['Belum Lunas', 'Ditolak'])
-            ->get();
+        $tunggakan = collect(
+            \App\Models\Tagihan::with('tarif', 'mahasiswa')
+                ->where('mahasiswa_id', $mahasiswaId)
+                ->masihTunggakan()
+                ->get()
+                ->filter(static fn (\App\Models\Tagihan $t): bool => $t->masihTunggakan())
+                ->all()
+        );
 
-        // Ambil jenis tarif untuk dropdown filter
-        $jenisTarif = TarifMaster::select('nama_pembayaran')->distinct()->orderBy('nama_pembayaran')->get();
+        $jenisTarif = TarifMaster::select('nama_pembayaran')->distinct()->orderBy('nama_pembayaran', 'asc')->get();
 
         return view('mahasiswa.laporan', compact('tunggakan', 'jenisTarif'));
     }
@@ -65,7 +66,6 @@ class LaporanController extends Controller
             }
         }
 
-        // Filter berdasarkan jenis pembayaran jika ada
         if ($request->filled('jenis_pembayaran')) {
             $query->whereHas('tagihan.tarif', function ($q) use ($request) {
                 $q->where('nama_pembayaran', $request->jenis_pembayaran);
@@ -74,11 +74,9 @@ class LaporanController extends Controller
 
         $histori = $query->latest('tanggal_bayar')->get();
 
-        // Ambil tahun akademik dari settings
         $settings = Setting::getCachedMap();
         $tahunAkademik = $settings['academic_year'] ?? ($settings['tahun_akademik'] ?? ($settings['tahun_ajaran'] ?? '-'));
 
-        // Siapkan filters untuk view
         $filters = [
             'tahun_akademik' => $tahunAkademik,
             'dari_tanggal' => $startDate ?? now()->format('Y-m-d'),
@@ -103,10 +101,14 @@ class LaporanController extends Controller
         $mahasiswa = $user->mahasiswaDetail;
         $mahasiswaId = $mahasiswa?->mahasiswa_id;
 
-        $tunggakan = \App\Models\Tagihan::with('tarif', 'mahasiswa')
-            ->where('mahasiswa_id', $mahasiswaId)
-            ->whereIn('status', ['Belum Lunas', 'Ditolak'])
-            ->get();
+        $tunggakan = collect(
+            \App\Models\Tagihan::with('tarif', 'mahasiswa')
+                ->where('mahasiswa_id', $mahasiswaId)
+                ->masihTunggakan()
+                ->get()
+                ->filter(static fn (\App\Models\Tagihan $t): bool => $t->masihTunggakan())
+                ->all()
+        );
 
         $settings = Setting::getCachedMap();
         $tahunAkademik = $settings['academic_year'] ?? ($settings['tahun_akademik'] ?? ($settings['tahun_ajaran'] ?? null));

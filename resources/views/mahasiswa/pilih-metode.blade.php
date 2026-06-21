@@ -38,7 +38,7 @@
             </div>
 
             {{-- Form Pilihan Metode --}}
-            <form action="{{ route('mahasiswa.pembayaran.proses-metode', $tagihan->tagihan_id) }}" method="POST">
+            <form id="form-pilih-metode" action="{{ route('mahasiswa.pembayaran.proses-metode', $tagihan->tagihan_id) }}" method="POST">
                 @csrf
                 <div class="p-4 sm:p-6 space-y-3 sm:space-y-4">
                     <p class="text-fluid-sm text-gray-600">Silakan pilih salah satu metode pembayaran yang Anda inginkan:</p>
@@ -77,7 +77,7 @@
                     </button>
 
                     {{-- Pilihan 2: Tunai --}}
-                    <button type="submit" name="metode" value="tunai"
+                    <button type="button" id="btn-metode-tunai"
                             class="group w-full flex items-center justify-between gap-3 min-h-touch p-4 border-2 border-gray-200 rounded-xl sm:rounded-lg hover:border-success-500 hover:bg-success-50 focus:outline-none focus:ring-2 focus:ring-success-500 transition-all duration-200 shadow-sm hover:shadow-md text-left">
                         <div class="text-left">
                             <p class="font-semibold text-gray-800 group-hover:text-success-700">Bayar {{ $isWajibLunas ? 'Penuh' : 'Lunas' }} Tunai di Kasir</p>
@@ -100,3 +100,47 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('form-pilih-metode');
+    const btnTunai = document.getElementById('btn-metode-tunai');
+    if (!form || !btnTunai) return;
+
+    btnTunai.addEventListener('click', async function () {
+        const title = 'Bayar Tunai di Kasir?';
+        const text = 'Status tagihan akan diubah menjadi Menunggu Pembayaran Tunai. Silakan datang ke kasir untuk melunasi tagihan ini.';
+
+        let confirmed = false;
+        if (window.App?.alert?.confirm) {
+            confirmed = await App.alert.confirm(title, text, 'Ya, Lanjutkan');
+        } else if (window.Swal) {
+            const result = await Swal.fire({
+                icon: 'warning',
+                title,
+                text,
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Lanjutkan',
+                cancelButtonText: 'Batal',
+            });
+            confirmed = result.isConfirmed;
+        } else {
+            confirmed = confirm(title + '\n\n' + text);
+        }
+
+        if (!confirmed) return;
+
+        let metodeInput = form.querySelector('input[name="metode"]');
+        if (!metodeInput) {
+            metodeInput = document.createElement('input');
+            metodeInput.type = 'hidden';
+            metodeInput.name = 'metode';
+            form.appendChild(metodeInput);
+        }
+        metodeInput.value = 'tunai';
+        form.submit();
+    });
+});
+</script>
+@endpush

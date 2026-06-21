@@ -4,9 +4,10 @@
             @case('admin') bg-danger-500 @break
             @case('kasir') bg-primary-500 @break
             @case('mahasiswa') bg-success-500 @break
+            @case('yayasan') bg-indigo-500 @break
         @endswitch
     ">
-        {{ ucfirst(Auth::user()->role) }}
+        @if(Auth::user()->isYayasan()) Yayasan @else {{ ucfirst(Auth::user()->role) }} @endif
     </span>
 
     {{-- Dropdown Menu untuk User --}}
@@ -19,7 +20,8 @@
             $roleColors = [
                 'admin' => ['from' => 'from-red-400', 'to' => 'to-red-600'],
                 'kasir' => ['from' => 'from-blue-400', 'to' => 'to-blue-600'],
-                'mahasiswa' => ['from' => 'from-green-400', 'to' => 'to-green-600']
+                'mahasiswa' => ['from' => 'from-green-400', 'to' => 'to-green-600'],
+                'yayasan' => ['from' => 'from-indigo-400', 'to' => 'to-indigo-600'],
             ];
             $avatarColors = $roleColors[Auth::user()->role] ?? $roleColors['mahasiswa'];
         @endphp
@@ -32,7 +34,7 @@
             </div>
             <div class="hidden md:block text-left min-w-0 max-w-[10rem] lg:max-w-xs">
                 <div class="font-medium text-gray-900 truncate">{{ Auth::user()->nama_lengkap }}</div>
-                <div class="text-fluid-xs text-gray-500">{{ ucfirst(Auth::user()->role) }}</div>
+                <div class="text-fluid-xs text-gray-500">@if(Auth::user()->isYayasan()) Yayasan @else {{ ucfirst(Auth::user()->role) }} @endif</div>
             </div>
             <svg class="ml-0.5 h-5 w-5 shrink-0 text-gray-400 hidden sm:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />

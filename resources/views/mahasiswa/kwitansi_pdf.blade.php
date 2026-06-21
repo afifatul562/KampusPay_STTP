@@ -252,9 +252,7 @@
     <header>
         <table class="kop-surat">
             <tr>
-                <td class="logo-cell">
-                    <img src="{{ public_path('images/logo_kampus.png') }}" alt="Logo" class="logo">
-                </td>
+                @include('partials.pdf_kampus_logo_cell')
                 <td class="info-cell">
                     <div class="yayasan">YAYASAN PENDIDIKAN TINGGI PAYAKUMBUH</div>
                     <div class="kampus">SEKOLAH TINGGI TEKNOLOGI PAYAKUMBUH</div>

@@ -40,14 +40,16 @@ Kolom:
 ### 2) `tagihan_template.csv`
 
 Kolom:
-- `kode_pembayaran` (wajib, unik)
+- `kode_pembayaran` (wajib, unik per slip Access)
 - `npm` (wajib)
 - `nama_pembayaran` (wajib; usahakan konsisten dengan master tarif KampusPay)
-- `jumlah_tagihan` (wajib, angka)
-- `tanggal_jatuh_tempo` (wajib, `YYYY-MM-DD`)
-- `status` (wajib; contoh: `Lunas`, `Belum Dibayarkan`, `Belum Lunas`, `Menunggu Verifikasi Transfer`, `Menunggu Pembayaran Tunai`, `Ditolak`)
+- `jumlah_tagihan` (wajib; **nominal cicilan per slip**, bukan total tagihan)
+- `tanggal_jatuh_tempo` atau `tanggal` (wajib, `YYYY-MM-DD`)
+- `status` (opsional saat mode gabung slip; status dihitung dari import pembayaran)
 - `semester_label` (opsional; contoh: `2025/2026 Genap`)
-- `keterangan` (opsional)
+- `keterangan` (wajib untuk Uang Semester/Kemahasiswaan/UAS; contoh: `Semester VII`)
+
+**Mode gabung slip Access (default ON):** beberapa baris dengan jenis + semester sama → **1 tagihan** + alias kode slip. Nominal tagihan = **nilai terbesar `jumlah_tagihan` di grup CSV** (bukan nominal tarif master). Tarif master hanya dipakai jika kolom jumlah di CSV kosong/0.
 
 ### 3) `pembayaran_template.csv`
 
@@ -59,10 +61,11 @@ Kolom:
 - `is_cicilan` (opsional; `0` atau `1`)
 - `status_dibatalkan` (opsional; `0` atau `1`)
 - `alasan_pembatalan` (opsional)
-- `kasir_username` (opsional)
+- `kasir_username` (opsional; **username kasir yang sudah terdaftar** di Admin → Users, mis. `fitri`, `kasir01`. Jika kosong, dipakai akun fallback `Kasir Import`.)
 
 Catatan cicilan:
-- Jika satu tagihan dibayar cicilan, maka `pembayaran_template.csv` boleh memiliki **beberapa baris** dengan `kode_pembayaran` yang sama.
+- `pembayaran_template.csv` boleh memiliki **beberapa baris** dengan `kode_pembayaran` slip Access yang berbeda, selama semua slip sudah terdaftar di import tagihan (mode gabung).
+- `tanggal_bayar` = tanggal transaksi; `jumlah_bayar` = nominal cicilan.
 
 ## Langkah kerja yang aman
 

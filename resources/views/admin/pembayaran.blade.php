@@ -10,7 +10,7 @@
     $tarifIndexRouteName = $rolePrefix . '.tarif.index';
     $createTagihanRouteName = $rolePrefix . '.payments.tagihan.create';
     $apiTagihanBase = url("api/{$rolePrefix}/tagihan");
-    $apiAktivasiNotif = $isKasirPage ? route('kasir.aktivasi.notifications') : null;
+    $apiKasirNotif = $isKasirPage ? url('/api/kasir/notifications') : null;
     $printPembayaranBaseUrl = url("{$rolePrefix}/pembayaran/print");
 @endphp
 
@@ -119,13 +119,20 @@
     </x-card>
 
     {{-- Tabel Pembayaran & Tagihan --}}
-    <x-data-table
-        :headers="['Kode Pembayaran', 'Mahasiswa', 'Jenis Tagihan', 'Jumlah', 'Status', 'Tgl Bayar', 'Aksi']"
-        aria-label="Tabel pembayaran dan tagihan">
-        <tr id="loading-row">
-            <td colspan="7" class="text-center py-10 text-gray-500">Memuat data...</td>
-        </tr>
-    </x-data-table>
+    <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+        <x-data-table
+            :headers="['Kode Pembayaran', 'Mahasiswa', 'Jenis Tagihan', 'Jumlah', 'Status', 'Tgl Bayar', 'Aksi']"
+            aria-label="Tabel pembayaran dan tagihan"
+            class="border-0 shadow-none rounded-none">
+            <tr id="loading-row">
+                <td colspan="7" class="text-center py-10 text-gray-500">Memuat data...</td>
+            </tr>
+        </x-data-table>
+        <div id="tagihanPagination" class="hidden px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-fluid-sm text-gray-600">
+            <p id="tagihanPaginationInfo" class="text-gray-500"></p>
+            <div id="tagihanPaginationControls" class="flex items-center gap-2 flex-wrap"></div>
+        </div>
+    </div>
 
     {{-- Modal Buat/Edit Tagihan --}}
     <div id="tagihanModal" class="hidden fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-gray-900 bg-opacity-60">
@@ -204,7 +211,8 @@
         const apiTagihanBase = "{{ $apiTagihanBase }}";
         const printPembayaranBaseUrl = @json($printPembayaranBaseUrl);
         const isKasir = "{{ $isKasirPage ? '1' : '0' }}" === '1';
-        const apiAktivasiNotif = "{{ $apiAktivasiNotif ?? '' }}";
+        const apiKasirNotif = "{{ $apiKasirNotif ?? '' }}";
+        const kasirNotifReadBase = @json(url('/api/kasir/notifications'));
         // tbody dari tabel ber-aria-label
         const paymentTable = document.querySelector('table[aria-label="Tabel pembayaran dan tagihan"]');
         const paymentTableBody = paymentTable ? paymentTable.querySelector('tbody') : null;
@@ -235,7 +243,6 @@
         const detailCloseButtons = detailTagihanModal ? detailTagihanModal.querySelectorAll('.detail-close-button') : [];
 
         // Data & filter tabel
-        let allTagihanData = [];
         let allMahasiswaData = [];
         let allTarifsData = [];
         const filterStatusSelect = document.getElementById('filterStatus');
@@ -244,9 +251,14 @@
         const filterTahunAkademikSelect = document.getElementById('filterTahunAkademik');
         const filterAngkatanSelect = document.getElementById('filterAngkatan');
         const filterProgramStudiSelect = document.getElementById('filterProgramStudi');
+        const tagihanPagination = document.getElementById('tagihanPagination');
+        const tagihanPaginationInfo = document.getElementById('tagihanPaginationInfo');
+        const tagihanPaginationControls = document.getElementById('tagihanPaginationControls');
         let currentFilters = { status: '', jenis: '', namaMahasiswa: '' };
         let currentServerFilters = { tahunAkademik: '', angkatan: '', programStudi: '' };
-        let aktivasiNotifs = [];
+        let paginationState = { current_page: 1, last_page: 1, per_page: 15, total: 0, from: 0, to: 0 };
+        const PER_PAGE = 15;
+        let kasirNotifs = [];
         let notifTimer = null;
         function buildQueryString(params) {
             const qp = new URLSearchParams();
@@ -258,6 +270,14 @@
             });
             const str = qp.toString();
             return str ? `?${str}` : '';
+        }
+
+        function currentAcademicYearValue() {
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = now.getMonth() + 1;
+            const start = m >= 10 ? y : y - 1;
+            return `${start}/${start + 1}`;
         }
 
         function populateAcademicYears() {
@@ -273,8 +293,7 @@
                 opt.textContent = ay;
                 filterTahunAkademikSelect.appendChild(opt);
             }
-            // Default: tahun akademik berjalan
-            filterTahunAkademikSelect.value = `${nowYear}/${nowYear + 1}`;
+            filterTahunAkademikSelect.value = currentAcademicYearValue();
         }
 
         async function loadMasterMahasiswaForFilters() {
@@ -387,19 +406,6 @@
         // Select2 mahasiswa (jika jQuery + plugin ada)
         const isjQueryAvailable = !!(window.$ && $.fn);
         const isSelect2Available = isjQueryAvailable && !!$.fn.select2;
-        if (isSelect2Available) {
-            $(mahasiswaSelect).select2({
-                theme: "default",
-                width: '100%',
-                dropdownParent: $('#tagihanModal'),
-                placeholder: 'Pilih Mahasiswa',
-                allowClear: true
-            });
-            // Bubbling ke change native untuk filter tarif
-            $(mahasiswaSelect).on('select2:select select2:clear', function(){
-                mahasiswaSelect.dispatchEvent(new Event('change'));
-            });
-        }
 
         async function apiRequest(url, method = 'GET', body = null) {
              if (!apiToken) {
@@ -428,7 +434,38 @@
                  throw new Error(error.message || 'Gagal memproses permintaan.');
              }
         }
+        let suppressTarifAutoFill = false;
+        let editingTagihanData = null;
+
+        function initMahasiswaSelect2() {
+            if (!isSelect2Available) return;
+            if ($(mahasiswaSelect).hasClass('select2-hidden-accessible')) {
+                $(mahasiswaSelect).select2('destroy');
+            }
+            $(mahasiswaSelect).select2({
+                theme: "default",
+                width: '100%',
+                dropdownParent: $('#tagihanModal'),
+                placeholder: 'Pilih Mahasiswa',
+                allowClear: true
+            });
+            $(mahasiswaSelect).off('select2:select select2:clear').on('select2:select select2:clear', function () {
+                mahasiswaSelect.dispatchEvent(new Event('change'));
+            });
+        }
+
+        if (isSelect2Available) {
+            initMahasiswaSelect2();
+        }
+
+        function setFlatpickrMinDate(mode) {
+            if (!flatpickrDueDate || typeof flatpickrDueDate.set !== 'function') {
+                return;
+            }
+            flatpickrDueDate.set('minDate', mode === 'edit' ? null : 'today');
+        }
         function applySuggestedJatuhTempoFromTarif(tarif) {
+            if (suppressTarifAutoFill) return;
             const days = parseDueDaysFromTarifForSuggest(tarif);
             if (days == null) return;
             const d = new Date();
@@ -454,43 +491,35 @@
             return onlyDigits ? Number(onlyDigits) : '';
         }
 
-        async function loadAktivasiNotifs() {
-            if (!isKasir || !apiAktivasiNotif) return;
+        async function loadKasirNotifs() {
+            if (!isKasir || !apiKasirNotif) return;
             try {
-                const data = await apiRequest(apiAktivasiNotif);
-                aktivasiNotifs = data.data || [];
-                renderAktivasiNotifs();
+                const data = await apiRequest(apiKasirNotif);
+                kasirNotifs = data.data || [];
+                renderKasirNotifs(data.unread_count);
             } catch (e) {
-                console.warn('Gagal memuat notifikasi aktivasi', e);
+                console.warn('Gagal memuat notifikasi transfer', e);
             }
         }
 
-        function renderAktivasiNotifs() {
+        function renderKasirNotifs(unreadCount) {
             if (!notifAktivasiList || !notifAktivasiBadge) return;
-            if (!aktivasiNotifs.length) {
-                notifAktivasiList.innerHTML = '<div class="p-4 text-sm text-gray-500">Belum ada notifikasi.</div>';
+            if (!kasirNotifs.length) {
+                notifAktivasiList.innerHTML = '<div class="p-4 text-sm text-gray-500">Belum ada notifikasi transfer.</div>';
                 notifAktivasiBadge.textContent = '0';
                 return;
             }
-            notifAktivasiBadge.textContent = aktivasiNotifs.length;
-            notifAktivasiList.innerHTML = aktivasiNotifs.map(item => {
-                const statusLabel = item.status === 'aktif' ? 'Aktif' : 'BSS';
-                const badgeClass = item.status === 'aktif' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700';
-                const nama = item.mahasiswa?.user?.nama_lengkap || 'Mahasiswa';
-                const npm = item.mahasiswa?.npm || '';
-                const updated = item.updated_at ? new Date(item.updated_at).toLocaleString('id-ID') : '';
+            const unread = unreadCount ?? kasirNotifs.filter(n => !n.read_at).length;
+            notifAktivasiBadge.textContent = unread > 9 ? '9+' : String(unread);
+            notifAktivasiList.innerHTML = kasirNotifs.map(item => {
+                const when = item.created_at ? new Date(item.created_at).toLocaleString('id-ID') : '';
+                const link = item.link || @json(route('kasir.verifikasi.index'));
+                const unreadClass = !item.read_at ? 'bg-blue-50 font-semibold' : '';
                 return `
-                    <div class="p-4 hover:bg-gray-50">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <div class="text-sm font-semibold text-gray-800">${nama}</div>
-                                <div class="text-xs text-gray-500">${npm}</div>
-                            </div>
-                            <span class="px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}">${statusLabel}</span>
-                        </div>
-                        <div class="mt-2 text-xs text-gray-500">Semester: ${item.semester_label || '-'}</div>
-                        <div class="text-[11px] text-gray-400">${updated}</div>
-                    </div>
+                    <a href="${link}" data-id="${item.id || ''}" class="block p-4 hover:bg-gray-50 ${unreadClass}">
+                        <p class="text-sm text-gray-800">${item.message || 'Transfer masuk'}</p>
+                        <p class="text-[11px] text-gray-400 mt-1">${when}</p>
+                    </a>
                 `;
             }).join('');
         }
@@ -533,35 +562,27 @@
                 const pembayaran = tagihan.pembayaran;
                 const pembayaranAll = tagihan.pembayaran_all || tagihan.pembayaranAll || [];
                 const sudahAdaPembayaran = pembayaranAll.length > 0 || (pembayaran && !pembayaran.status_dibatalkan);
-                // Jika status "Belum Lunas" dan sudah ada pembayaran (cicilan), tampilkan "Belum Lunas"
-                // Jika status "Belum Lunas" dan belum ada pembayaran, tampilkan "Belum Dibayarkan"
                 let statusText = tagihan.status === 'Belum Lunas'
                     ? (sudahAdaPembayaran ? 'Belum Lunas' : 'Belum Dibayarkan')
                     : tagihan.status;
 
-                // 1. Kode Pembayaran
                 tr.appendChild(createCell(tagihan.kode_pembayaran, ['text-gray-700']));
 
-                // 2. Mahasiswa (Nama & NPM)
                 const cellMahasiswa = document.createElement('td');
                 cellMahasiswa.className = 'px-6 py-4 whitespace-nowrap';
                 const divNama = document.createElement('div');
                 divNama.className = 'font-medium text-gray-900';
-                divNama.textContent = tagihan.mahasiswa?.user?.nama_lengkap ?? 'N/A'; // Aman
+                divNama.textContent = tagihan.mahasiswa?.user?.nama_lengkap ?? 'N/A';
                 const divNpm = document.createElement('div');
                 divNpm.className = 'text-gray-500';
-                divNpm.textContent = tagihan.mahasiswa?.npm ?? 'N/A'; // Aman
+                divNpm.textContent = tagihan.mahasiswa?.npm ?? 'N/A';
                 cellMahasiswa.appendChild(divNama);
                 cellMahasiswa.appendChild(divNpm);
                 tr.appendChild(cellMahasiswa);
 
-                // 3. Jenis Tagihan
                 tr.appendChild(createCell(tagihan.jenis_tampilan || tagihan.tarif?.nama_pembayaran, ['text-gray-700']));
-
-                // 4. Jumlah
                 tr.appendChild(createCell(rupiahFormat.format(tagihan.jumlah_tagihan), ['text-right', 'font-medium', 'text-gray-800']));
 
-                // 5. Status (Pakai innerHTML tapi aman karena dari logic kita)
                 const cellStatus = document.createElement('td');
                 cellStatus.className = 'px-6 py-4 whitespace-nowrap text-center';
                 const isDibatalkan = pembayaran && pembayaran.status_dibatalkan;
@@ -571,10 +592,8 @@
                 cellStatus.innerHTML = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${isDibatalkan ? 'bg-red-100 text-red-800' : (isLunas ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800')}">${statusText}</span>`;
                 tr.appendChild(cellStatus);
 
-                // 6. Tgl Bayar
                 tr.appendChild(createCell(pembayaran ? new Date(pembayaran.tanggal_bayar).toLocaleDateString('id-ID') : '-', ['text-gray-500']));
 
-                // 7. Aksi (Pakai innerHTML tapi aman karena ID bukan input teks)
                 const cellAksi = document.createElement('td');
                 cellAksi.className = 'px-6 py-4 whitespace-nowrap text-right font-medium';
                 cellAksi.innerHTML = `
@@ -582,14 +601,14 @@
                     <button class="view-btn text-gray-500 hover:text-blue-600" data-id="${tagihan.tagihan_id}" data-tooltip="Lihat detail tagihan" title="Lihat Detail">
                         <svg class="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                     </button>
-                    ${!isLunas ? `
+                    ${!isLunas && !isKasir ? `
                     <button class="edit-btn text-gray-500 hover:text-yellow-600" data-id="${tagihan.tagihan_id}" data-tooltip="Edit tagihan" title="Edit Tagihan">
                         <svg class="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536l12.232-12.232z"></path></svg>
-                    </button>` : '<span class="w-5 h-5 inline-block"></span>'}
-                    ${!isLunas ? `
+                    </button>` : (!isKasir ? '<span class="w-5 h-5 inline-block"></span>' : '')}
+                    ${!isLunas && !isKasir ? `
                     <button class="delete-btn text-gray-500 hover:text-red-600" data-id="${tagihan.tagihan_id}" data-tooltip="Hapus tagihan" title="Hapus Tagihan">
                         <svg class="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    </button>` : '<span class="w-5 h-5 inline-block"></span>'}
+                    </button>` : (!isKasir ? '<span class="w-5 h-5 inline-block"></span>' : '')}
                     ${isLunas && pembayaran ? `
                     <a href="${printPembayaranBaseUrl}/${pembayaran.pembayaran_id}" target="_blank" class="print-btn text-gray-500 hover:text-indigo-600" data-tooltip="Cetak bukti pembayaran" title="Cetak Bukti">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
@@ -602,62 +621,110 @@
             });
         }
 
-         function applyFilters() {
-             currentFilters.status = filterStatusSelect.value;
-             currentFilters.jenis = filterJenisSelect.value;
-             currentFilters.namaMahasiswa = filterNamaMahasiswaInput.value.toLowerCase().trim();
-             const filteredData = allTagihanData.filter(tagihan => {
-                 let statusMatch = true;
-                 if (currentFilters.status) {
-                     if (currentFilters.status === 'BUKAN_LUNAS') {
-                         statusMatch = (tagihan.status || '') !== 'Lunas';
-                     } else if (currentFilters.status === 'Dibatalkan') {
-                         const pembayaran = tagihan.pembayaran;
-                         statusMatch = pembayaran && pembayaran.status_dibatalkan === true;
-                     } else {
-                         const pembayaran = tagihan.pembayaran;
-                         const isDibatalkan = pembayaran && pembayaran.status_dibatalkan === true;
-
-                         if (isDibatalkan) {
-                             statusMatch = false;
-                         } else {
-                             const pembayaranAll = tagihan.pembayaran_all || tagihan.pembayaranAll || [];
-                             const sudahAdaPembayaran = pembayaranAll.length > 0 || (tagihan.pembayaran && !tagihan.pembayaran.status_dibatalkan);
-                             let statusAsli = tagihan.status === 'Belum Lunas'
-                                 ? (sudahAdaPembayaran ? 'Belum Lunas' : 'Belum Dibayarkan')
-                                 : tagihan.status;
-                             statusMatch = statusAsli === currentFilters.status;
-                         }
-                     }
-                 }
-                 const jenisMatch = !currentFilters.jenis || (tagihan.tarif && tagihan.tarif.nama_pembayaran === currentFilters.jenis);
-                 const namaMatch = !currentFilters.namaMahasiswa ||
-                     (tagihan.mahasiswa?.user?.nama_lengkap?.toLowerCase().includes(currentFilters.namaMahasiswa) ||
-                      tagihan.mahasiswa?.npm?.toLowerCase().includes(currentFilters.namaMahasiswa));
-                 return statusMatch && jenisMatch && namaMatch;
-             });
-             renderTable(filteredData);
+         function applyFilters(resetPage = true) {
+             currentFilters.status = filterStatusSelect ? filterStatusSelect.value : '';
+             currentFilters.jenis = filterJenisSelect ? filterJenisSelect.value : '';
+             currentFilters.namaMahasiswa = filterNamaMahasiswaInput ? filterNamaMahasiswaInput.value.trim() : '';
+             loadPayments(resetPage ? 1 : paginationState.current_page);
          }
 
          function populateTableFilters() {
+             if (!filterJenisSelect) return;
+             const selected = filterJenisSelect.value;
              const uniqueJenis = new Set();
-             allTagihanData.forEach(tagihan => { if (tagihan.tarif && tagihan.tarif.nama_pembayaran) { uniqueJenis.add(tagihan.tarif.nama_pembayaran); } });
+             (allTarifsData || []).forEach(tarif => {
+                 if (tarif && tarif.nama_pembayaran) uniqueJenis.add(tarif.nama_pembayaran);
+             });
              filterJenisSelect.innerHTML = '<option value="">Semua Jenis</option>';
-             Array.from(uniqueJenis).sort().forEach(jenis => { const option = document.createElement('option'); option.value = jenis; option.textContent = jenis; filterJenisSelect.appendChild(option); });
+             Array.from(uniqueJenis).sort().forEach(jenis => {
+                 const option = document.createElement('option');
+                 option.value = jenis;
+                 option.textContent = jenis;
+                 filterJenisSelect.appendChild(option);
+             });
+             if (selected && uniqueJenis.has(selected)) {
+                 filterJenisSelect.value = selected;
+             }
          }
 
-        function loadPayments() {
-            renderTable([]);
+        function renderPagination() {
+            if (!tagihanPagination || !tagihanPaginationInfo || !tagihanPaginationControls) return;
+
+            const { current_page, last_page, total, from, to } = paginationState;
+            if (!total) {
+                tagihanPagination.classList.add('hidden');
+                return;
+            }
+
+            tagihanPagination.classList.remove('hidden');
+            tagihanPaginationInfo.textContent = total
+                ? `Menampilkan ${from ?? 0}–${to ?? 0} dari ${total} tagihan`
+                : 'Tidak ada data tagihan';
+
+            const btnClass = 'inline-flex items-center justify-center min-h-touch px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors';
+            const activeClass = 'bg-primary-600 border-primary-600 text-white';
+            const idleClass = 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50';
+            const disabledClass = 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed';
+
+            const mkBtn = (label, page, { disabled = false, active = false } = {}) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = label;
+                btn.className = `${btnClass} ${disabled ? disabledClass : (active ? activeClass : idleClass)}`;
+                btn.disabled = disabled;
+                if (!disabled && !active) {
+                    btn.addEventListener('click', () => loadPayments(page));
+                }
+                return btn;
+            };
+
+            tagihanPaginationControls.innerHTML = '';
+            tagihanPaginationControls.appendChild(mkBtn('« Sebelumnya', current_page - 1, { disabled: current_page <= 1 }));
+
+            const windowSize = 5;
+            let start = Math.max(1, current_page - Math.floor(windowSize / 2));
+            let end = Math.min(last_page, start + windowSize - 1);
+            start = Math.max(1, end - windowSize + 1);
+
+            for (let page = start; page <= end; page++) {
+                tagihanPaginationControls.appendChild(mkBtn(String(page), page, { active: page === current_page }));
+            }
+
+            tagihanPaginationControls.appendChild(mkBtn('Berikutnya »', current_page + 1, { disabled: current_page >= last_page }));
+        }
+
+        function loadPayments(page = 1) {
+            if (paymentTableBody) {
+                paymentTableBody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-gray-500">Memuat data...</td></tr>';
+            }
+            if (tagihanPagination) {
+                tagihanPagination.classList.add('hidden');
+            }
+
             const baseUrl = "{{ route($tagihanIndexRouteName) }}";
             const url = baseUrl + buildQueryString({
                 tahun_akademik: currentServerFilters.tahunAkademik,
                 angkatan: currentServerFilters.angkatan,
                 program_studi: currentServerFilters.programStudi,
+                status: currentFilters.status,
+                jenis: currentFilters.jenis,
+                search: currentFilters.namaMahasiswa,
+                page: page,
+                per_page: PER_PAGE,
             });
+
             apiRequest(url).then(response => {
-                allTagihanData = response.data || response;
-                populateTableFilters();
-                applyFilters();
+                const rows = Array.isArray(response.data) ? response.data : (Array.isArray(response) ? response : []);
+                paginationState = {
+                    current_page: response.current_page || page,
+                    last_page: response.last_page || 1,
+                    per_page: response.per_page || PER_PAGE,
+                    total: response.total ?? rows.length,
+                    from: response.from ?? (rows.length ? 1 : 0),
+                    to: response.to ?? rows.length,
+                };
+                renderTable(rows);
+                renderPagination();
             }).catch(error => {
                 console.error('Error fetching tagihan:', error);
                 Swal.fire({ icon: 'error', title: 'Gagal Memuat Data', text: `Gagal memuat data tagihan: ${error.message}` });
@@ -665,6 +732,17 @@
                     paymentTableBody.innerHTML = `<tr><td colspan="7" class="text-center py-10 text-red-500">Gagal memuat data. Silakan refresh.</td></tr>`;
                 }
             });
+        }
+
+        async function loadTarifForFilters() {
+            const tarifUrl = "{{ route($tarifIndexRouteName) }}";
+            try {
+                const tarifResponse = await apiRequest(tarifUrl);
+                allTarifsData = tarifResponse.data || tarifResponse || [];
+                populateTableFilters();
+            } catch (error) {
+                console.warn('Gagal memuat tarif untuk filter jenis:', error);
+            }
         }
 
         async function populateFormDropdowns() {
@@ -710,24 +788,29 @@
                 mahasiswaSelect.appendChild(option);
             });
 
-            // Trigger change agar dependent dropdown ter-update
-            mahasiswaSelect.dispatchEvent(new Event('change'));
-            filterTarifDropdown();
+            if (isSelect2Available) {
+                initMahasiswaSelect2();
+            }
+
+            if (!suppressTarifAutoFill) {
+                mahasiswaSelect.dispatchEvent(new Event('change'));
+                filterTarifDropdown();
+            }
         }
 
-        function filterTarifDropdown() {
-            // Ambil option terpilih secara aman (kompatibel dengan Select2)
+        function filterTarifDropdown(ensureTarifId = null) {
             const selectedValue = mahasiswaSelect.value;
-            const selectedOption = mahasiswaSelect.querySelector(`option[value="${CSS.escape(selectedValue)}"]`);
+            const selectedOption = mahasiswaSelect.querySelector(`option[value="${CSS.escape(String(selectedValue))}"]`);
 
             if (!selectedOption || !selectedOption.value) {
-                tarifSelect.innerHTML = '<option value="" disabled selected>Pilih mahasiswa dulu</option>';
-                cleaveJumlah.setRawValue(''); // Set ke kosong
-                kodeInput.value = '';
+                if (!suppressTarifAutoFill) {
+                    tarifSelect.innerHTML = '<option value="" disabled selected>Pilih mahasiswa dulu</option>';
+                    cleaveJumlah.setRawValue('');
+                    kodeInput.value = '';
+                }
                 return;
             }
 
-            // Ambil dataset dari <option> terpilih
             const prodiMhs = selectedOption.dataset.prodi;
             const angkatanMhs = selectedOption.dataset.angkatan;
 
@@ -742,9 +825,48 @@
                 tarifSelect.innerHTML += `<option value="${tarif.tarif_id}">${tarif.nama_pembayaran}</option>`;
             });
 
-            cleaveJumlah.setRawValue(''); // Set ke kosong
-            kodeInput.value = '';
-            tarifSelect.dispatchEvent(new Event('change'));
+            if (ensureTarifId && !filteredTarifs.some(t => String(t.tarif_id) === String(ensureTarifId))) {
+                const currentTarif = allTarifsData.find(t => String(t.tarif_id) === String(ensureTarifId));
+                if (currentTarif) {
+                    tarifSelect.innerHTML += `<option value="${currentTarif.tarif_id}">${currentTarif.nama_pembayaran}</option>`;
+                }
+            }
+
+            if (!suppressTarifAutoFill) {
+                cleaveJumlah.setRawValue('');
+                kodeInput.value = '';
+                tarifSelect.dispatchEvent(new Event('change'));
+            }
+        }
+
+        async function fillEditTagihanForm(tagihanData) {
+            suppressTarifAutoFill = true;
+            editingTagihanData = tagihanData;
+
+            await populateFormDropdowns();
+
+            angkatanFilterSelect.value = String(tagihanData.mahasiswa?.angkatan ?? '');
+            filterMahasiswaDropdown();
+
+            mahasiswaSelect.value = String(tagihanData.mahasiswa_id);
+            if (isSelect2Available) {
+                $(mahasiswaSelect).val(String(tagihanData.mahasiswa_id)).trigger('change.select2');
+            }
+
+            filterTarifDropdown(tagihanData.tarif_id);
+            tarifSelect.value = String(tagihanData.tarif_id);
+            cleaveJumlah.setRawValue(tagihanData.jumlah_tagihan);
+            kodeInput.value = tagihanData.kode_pembayaran || '';
+
+            if (tagihanData.tanggal_jatuh_tempo) {
+                const dateStr = String(tagihanData.tanggal_jatuh_tempo).split('T')[0];
+                const dateObj = new Date(dateStr + 'T00:00:00');
+                if (!isNaN(dateObj.getTime()) && flatpickrDueDate && typeof flatpickrDueDate.setDate === 'function') {
+                    flatpickrDueDate.setDate(dateObj, false);
+                }
+            }
+
+            suppressTarifAutoFill = false;
         }
 
         // Modal buka/tutup tagihan
@@ -780,45 +902,14 @@
 
             if (mode === 'add') {
                 modalTitle.textContent = 'Buat Tagihan Baru';
+                editingTagihanData = null;
+                setFlatpickrMinDate('add');
                 populateFormDropdowns();
             } else if (mode === 'edit' && tagihanData) {
                 modalTitle.textContent = 'Edit Tagihan';
                 tagihanIdInput.value = tagihanData.tagihan_id;
-
-                populateFormDropdowns().then(() => {
-                    // Isi data yang ada
-                    angkatanFilterSelect.value = tagihanData.mahasiswa?.angkatan ?? '';
-                    angkatanFilterSelect.dispatchEvent(new Event('change')); // Trigger filter mahasiswa
-
-                    setTimeout(() => {
-                        // Set value (support Select2 jika ada)
-                        if (isSelect2Available) {
-                            $(mahasiswaSelect).val(tagihanData.mahasiswa_id).trigger('change');
-                        } else {
-                            mahasiswaSelect.value = String(tagihanData.mahasiswa_id);
-                            mahasiswaSelect.dispatchEvent(new Event('change'));
-                        }
-
-                        setTimeout(() => {
-                            tarifSelect.value = tagihanData.tarif_id;
-
-                            // Set Cleave.js value
-                            cleaveJumlah.setRawValue(tagihanData.jumlah_tagihan);
-
-                            // Set Flatpickr value (konversi YYYY-MM-DD ke Date object)
-                            if(tagihanData.tanggal_jatuh_tempo) {
-                                const dateStr = tagihanData.tanggal_jatuh_tempo.split('T')[0]; // Ambil bagian tanggal saja
-                                const dateObj = new Date(dateStr + 'T00:00:00'); // Tambahkan time untuk menghindari timezone issue
-                                if (!isNaN(dateObj.getTime()) && flatpickrDueDate && typeof flatpickrDueDate.setDate === 'function') {
-                                    flatpickrDueDate.setDate(dateObj, false);
-                                }
-                            }
-
-                            kodeInput.value = tagihanData.kode_pembayaran;
-                            tarifSelect.dispatchEvent(new Event('change'));
-                        }, 200); // Delay kecil untuk Select2
-                    }, 200); // Delay kecil untuk Select2
-                });
+                setFlatpickrMinDate('edit');
+                fillEditTagihanForm(tagihanData);
             }
             tagihanModal.classList.remove('hidden');
             tagihanModal.classList.add('flex');
@@ -828,6 +919,8 @@
             if (!tagihanModal) {
                 return;
             }
+            editingTagihanData = null;
+            suppressTarifAutoFill = false;
             tagihanModal.classList.add('hidden');
             tagihanModal.classList.remove('flex');
         }
@@ -838,8 +931,6 @@
             const rupiahFormat = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
             const pembayaranAll = tagihanData.pembayaran_all || tagihanData.pembayaranAll || [];
             const sudahAdaPembayaran = pembayaranAll.length > 0 || (tagihanData.pembayaran && !tagihanData.pembayaran.status_dibatalkan);
-            // Jika status "Belum Lunas" dan sudah ada pembayaran (cicilan), tampilkan "Belum Lunas"
-            // Jika status "Belum Lunas" dan belum ada pembayaran, tampilkan "Belum Dibayarkan"
             let statusText = tagihanData.status === 'Belum Lunas'
                 ? (sudahAdaPembayaran ? 'Belum Lunas' : 'Belum Dibayarkan')
                 : tagihanData.status;
@@ -1095,6 +1186,7 @@
         // Sinkronkan tampilan jumlah tagihan
         if (tarifSelect) {
             tarifSelect.addEventListener('change', function() {
+                if (suppressTarifAutoFill) return;
                 const selectedTarifId = this.value;
                 const selectedTarif = allTarifsData.find(t => t.tarif_id == selectedTarifId);
 
@@ -1154,7 +1246,13 @@
              const id = tagihanIdInput.value; const isEdit = !!id;
              const url = isEdit ? `${apiTagihanBase}/${id}` : "{{ route($createTagihanRouteName) }}";
              const method = isEdit ? 'PUT' : 'POST';
-            const formData = { mahasiswa_id: mahasiswaSelect.value, tarif_id: tarifSelect.value, jumlah_tagihan: parseRupiahToNumber(jumlahInput.value), tanggal_jatuh_tempo: toYmdFromDdMmYyyy(tglJatuhTempoInput.value), kode_pembayaran: kodeInput.value, };
+            const formData = {
+                mahasiswa_id: mahasiswaSelect.value,
+                tarif_id: tarifSelect.value,
+                jumlah_tagihan: parseRupiahToNumber(jumlahInput.value),
+                tanggal_jatuh_tempo: toYmdFromDdMmYyyy(tglJatuhTempoInput.value),
+                kode_pembayaran: kodeInput.value || (isEdit ? editingTagihanData?.kode_pembayaran : '') || '',
+            };
 
              if (!formData.mahasiswa_id || !formData.tarif_id || !formData.tanggal_jatuh_tempo) {
                  Swal.fire({ icon: 'warning', title: 'Input Tidak Lengkap', text: 'Harap lengkapi semua field (Mahasiswa, Tarif, Tgl. Jatuh Tempo)!' });
@@ -1196,19 +1294,16 @@
 
          // Listener untuk Filter Tabel
          if (filterStatusSelect) {
-             filterStatusSelect.addEventListener('change', applyFilters);
+             filterStatusSelect.addEventListener('change', () => applyFilters(true));
          }
          if (filterJenisSelect) {
-             filterJenisSelect.addEventListener('change', applyFilters);
+             filterJenisSelect.addEventListener('change', () => applyFilters(true));
          }
          if (filterNamaMahasiswaInput) {
-             // Gunakan debounce untuk performa yang lebih baik
              let debounceTimer;
              filterNamaMahasiswaInput.addEventListener('input', function() {
                  clearTimeout(debounceTimer);
-                 debounceTimer = setTimeout(() => {
-                     applyFilters();
-                 }, 300);
+                 debounceTimer = setTimeout(() => applyFilters(true), 300);
              });
          }
 
@@ -1217,7 +1312,7 @@
              currentServerFilters.tahunAkademik = filterTahunAkademikSelect ? filterTahunAkademikSelect.value : '';
              currentServerFilters.angkatan = filterAngkatanSelect ? filterAngkatanSelect.value : '';
              currentServerFilters.programStudi = filterProgramStudiSelect ? filterProgramStudiSelect.value : '';
-             loadPayments();
+             applyFilters(true);
          }
          filterTahunAkademikSelect?.addEventListener('change', syncServerFiltersAndReload);
          filterAngkatanSelect?.addEventListener('change', syncServerFiltersAndReload);
@@ -1236,12 +1331,12 @@
         }
 
         populateAcademicYears();
-        // Pastikan request pertama sudah membawa tahun akademik default
+        loadTarifForFilters();
         syncServerFiltersAndReload();
         loadMasterMahasiswaForFilters();
         if (isKasir) {
-            loadAktivasiNotifs();
-            notifTimer = setInterval(loadAktivasiNotifs, 20000);
+            loadKasirNotifs();
+            notifTimer = setInterval(loadKasirNotifs, 20000);
         }
     });
 </script>

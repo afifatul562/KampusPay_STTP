@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function loadMahasiswaStatus(mahasiswaId) {
         try {
-            const response = await apiRequest(`{{ route('kasir.aktivasi.notifications') }}`);
+            const response = await apiRequest(`{{ route('kasir.aktivasi.index') }}`);
             const aktivasi = response.data?.find(a => a.mahasiswa_id === mahasiswaId);
 
             if (aktivasi) {
@@ -221,7 +221,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function loadAktivasiList() {
         try {
-            const response = await apiRequest(`{{ route('kasir.aktivasi.notifications') }}`);
+            const response = await apiRequest(`{{ route('kasir.aktivasi.index') }}`);
             const data = response.data || [];
 
             if (data.length === 0) {

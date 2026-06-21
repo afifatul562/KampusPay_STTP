@@ -24,5 +24,17 @@ class AdminUserSeeder extends Seeder
                 'role' => 'admin',
             ]
         );
+
+        $yayasanPassword = env('YAYASAN_DEFAULT_PASSWORD', 'yayasan123');
+
+        User::updateOrCreate(
+            ['username' => 'yayasan'],
+            [
+                'nama_lengkap' => 'Pimpinan Yayasan',
+                'email' => 'yayasan@sttpayakumbuh.ac.id',
+                'password' => Hash::make($yayasanPassword),
+                'role' => 'yayasan',
+            ]
+        );
     }
 }

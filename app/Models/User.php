@@ -42,6 +42,11 @@ class User extends Authenticatable
         return $this->role === 'mahasiswa';
     }
 
+    public function isYayasan(): bool
+    {
+        return $this->role === 'yayasan';
+    }
+
     public function mahasiswaDetail()
     {
         return $this->hasOne(MahasiswaDetail::class);
@@ -58,7 +63,7 @@ class User extends Authenticatable
     /**
      * Mengatur atribut name (alias untuk nama_lengkap)
      */
-    public function setNameAttribute($value)
+    public function setNameAttribute(mixed $value): void
     {
         $this->attributes['nama_lengkap'] = $value;
     }

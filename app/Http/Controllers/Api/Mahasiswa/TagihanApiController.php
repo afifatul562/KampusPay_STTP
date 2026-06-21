@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Models\AktivasiStatus;
 use App\Models\Tagihan;
+use App\Support\TagihanPayability;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -38,19 +39,16 @@ class TagihanApiController extends Controller
             $q->whereNull('available_from')->orWhere('available_from', '<=', $today);
         });
 
-        if ($aktivasi && $aktivasi->status === 'bss') {
-            $tagihanQuery->where('is_bss', true);
-        } else {
-            $tagihanQuery->where(function ($q) {
-                $q->whereNull('is_bss')->orWhere('is_bss', false);
-            });
-        }
+        TagihanPayability::applyAktivasiScope($tagihanQuery, $aktivasi);
 
         if ($request->filled('status')) {
-            $tagihanQuery->where('status', $request->status);
+            $this->applyStatusFilter($tagihanQuery, (string) $request->status);
         }
 
         $tagihan = $tagihanQuery->get()->map(function (Tagihan $t) {
+            $status = $t->statusForMobileApi();
+            $wajibLunas = $this->tagihanWajibLunas($t);
+
             return [
                 'id' => $t->tagihan_id,
                 'kode_pembayaran' => $t->kode_pembayaran,
@@ -58,10 +56,15 @@ class TagihanApiController extends Controller
                 'jenis_tampilan' => $t->jenis_tampilan,
                 'jumlah_tagihan' => $t->jumlah_tagihan,
                 'sisa_pokok' => $t->sisa_pokok,
-                'status' => $t->status,
+                'status' => $status['status'],
+                'status_kode' => $status['status_kode'],
+                'status_verifikasi' => $status['status_verifikasi'],
+                'status_warna' => $status['status_warna'],
+                'status_warna_bg' => $status['status_warna_bg'],
+                'status_warna_teks' => $status['status_warna_teks'],
                 'tanggal_jatuh_tempo' => $t->tanggal_jatuh_tempo,
-                'is_wajib_lunas' => (bool) ($t->is_wajib_lunas ?? false),
-                'bisa_cicil' => method_exists($t, 'isWajibLunas') ? !$t->isWajibLunas() : !($t->is_wajib_lunas ?? false),
+                'is_wajib_lunas' => $wajibLunas,
+                'bisa_cicil' => ! $wajibLunas,
             ];
         });
 
@@ -79,32 +82,20 @@ class TagihanApiController extends Controller
 
         $user = Auth::user();
         if ($user?->isMahasiswa() && $user->mahasiswaDetail) {
-            $semester = Setting::currentSemesterLabel();
-            $aktivasi = AktivasiStatus::query()
-                ->where('mahasiswa_id', $user->mahasiswaDetail->mahasiswa_id)
-                ->where('semester_label', $semester)
-                ->latest()
-                ->first();
-
-            if ($aktivasi && $aktivasi->status === 'bss' && !$tagihan->is_bss) {
-                return response()->json(['success' => false, 'message' => 'Status BSS: hanya tagihan BSS yang ditampilkan.'], 403);
-            }
-            if ((!$aktivasi || $aktivasi->status === 'aktif') && $tagihan->is_bss) {
-                return response()->json(['success' => false, 'message' => 'Tagihan BSS tidak ditampilkan saat status aktif.'], 403);
-            }
-
-            $today = now()->toDateString();
-            if ($tagihan->available_from && (string) $tagihan->available_from->toDateString() > $today) {
-                return response()->json(['success' => false, 'message' => 'Tagihan ini belum tersedia.'], 403);
+            $message = TagihanPayability::violationMessage(
+                $tagihan,
+                (int) $user->mahasiswaDetail->mahasiswa_id,
+            );
+            if ($message) {
+                return response()->json(['success' => false, 'message' => $message], 403);
             }
         }
 
         $settings = Setting::getCachedMap();
 
-        // Relasi `konfirmasi` pada model Tagihan sudah di-set sebagai `hasOne()->latestOfMany()`
-        // sehingga otomatis mengembalikan SATU konfirmasi terbaru.
-        // Jadi tidak perlu lagi memanggil `sortByDesc()` (yang hanya ada di Collection, bukan di Model).
         $lastKonfirmasi = $tagihan->konfirmasi;
+        $status = $tagihan->statusForMobileApi();
+        $wajibLunas = $this->tagihanWajibLunas($tagihan);
 
         return response()->json([
             'success' => true,
@@ -116,10 +107,15 @@ class TagihanApiController extends Controller
                 'deskripsi' => $tagihan->tarif?->keterangan ?? null,
                 'jumlah_tagihan' => $tagihan->jumlah_tagihan,
                 'sisa_pokok' => $tagihan->sisa_pokok,
-                'status' => $tagihan->status,
+                'status' => $status['status'],
+                'status_kode' => $status['status_kode'],
+                'status_verifikasi' => $status['status_verifikasi'],
+                'status_warna' => $status['status_warna'],
+                'status_warna_bg' => $status['status_warna_bg'],
+                'status_warna_teks' => $status['status_warna_teks'],
                 'tanggal_jatuh_tempo' => $tagihan->tanggal_jatuh_tempo,
-                'is_wajib_lunas' => (bool) ($tagihan->is_wajib_lunas ?? false),
-                'bisa_cicil' => method_exists($tagihan, 'isWajibLunas') ? !$tagihan->isWajibLunas() : !($tagihan->is_wajib_lunas ?? false),
+                'is_wajib_lunas' => $wajibLunas,
+                'bisa_cicil' => ! $wajibLunas,
                 'metode_yang_diizinkan' => $this->resolveMetodeDiizinkan($tagihan),
                 'konfirmasi_terakhir' => $lastKonfirmasi ? [
                     'status_verifikasi' => $lastKonfirmasi->status_verifikasi,
@@ -149,15 +145,33 @@ class TagihanApiController extends Controller
     {
         $allowed = ['tunai', 'transfer'];
 
-        if (method_exists($tagihan, 'isWajibLunas')) {
-            if (!$tagihan->isWajibLunas()) {
-                $allowed[] = 'cicil';
-            }
-        } elseif (!($tagihan->is_wajib_lunas ?? false)) {
+        if (! $this->tagihanWajibLunas($tagihan)) {
             $allowed[] = 'cicil';
         }
 
         return $allowed;
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<\App\Models\Tagihan>|\Illuminate\Database\Eloquent\Relations\Relation  $query
+     */
+    private function applyStatusFilter($query, string $status): void
+    {
+        if ($status === 'Belum Dibayarkan') {
+            $query->where('status', '=', 'Belum Lunas')
+                ->where(function ($q) {
+                    $q->whereNull('total_angsuran')->orWhere('total_angsuran', '<=', 0);
+                });
+
+            return;
+        }
+
+        $query->where('status', '=', $status);
+    }
+
+    private function tagihanWajibLunas(Tagihan $tagihan): bool
+    {
+        return method_exists($tagihan, 'isWajibLunas') && $tagihan->isWajibLunas();
     }
 }
 

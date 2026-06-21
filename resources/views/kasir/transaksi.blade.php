@@ -126,11 +126,16 @@
                         @if($item->is_cicilan)
                             <div class="text-xs text-purple-600 font-semibold mt-1">Cicilan</div>
                             @php
-                                $totalTagihan = data_get($item, 'tagihan.jumlah_tagihan', 0);
-                                $sisaPokok = data_get($item, 'tagihan.sisa_pokok', $totalTagihan);
+                                $tagihanRow = $item->tagihan;
+                                $totalTagihan = (float) ($tagihanRow->jumlah_tagihan ?? 0);
+                                $terbayarSampaiTransaksi = (float) ($tagihanRow?->pembayaranAll
+                                    ?->where('status_dibatalkan', false)
+                                    ->filter(fn ($p) => $p->tanggal_bayar <= $item->tanggal_bayar)
+                                    ->sum('jumlah_bayar') ?? 0);
+                                $sisaSetelahTransaksi = max(0, $totalTagihan - $terbayarSampaiTransaksi);
                             @endphp
-                            @if($sisaPokok > 0)
-                                <div class="text-xs text-orange-600 mt-1">Sisa: Rp {{ number_format($sisaPokok, 0, ',', '.') }}</div>
+                            @if($sisaSetelahTransaksi > 0)
+                                <div class="text-xs text-orange-600 mt-1">Sisa: Rp {{ number_format($sisaSetelahTransaksi, 0, ',', '.') }}</div>
                             @endif
                         @endif
                     </td>
@@ -145,7 +150,7 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-center">
                         @if ($metodeLower === 'transfer' && $item->konfirmasi && $item->konfirmasi->file_bukti_pembayaran)
-                            <a href="{{ asset('storage/' . $item->konfirmasi->file_bukti_pembayaran) }}" target="_blank" class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200">Lihat Bukti</a>
+                            <a href="{{ $item->konfirmasi->buktiViewUrl() }}" target="_blank" class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200">Lihat Bukti</a>
                         @else
                             <span class="text-gray-400 text-xs">-</span>
                         @endif

@@ -25,14 +25,11 @@ class LaporanApiController extends Controller
             ], 404);
         }
 
-        $tunggakan = Tagihan::with('tarif', 'mahasiswa')
-            ->where('mahasiswa_id', $mahasiswaId)
-            ->whereIn('status', ['Belum Lunas', 'Ditolak'])
-            ->get();
+        $tunggakan = $this->tunggakanTagihan($mahasiswaId);
 
         $jenisTarif = TarifMaster::select('nama_pembayaran')
             ->distinct()
-            ->orderBy('nama_pembayaran')
+            ->orderBy('nama_pembayaran', 'asc')
             ->pluck('nama_pembayaran');
 
         return response()->json([
@@ -130,22 +127,19 @@ class LaporanApiController extends Controller
             ], 404);
         }
 
-        $tunggakan = Tagihan::with('tarif', 'mahasiswa')
-            ->where('mahasiswa_id', $mahasiswaId)
-            ->whereIn('status', ['Belum Lunas', 'Ditolak'])
-            ->get()
-            ->map(function (Tagihan $t) {
-                return [
-                    'id' => $t->tagihan_id,
-                    'kode_pembayaran' => $t->kode_pembayaran,
-                    'nama_pembayaran' => $t->tarif?->nama_pembayaran,
-                    'jenis_tampilan' => $t->jenis_tampilan,
-                    'jumlah_tagihan' => $t->jumlah_tagihan,
-                    'sisa_pokok' => $t->sisa_pokok,
-                    'tanggal_jatuh_tempo' => $t->tanggal_jatuh_tempo,
-                    'status' => $t->status, // Tambahkan status untuk ditampilkan
-                ];
-            });
+        $tunggakan = $this->tunggakanTagihan($mahasiswaId)->map(function (Tagihan $t) {
+            return [
+                'id' => $t->tagihan_id,
+                'kode_pembayaran' => $t->kode_pembayaran,
+                'nama_pembayaran' => $t->tarif?->nama_pembayaran,
+                'jenis_tampilan' => $t->jenis_tampilan,
+                'jumlah_tagihan' => $t->jumlah_tagihan,
+                'sisa_pokok' => $t->sisa_pokok,
+                'tanggal_jatuh_tempo' => $t->tanggal_jatuh_tempo,
+                'status' => $t->displayStatusLabel(),
+                'status_kode' => $t->status,
+            ];
+        });
 
         $settings = Setting::getCachedMap();
         $tahunAkademik = $settings['academic_year'] ?? ($settings['tahun_akademik'] ?? ($settings['tahun_ajaran'] ?? null));
@@ -232,10 +226,7 @@ class LaporanApiController extends Controller
             abort(404, 'Detail mahasiswa tidak ditemukan.');
         }
 
-        $tunggakan = Tagihan::with('tarif', 'mahasiswa')
-            ->where('mahasiswa_id', $mahasiswaId)
-            ->whereIn('status', ['Belum Lunas', 'Ditolak'])
-            ->get();
+        $tunggakan = $this->tunggakanTagihan($mahasiswaId);
 
         $settings = Setting::getCachedMap();
         $tahunAkademik = $settings['academic_year'] ?? ($settings['tahun_akademik'] ?? ($settings['tahun_ajaran'] ?? null));
@@ -247,6 +238,22 @@ class LaporanApiController extends Controller
         ]);
 
         return $pdf->download('laporan-data-tunggakan.pdf');
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, Tagihan>
+     */
+    private function tunggakanTagihan(int $mahasiswaId): \Illuminate\Support\Collection
+    {
+        return collect(
+            Tagihan::with('tarif', 'mahasiswa', 'konfirmasi', 'pembayaranAll')
+                ->where('mahasiswa_id', $mahasiswaId)
+                ->masihTunggakan()
+                ->get()
+                ->filter(static fn (Tagihan $t): bool => $t->masihTunggakan())
+                ->values()
+                ->all()
+        );
     }
 }
 

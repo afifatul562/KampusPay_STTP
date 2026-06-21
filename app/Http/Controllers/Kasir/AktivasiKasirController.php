@@ -5,18 +5,13 @@ namespace App\Http\Controllers\Kasir;
 use App\Http\Controllers\Controller;
 use App\Models\AktivasiStatus;
 use App\Models\MahasiswaDetail;
-use App\Models\Tagihan;
-use App\Models\TarifMaster;
 use App\Models\Setting;
-use App\Notifications\AktivasiStatusChanged;
-use App\Services\PaymentCodeGenerator;
-use App\Models\User;
+use App\Services\BssTagihanService;
+use App\Services\TagihanGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
 
 class AktivasiKasirController extends Controller
 {
@@ -57,18 +52,18 @@ class AktivasiKasirController extends Controller
 
         DB::beginTransaction();
         try {
-            $aktivasi->update([
+            $aktivasi->fill([
                 'status' => $request->status,
                 'note' => $request->note,
                 'chosen_by_user_id' => $user->id,
                 'chosen_by_role' => $user->role,
             ]);
-
-            $staff = User::query()->whereIn('role', ['admin', 'kasir'])->get();
-            Notification::send($staff, new AktivasiStatusChanged($aktivasi));
+            $aktivasi->save();
 
             if ($request->status === 'bss') {
-                $this->ensureBssTagihan($aktivasi);
+                app(BssTagihanService::class)->ensureForAktivasi($aktivasi);
+            } elseif ($request->status === 'aktif') {
+                app(TagihanGenerator::class)->generateForAktif($aktivasi);
             }
 
             DB::commit();
@@ -105,11 +100,10 @@ class AktivasiKasirController extends Controller
                 ]
             );
 
-            $staff = User::query()->whereIn('role', ['admin', 'kasir'])->get();
-            Notification::send($staff, new AktivasiStatusChanged($aktivasi));
-
             if ($request->status === 'bss') {
-                $this->ensureBssTagihan($aktivasi);
+                app(BssTagihanService::class)->ensureForAktivasi($aktivasi);
+            } elseif ($request->status === 'aktif') {
+                app(TagihanGenerator::class)->generateForAktif($aktivasi);
             }
 
             DB::commit();
@@ -119,44 +113,6 @@ class AktivasiKasirController extends Controller
             Log::error('Simpan aktivasi kasir gagal: ' . $e->getMessage());
             return response()->json(['message' => 'Gagal menyimpan status.'], 500);
         }
-    }
-
-    protected function ensureBssTagihan(AktivasiStatus $aktivasi): void
-    {
-        $semester = $aktivasi->semester_label;
-        $amount = config('academic.bss_amount');
-        $dueIn = (int) config('academic.bss_due_in_days', 14);
-        $tarifName = config('academic.bss_tarif_name', 'Administrasi BSS');
-
-        $tarif = TarifMaster::firstOrCreate(
-            ['nama_pembayaran' => $tarifName],
-            ['nominal' => $amount]
-        );
-
-        $existing = Tagihan::where('mahasiswa_id', $aktivasi->mahasiswa_id)
-            ->where('tarif_id', $tarif->tarif_id)
-            ->where('is_bss', true)
-            ->first();
-
-        if ($existing) {
-            return;
-        }
-
-        $kode = PaymentCodeGenerator::generate($tarif->tarif_id);
-        $jatuhTempo = Carbon::now()->addDays($dueIn)->toDateString();
-
-        Tagihan::create([
-            'mahasiswa_id' => $aktivasi->mahasiswa_id,
-            'tarif_id' => $tarif->tarif_id,
-            'kode_pembayaran' => $kode,
-            'jumlah_tagihan' => $amount,
-            'total_angsuran' => 0,
-            'sisa_pokok' => null,
-            'tanggal_jatuh_tempo' => $jatuhTempo,
-            'semester_label' => $semester,
-            'is_bss' => true,
-            'status' => 'Belum Lunas',
-        ]);
     }
 
 }

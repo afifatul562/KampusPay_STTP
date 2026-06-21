@@ -27,6 +27,7 @@
             <div class="text-fluid-sm font-medium text-gray-500 mb-1">Total uang masuk</div>
             <div id="total-pembayaran-value" class="font-bold text-gray-900 mt-1 text-left whitespace-nowrap tabular-nums leading-tight max-w-full text-fluid-lg lg:text-fluid-xl">...</div>
             <div id="total-pembayaran-skeleton" class="w-36 h-8 bg-gray-200 rounded-md animate-pulse mt-1"></div>
+            <p id="total-pembayaran-tahun" class="text-fluid-xs text-gray-400 mt-1">Tahun kalender {{ now()->year }}</p>
             {{-- <p class="text-fluid-xs text-gray-400 mt-1.5 leading-snug">Jumlah terbayar (cicilan), pembayaran tidak dibatalkan</p> --}}
         </div>
         <div class="relative z-10 bg-gradient-to-br from-success-400 to-success-600 p-3 sm:p-4 rounded-xl shadow-lg group-hover:shadow-xl sm:group-hover:scale-110 transition-all duration-300 shrink-0">
@@ -40,6 +41,7 @@
             <div class="text-fluid-sm font-medium text-gray-500 mb-1">Tingkat pembayaran</div>
             <div id="tingkat-pembayaran-value" class="text-fluid-2xl lg:text-fluid-3xl font-bold text-gray-900 mt-1">...</div>
             <div id="tingkat-pembayaran-skeleton" class="w-36 h-8 bg-gray-200 rounded-md animate-pulse mt-1"></div>
+            <p id="tingkat-pembayaran-tahun" class="text-fluid-xs text-gray-400 mt-1">Tahun kalender {{ now()->year }}</p>
             {{-- <p class="text-fluid-xs text-gray-400 mt-1.5 leading-snug">Terbayar dibanding total nominal tagihan</p> --}}
         </div>
         <div class="relative z-10 bg-gradient-to-br from-warning-400 to-warning-600 p-3 sm:p-4 rounded-xl shadow-lg sm:group-hover:scale-110 transition-all duration-300 shrink-0">

@@ -73,9 +73,10 @@
             <div class="w-full sm:w-auto">
                 <label for="tahun_akademik" class="block text-sm font-medium text-gray-700">Tahun Akademik</label>
                 <select name="tahun_akademik" id="tahun_akademik" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                    @php($defaultTahunAkademik = \App\Support\AcademicPeriod::currentAcademicYear())
                     @for ($y = date('Y'); $y >= date('Y') - 4; $y--)
                         @php($ay = $y . '/' . ($y + 1))
-                        <option value="{{ $ay }}" {{ $selectedTahunAkademik == $ay ? 'selected' : '' }}>{{ $ay }}</option>
+                        <option value="{{ $ay }}" {{ ($selectedTahunAkademik ?: $defaultTahunAkademik) == $ay ? 'selected' : '' }}>{{ $ay }}</option>
                     @endfor
                 </select>
             </div>
@@ -276,6 +277,14 @@ document.addEventListener('DOMContentLoaded', function() {
         return data;
     }
 
+    function currentAcademicYearValue() {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = now.getMonth() + 1;
+        const start = m >= 10 ? y : y - 1;
+        return `${start}/${start + 1}`;
+    }
+
     (function populateAcademicYears(){
         if (!tahunAkademikSelect) return;
         const nowYear = new Date().getFullYear();
@@ -288,7 +297,7 @@ document.addEventListener('DOMContentLoaded', function() {
             opt.textContent = ay;
             tahunAkademikSelect.appendChild(opt);
         }
-        tahunAkademikSelect.value = `${nowYear}/${nowYear + 1}`;
+        tahunAkademikSelect.value = currentAcademicYearValue();
     })();
 
     async function populateAngkatanProdi() {

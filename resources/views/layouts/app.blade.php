@@ -217,6 +217,8 @@
                 @include('layouts.partials.kasir-nav')
             @elseif(Auth::user()->isMahasiswa())
                 @include('layouts.partials.mahasiswa-nav')
+            @elseif(Auth::user()->isYayasan())
+                @include('layouts.partials.yayasan-nav')
             @endif
             </div>
         </aside>
@@ -231,7 +233,23 @@
 
                 @auth {{-- Hanya tampilkan jika user login --}}
                 <div class="flex items-center shrink-0 gap-2 sm:gap-3 xl:gap-4"> {{-- ml-auto untuk dorong ke kanan --}}
-                    @if(Auth::user()->isKasir())
+                    @if(Auth::user()->isMahasiswa())
+                    <div class="relative">
+                        <button id="mhsNotifBell" type="button" class="relative inline-flex items-center justify-center min-h-touch min-w-touch sm:w-11 sm:h-11 rounded-full bg-gray-50 border border-gray-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500" aria-label="Notifikasi pembayaran">
+                            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                            <span id="mhsNotifBadge" class="absolute -top-0.5 -right-0.5 min-w-[1.125rem] px-1 rounded-full bg-primary-500 text-white text-fluid-xs font-semibold leading-4 text-center hidden">0</span>
+                        </button>
+                        <div id="mhsNotifDropdown" class="hidden absolute right-0 mt-2 w-[min(calc(100vw-1.5rem),20rem)] sm:w-80 max-w-[calc(100vw-1rem)] bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                            <div class="p-3 border-b border-gray-100 flex items-center justify-between">
+                                <span class="font-semibold text-gray-800 text-sm">Notifikasi</span>
+                                <button id="mhsNotifClose" type="button" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+                            </div>
+                            <div id="mhsNotifList" class="max-h-80 overflow-y-auto divide-y divide-gray-100">
+                                <div class="p-4 text-sm text-gray-500">Memuat...</div>
+                            </div>
+                        </div>
+                    </div>
+                    @elseif(Auth::user()->isKasir())
                     <div class="relative">
                         <button id="globalNotifBell" type="button" class="relative inline-flex items-center justify-center min-h-touch min-w-touch sm:w-11 sm:h-11 rounded-full bg-gray-50 border border-gray-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500" aria-label="Notifikasi aktivasi">
                             <svg class="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
@@ -271,13 +289,20 @@
             const dropdown = document.getElementById('globalNotifDropdown');
             const listEl = document.getElementById('globalNotifList');
             const closeBtn = document.getElementById('globalNotifClose');
-            const apiUrl = "{{ route('kasir.aktivasi.notifications') }}";
+            const apiUrl = @json(url('/api/kasir/notifications'));
+            const readUrlBase = @json(url('/api/kasir/notifications'));
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
             let timer = null;
 
             if (!apiToken || !bellBtn || !dropdown || !listEl) return;
 
+            function escapeHtml(str) {
+                return String(str || '').replace(/[&<>"']/g, (c) => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                })[c]);
+            }
+
             async function apiRequest(url) {
-                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
                 const resp = await fetch(url, {
                     headers: {
                         'Accept': 'application/json',
@@ -289,41 +314,53 @@
                 return resp.json();
             }
 
-            function render(items) {
+            function render(items, unread) {
                 if (!items || !items.length) {
-                    listEl.innerHTML = '<div class="p-4 text-sm text-gray-500">Belum ada notifikasi.</div>';
+                    listEl.innerHTML = '<div class="p-4 text-sm text-gray-500">Belum ada notifikasi transfer.</div>';
                     badge.classList.add('hidden');
                     badge.textContent = '0';
                     return;
                 }
-                badge.classList.remove('hidden');
-                badge.textContent = items.length;
+                const unreadCount = unread ?? items.filter(n => !n.read_at).length;
+                if (unreadCount > 0) {
+                    badge.classList.remove('hidden');
+                    badge.textContent = unreadCount > 9 ? '9+' : String(unreadCount);
+                } else {
+                    badge.classList.add('hidden');
+                    badge.textContent = '0';
+                }
                 listEl.innerHTML = items.map(item => {
-                    const statusLabel = item.status === 'aktif' ? 'Aktif' : 'BSS';
-                    const badgeClass = item.status === 'aktif' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700';
-                    const nama = item.mahasiswa?.user?.nama_lengkap || 'Mahasiswa';
-                    const npm = item.mahasiswa?.npm || '';
-                    const updated = item.updated_at ? new Date(item.updated_at).toLocaleString('id-ID') : '';
+                    const isUnread = !item.read_at;
+                    const when = item.created_at ? new Date(item.created_at).toLocaleString('id-ID') : '';
+                    const link = item.link || @json(route('kasir.verifikasi.index'));
                     return `
-                        <div class="p-4 hover:bg-gray-50">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <div class="text-sm font-semibold text-gray-800">${nama}</div>
-                                    <div class="text-xs text-gray-500">${npm}</div>
-                                </div>
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}">${statusLabel}</span>
-                            </div>
-                            <div class="mt-2 text-xs text-gray-500">Semester: ${item.semester_label || '-'}</div>
-                            <div class="text-[11px] text-gray-400">${updated}</div>
-                        </div>
+                        <a href="${escapeHtml(link)}" data-id="${escapeHtml(item.id)}" class="kasir-notification-item block p-4 hover:bg-gray-50 ${isUnread ? 'bg-blue-50' : ''}">
+                            <p class="text-sm text-gray-800 ${isUnread ? 'font-semibold' : ''}">${escapeHtml(item.message)}</p>
+                            <p class="text-[11px] text-gray-400 mt-1">${escapeHtml(when)}</p>
+                        </a>
                     `;
                 }).join('');
+
+                listEl.querySelectorAll('.kasir-notification-item').forEach((el) => {
+                    el.addEventListener('click', function() {
+                        const id = this.dataset.id;
+                        if (!id || !this.classList.contains('bg-blue-50')) return;
+                        fetch(`${readUrlBase}/${id}/read`, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Authorization': `Bearer ${apiToken}`,
+                                'X-CSRF-TOKEN': csrfToken,
+                            },
+                        }).catch(() => {});
+                    });
+                });
             }
 
             async function loadNotifs() {
                 try {
                     const data = await apiRequest(apiUrl);
-                    render(data.data || []);
+                    render(data.data || [], data.unread_count);
                 } catch (e) {
                     console.warn(e.message);
                     listEl.innerHTML = `<div class="p-4 text-sm text-red-500">${e.message || 'Gagal memuat notifikasi.'}</div>`;
@@ -347,6 +384,95 @@
 
             loadNotifs();
             timer = setInterval(loadNotifs, 20000);
+        });
+    </script>
+    @endif
+    @if(Auth::check() && Auth::user()->isMahasiswa())
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const bellBtn = document.getElementById('mhsNotifBell');
+            const badge = document.getElementById('mhsNotifBadge');
+            const dropdown = document.getElementById('mhsNotifDropdown');
+            const listEl = document.getElementById('mhsNotifList');
+            const closeBtn = document.getElementById('mhsNotifClose');
+            const apiUrl = @json(route('mahasiswa.notifications.index'));
+            const readUrlBase = @json(url('/mahasiswa/notifications'));
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+            if (!bellBtn || !dropdown || !listEl) return;
+
+            function escapeHtml(str) {
+                return String(str || '').replace(/[&<>"']/g, (c) => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                })[c]);
+            }
+
+            function render(notifications, unread) {
+                if (!notifications || !notifications.length) {
+                    listEl.innerHTML = '<div class="p-4 text-sm text-gray-500">Belum ada notifikasi.</div>';
+                    badge.classList.add('hidden');
+                    badge.textContent = '0';
+                    return;
+                }
+                const unreadCount = unread ?? notifications.filter(n => !n.read_at).length;
+                if (unreadCount > 0) {
+                    badge.classList.remove('hidden');
+                    badge.textContent = unreadCount > 9 ? '9+' : String(unreadCount);
+                } else {
+                    badge.classList.add('hidden');
+                    badge.textContent = '0';
+                }
+                listEl.innerHTML = notifications.map(item => {
+                    const isUnread = !item.read_at;
+                    const when = item.created_at ? new Date(item.created_at).toLocaleString('id-ID') : '';
+                    const link = item.link || @json(route('mahasiswa.pembayaran.index'));
+                    return `
+                        <a href="${escapeHtml(link)}" data-id="${escapeHtml(item.id)}" class="notification-item block p-4 hover:bg-gray-50 ${isUnread ? 'bg-blue-50' : ''}">
+                            <p class="text-sm text-gray-800 ${isUnread ? 'font-semibold' : ''}">${escapeHtml(item.message)}</p>
+                            <p class="text-[11px] text-gray-400 mt-1">${escapeHtml(when)}</p>
+                        </a>
+                    `;
+                }).join('');
+
+                listEl.querySelectorAll('.notification-item').forEach((el) => {
+                    el.addEventListener('click', function() {
+                        const id = this.dataset.id;
+                        if (!id || !this.classList.contains('bg-blue-50')) return;
+                        fetch(`${readUrlBase}/${id}/read`, {
+                            method: 'POST',
+                            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                        }).catch(() => {});
+                    });
+                });
+            }
+
+            async function loadNotifs() {
+                try {
+                    const resp = await fetch(apiUrl, {
+                        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                    });
+                    if (!resp.ok) throw new Error('Gagal memuat notifikasi');
+                    const json = await resp.json();
+                    render(json.data || [], json.unread_count);
+                } catch (e) {
+                    listEl.innerHTML = '<div class="p-4 text-sm text-red-500">Gagal memuat notifikasi.</div>';
+                    badge.classList.add('hidden');
+                }
+            }
+
+            bellBtn.addEventListener('click', () => {
+                dropdown.classList.toggle('hidden');
+                if (!dropdown.classList.contains('hidden')) loadNotifs();
+            });
+            closeBtn?.addEventListener('click', () => dropdown.classList.add('hidden'));
+            document.addEventListener('click', (e) => {
+                if (!dropdown.contains(e.target) && e.target !== bellBtn) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+
+            loadNotifs();
+            setInterval(loadNotifs, 30000);
         });
     </script>
     @endif

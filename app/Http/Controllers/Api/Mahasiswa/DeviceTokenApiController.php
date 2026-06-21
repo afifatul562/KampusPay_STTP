@@ -26,6 +26,9 @@ class DeviceTokenApiController extends Controller
             ],
         );
 
-        return response()->json(['message' => 'Token perangkat disimpan.']);
+        return response()->json([
+            'success' => true,
+            'message' => 'Token perangkat disimpan.',
+        ]);
     }
 }

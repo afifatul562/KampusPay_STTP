@@ -7,8 +7,10 @@ use App\Models\User;
 use App\Models\Tagihan;
 use App\Models\Pembayaran;
 use App\Models\KonfirmasiPembayaran;
-use App\Models\Setting; // <-- Pastikan ini di-import
+use App\Models\Setting;
 use App\Models\AktivasiStatus;
+use App\Support\TagihanPayability;
+use App\Services\KasirTransferNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -23,23 +25,9 @@ class PembayaranController extends Controller
             abort(403);
         }
 
-        $semester = Setting::currentSemesterLabel();
-        $aktivasi = AktivasiStatus::query()
-            ->where('mahasiswa_id', $detail->mahasiswa_id)
-            ->where('semester_label', $semester)
-            ->latest()
-            ->first();
-
-        if ($aktivasi && $aktivasi->status === 'bss' && !$tagihan->is_bss) {
-            abort(403, 'Status BSS: hanya tagihan BSS yang ditampilkan.');
-        }
-        if ((!$aktivasi || $aktivasi->status === 'aktif') && $tagihan->is_bss) {
-            abort(403, 'Tagihan BSS tidak ditampilkan saat status aktif.');
-        }
-
-        $today = now()->toDateString();
-        if ($tagihan->available_from && (string) $tagihan->available_from->toDateString() > $today) {
-            abort(403, 'Tagihan ini belum tersedia.');
+        $message = TagihanPayability::violationMessage($tagihan, (int) $detail->mahasiswa_id);
+        if ($message) {
+            abort(403, $message);
         }
     }
 
@@ -67,13 +55,7 @@ class PembayaranController extends Controller
             $q->whereNull('available_from')->orWhere('available_from', '<=', $today);
         });
 
-        if ($aktivasi && $aktivasi->status === 'bss') {
-            $tagihanQuery->where('is_bss', true);
-        } else {
-            $tagihanQuery->where(function ($q) {
-                $q->whereNull('is_bss')->orWhere('is_bss', false);
-            });
-        }
+        TagihanPayability::applyAktivasiScope($tagihanQuery, $aktivasi);
 
         if ($request->filled('status')) {
             $statusFilter = $request->status;
@@ -152,8 +134,16 @@ class PembayaranController extends Controller
             return redirect()->route('mahasiswa.pembayaran.show', $tagihan->tagihan_id);
 
         } elseif ($metode == 'tunai') {
-            // Jika pilih 'tunai', UPDATE STATUS TAGIHAN
-            $tagihan->update(['status' => 'Menunggu Pembayaran Tunai']);
+            // Status menunggu tunai; sisa pokok tetap dihitung tunggakan sampai lunas di kasir.
+            $sisa = max(0.0, (float) ($tagihan->sisa_pokok ?? $tagihan->jumlah_tagihan) - (float) ($tagihan->total_angsuran ?? 0));
+            if ($sisa <= 0) {
+                $sisa = (float) $tagihan->jumlah_tagihan;
+            }
+            $tagihan->fill([
+                'status' => 'Menunggu Pembayaran Tunai',
+                'sisa_pokok' => $sisa,
+            ]);
+            $tagihan->save();
 
             // Kembalikan ke daftar tagihan dengan pesan sukses
             return redirect()
@@ -200,10 +190,9 @@ class PembayaranController extends Controller
         $isCicilan = $request->has('is_cicilan') && $request->input('is_cicilan') == '1';
         $sisaPokok = $tagihan->sisa_pokok ?? $tagihan->jumlah_tagihan;
 
-        $minBayar = min(50000, $sisaPokok); // Minimal cicilan 50.000, kecuali sisa < 50.000
         $request->validate([
             'bukti_pembayaran' => 'required|file|max:2048',
-            'jumlah_bayar' => $isCicilan ? 'required|numeric|min:'.$minBayar.'|max:' . $sisaPokok : 'nullable',
+            'jumlah_bayar' => $isCicilan ? 'required|numeric|min:1|max:' . $sisaPokok : 'nullable',
         ]);
 
         // Validasi tambahan (server-side mime sniffing)
@@ -213,43 +202,32 @@ class PembayaranController extends Controller
         if (!$mime || !in_array(strtolower($mime), $allowed, true)) {
             return back()->withErrors(['bukti_pembayaran' => 'Format file tidak didukung. Hanya JPG/PNG.'])->withInput();
         }
-        // Pastikan file benar2 gambar dengan membaca header
         if (!@getimagesize($file->getPathname())) {
             return back()->withErrors(['bukti_pembayaran' => 'File bukan gambar yang valid.'])->withInput();
         }
 
         // Validasi jumlah bayar untuk cicilan
         if ($isCicilan) {
-            $jumlahBayar = $request->input('jumlah_bayar');
-            if ($jumlahBayar <= 0) {
-                return back()->withErrors(['jumlah_bayar' => 'Jumlah pembayaran harus lebih dari 0.'])->withInput();
-            }
-            if ($jumlahBayar > $sisaPokok) {
-                return back()->withErrors(['jumlah_bayar' => 'Jumlah pembayaran tidak boleh melebihi sisa pokok.'])->withInput();
-            }
-            if ($jumlahBayar < $minBayar && $sisaPokok >= 50000) {
-                return back()->withErrors(['jumlah_bayar' => 'Minimal pembayaran cicilan adalah Rp 50.000.'])->withInput();
+            $jumlahBayar = (float) $request->input('jumlah_bayar');
+            if (!$tagihan->cicilanAmountValid($jumlahBayar)) {
+                return back()->withErrors(['jumlah_bayar' => 'Jumlah pembayaran tidak valid.'])->withInput();
             }
         }
 
-        // 1. Tentukan nama folder
-        $folder = 'bukti_pembayaran';
-        // 2. Simpan file ke public/storage/bukti_pembayaran
-        $path = $file->store($folder, 'public');
+        $path = $file->store('bukti_pembayaran', 'public');
 
-        // 3. Simpan path LENGKAP (termasuk folder) ke database
-        //    CATATAN: Kamu mungkin mau ganti 'KonfirmasiPembayaran' jadi 'Pembayaran'
-        //    sesuai modelmu. Aku pakai 'KonfirmasiPembayaran' sesuai kodemu.
         $konfirmasi = KonfirmasiPembayaran::create([
             'tagihan_id' => $tagihan->tagihan_id,
             'file_bukti_pembayaran' => $path,
-            'status_verifikasi' => 'Menunggu Verifikasi', // atau 'PENDING'
+            'status_verifikasi' => 'Menunggu Verifikasi',
             'is_cicilan' => $isCicilan,
             'jumlah_bayar' => $isCicilan ? $request->input('jumlah_bayar') : null,
         ]);
 
-        // 5. Update status di tabel 'tagihan' utamanya
-        $tagihan->update(['status' => 'Menunggu Verifikasi Transfer']);
+        $tagihan->fill(['status' => 'Menunggu Verifikasi Transfer']);
+        $tagihan->save();
+
+        app(KasirTransferNotificationService::class)->notifyForKonfirmasi($konfirmasi);
 
         return redirect()->route('mahasiswa.pembayaran.index')
                          ->with('success', 'Bukti pembayaran berhasil di-upload dan sedang menunggu verifikasi.');
@@ -271,10 +249,9 @@ class PembayaranController extends Controller
 
         $sisaPokok = $tagihan->sisa_pokok ?? $tagihan->jumlah_tagihan;
 
-        $minBayar = min(50000, $sisaPokok); // Minimal cicilan 50.000, kecuali sisa < 50.000
         $request->validate([
             'bukti_pembayaran' => 'required|file|max:2048',
-            'jumlah_bayar' => 'required|numeric|min:'.$minBayar.'|max:' . $sisaPokok,
+            'jumlah_bayar' => 'required|numeric|min:1|max:' . $sisaPokok,
         ]);
 
         // Validasi tambahan (server-side mime sniffing)
@@ -288,12 +265,9 @@ class PembayaranController extends Controller
             return back()->withErrors(['bukti_pembayaran' => 'File bukan gambar yang valid.'])->withInput();
         }
 
-        $jumlahBayar = $request->input('jumlah_bayar');
-        if ($jumlahBayar <= 0 || $jumlahBayar > $sisaPokok) {
+        $jumlahBayar = (float) $request->input('jumlah_bayar');
+        if (!$tagihan->cicilanAmountValid($jumlahBayar)) {
             return back()->withErrors(['jumlah_bayar' => 'Jumlah pembayaran tidak valid.'])->withInput();
-        }
-        if ($jumlahBayar < $minBayar && $sisaPokok >= 50000) {
-            return back()->withErrors(['jumlah_bayar' => 'Minimal pembayaran cicilan adalah Rp 50.000.'])->withInput();
         }
 
         // Simpan file
@@ -302,7 +276,7 @@ class PembayaranController extends Controller
 
         // Simpan konfirmasi dengan catatan jumlah_bayar (bisa simpan di session atau kolom tambahan)
         // Untuk sekarang kita simpan jumlah_bayar di request, nanti saat verifikasi akan digunakan
-        KonfirmasiPembayaran::create([
+        $konfirmasi = KonfirmasiPembayaran::create([
             'tagihan_id' => $tagihan->tagihan_id,
             'file_bukti_pembayaran' => $path,
             'status_verifikasi' => 'Menunggu Verifikasi',
@@ -310,7 +284,10 @@ class PembayaranController extends Controller
             'jumlah_bayar' => $jumlahBayar,
         ]);
 
-        $tagihan->update(['status' => 'Menunggu Verifikasi Transfer']);
+        $tagihan->fill(['status' => 'Menunggu Verifikasi Transfer']);
+        $tagihan->save();
+
+        app(KasirTransferNotificationService::class)->notifyForKonfirmasi($konfirmasi);
 
         return redirect()->route('mahasiswa.pembayaran.index')
                          ->with('success', 'Bukti pembayaran cicilan berhasil di-upload dan sedang menunggu verifikasi.');

@@ -16,35 +16,23 @@ class TagihanBaruNotification extends Mailable
 {
     use Queueable, SerializesModels;
 
-    // 4. Buat properti publik untuk menyimpan data tagihan
-    public $tagihan;
+    public Tagihan $tagihan;
 
-    /**
-     * Create a new message instance.
-     */
-    public function __construct(Tagihan $tagihan) // <-- 5. Terima data tagihan saat Mailable dibuat
+    public function __construct(Tagihan $tagihan)
     {
-        $this->tagihan = $tagihan->load('tarif', 'mahasiswa.user'); // 6. Load relasi agar bisa dipakai di email
+        $this->tagihan = $tagihan->load('tarif', 'mahasiswa.user');
     }
 
-    /**
-     * Get the message envelope.
-     */
     public function envelope(): Envelope
     {
         return new Envelope(
-            // 7. Tentukan subjek email
             subject: 'Tagihan Baru KampusPay: ' . $this->tagihan->jenis_tampilan,
         );
     }
 
-    /**
-     * Get the message content definition.
-     */
     public function content(): Content
     {
         return new Content(
-            // 8. Tentukan file view mana yang akan digunakan
             view: 'emails.tagihan-baru',
         );
     }

@@ -5,28 +5,22 @@ namespace App\Http\Controllers\Mahasiswa;
 use App\Http\Controllers\Controller;
 use App\Models\AktivasiStatus;
 use App\Models\MahasiswaDetail;
-use App\Notifications\AktivasiStatusChanged;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Log;
-use App\Models\TarifMaster;
-use App\Models\Tagihan;
 use App\Models\Setting;
-use App\Models\User;
-use App\Services\PaymentCodeGenerator;
-use Carbon\Carbon;
+use App\Services\BssTagihanService;
+use App\Services\TagihanGenerator;
 
 class AktivasiController extends Controller
 {
     public function show(Request $request)
     {
-        // Pastikan token API ada di session untuk JavaScript
         if (!session('api_token')) {
             $user = Auth::user();
-            $user->tokens()->where('name', 'api-token')->delete(); // Hapus token lama dengan nama yang sama
+            $user->tokens()->where('name', 'api-token')->delete();
             $token = $user->createToken('api-token')->plainTextToken;
             $request->session()->put('api_token', $token);
         }
@@ -39,7 +33,8 @@ class AktivasiController extends Controller
         $semester = Setting::currentSemesterLabel();
         $mhsId = $request->user()->mahasiswaDetail?->mahasiswa_id;
 
-        $status = AktivasiStatus::where('mahasiswa_id', $mhsId)
+        $status = AktivasiStatus::query()
+            ->where('mahasiswa_id', $mhsId)
             ->where('semester_label', $semester)
             ->latest()
             ->first();
@@ -67,7 +62,8 @@ class AktivasiController extends Controller
         $semester = Setting::currentSemesterLabel();
 
         // Cek apakah sudah ada status (tidak peduli siapa yang pilih)
-        $existingStatus = AktivasiStatus::where('mahasiswa_id', $mhsId)
+        $existingStatus = AktivasiStatus::query()
+            ->where('mahasiswa_id', $mhsId)
             ->where('semester_label', $semester)
             ->latest()
             ->first();
@@ -96,11 +92,10 @@ class AktivasiController extends Controller
                 ]
             );
 
-            $staff = User::query()->whereIn('role', ['admin', 'kasir'])->get();
-            Notification::send($staff, new AktivasiStatusChanged($aktivasi));
-
             if ($request->status === 'bss') {
-                $this->ensureBssTagihan($aktivasi);
+                app(BssTagihanService::class)->ensureForAktivasi($aktivasi);
+            } elseif ($request->status === 'aktif') {
+                app(TagihanGenerator::class)->generateForAktif($aktivasi);
             }
 
             DB::commit();
@@ -114,41 +109,6 @@ class AktivasiController extends Controller
             Log::error('Gagal simpan aktivasi: ' . $e->getMessage());
             return response()->json(['message' => 'Gagal menyimpan status.'], 500);
         }
-    }
-
-    protected function ensureBssTagihan(AktivasiStatus $aktivasi): void
-    {
-        $amount = config('academic.bss_amount');
-        $dueIn = (int) config('academic.bss_due_in_days', 14);
-        $tarifName = config('academic.bss_tarif_name', 'Administrasi BSS');
-
-        $tarif = TarifMaster::firstOrCreate(
-            ['nama_pembayaran' => $tarifName],
-            ['nominal' => $amount]
-        );
-
-        $existing = Tagihan::where('mahasiswa_id', $aktivasi->mahasiswa_id)
-            ->where('tarif_id', $tarif->tarif_id)
-            ->where('is_bss', true)
-            ->first();
-
-        if ($existing) return;
-
-        $kode = PaymentCodeGenerator::generate($tarif->tarif_id);
-        $jatuhTempo = Carbon::now()->addDays($dueIn)->toDateString();
-
-        Tagihan::create([
-            'mahasiswa_id' => $aktivasi->mahasiswa_id,
-            'tarif_id' => $tarif->tarif_id,
-            'kode_pembayaran' => $kode,
-            'jumlah_tagihan' => $amount,
-            'total_angsuran' => 0,
-            'sisa_pokok' => null,
-            'tanggal_jatuh_tempo' => $jatuhTempo,
-            'semester_label' => $aktivasi->semester_label,
-            'is_bss' => true,
-            'status' => 'Belum Lunas',
-        ]);
     }
 
 }

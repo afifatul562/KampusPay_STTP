@@ -101,13 +101,12 @@
                                     <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                                 </svg>
                             </template>
-                            <div class="flex text-sm text-gray-600">
-                                <label for="bukti_pembayaran" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500">
+                            <div class="flex flex-col items-center gap-1 text-sm text-gray-600">
+                                <label for="bukti_pembayaran" class="inline-flex cursor-pointer rounded-md font-medium text-blue-600 hover:text-blue-500">
                                     <span>Upload file</span>
                                     <input @change="fileChosen" type="file" name="bukti_pembayaran" id="bukti_pembayaran" class="sr-only" required accept="image/jpeg, image/jpg, image/png" aria-describedby="upload-help">
                                 </label>
-                                <p class="pl-1" x-show="!fileName"></p>
-                                <p class="pl-1" x-show="fileName" x-text="fileName"></p>
+                                <p class="text-xs text-gray-500 truncate max-w-full px-2" x-show="fileName" x-text="fileName"></p>
                             </div>
                             <p id="upload-help" class="text-xs text-gray-500" x-show="!fileName">PNG, JPG hingga 2MB</p>
                         </div>

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\AcademicPeriod;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
@@ -34,10 +35,7 @@ class Setting extends Model
      */
     public static function currentSemesterLabel(): string
     {
-        $settings = static::getCachedMap();
-        $year = (string) ($settings['academic_year'] ?? '');
-        $sem = (string) ($settings['semester'] ?? '');
-        $label = trim(trim($year) . ' ' . trim($sem));
+        $label = AcademicPeriod::currentSemesterLabel();
 
         return $label !== '' ? $label : (string) config('academic.current_semester');
     }

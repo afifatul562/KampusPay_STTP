@@ -48,19 +48,18 @@ class AppServiceProvider extends ServiceProvider
         } catch (\Throwable $e) {
         }
 
-        // Generate API token untuk semua view yang butuh (admin/kasir/mahasiswa)
         View::composer('layouts.app', function ($view) {
-            if (Auth::check()) {
-                /** @var \App\Models\User $user */
-                $user = Auth::user();
-                if ($user && ($user->isAdmin() || $user->isKasir() || $user->isMahasiswa()) && !session('api_token')) {
-                    // Hapus token lama dengan nama yang sama
-                    $user->tokens()->where('name', 'api-token')->delete();
-                    // Generate token baru
-                    $token = $user->createToken('api-token')->plainTextToken;
-                    session(['api_token' => $token]);
-                }
+            if (! Auth::check() || session('api_token')) {
+                return;
             }
+
+            $user = Auth::user();
+            if (! $user || (! $user->isAdmin() && ! $user->isKasir() && ! $user->isMahasiswa())) {
+                return;
+            }
+
+            $user->tokens()->where('name', 'api-token')->delete();
+            session(['api_token' => $user->createToken('api-token')->plainTextToken]);
         });
     }
 }

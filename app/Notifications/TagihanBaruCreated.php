@@ -7,7 +7,7 @@ use Illuminate\Notifications\Notification;
 
 class TagihanBaruCreated extends Notification
 {
-    public $tagihan;
+    public Tagihan $tagihan;
 
     public function __construct(Tagihan $tagihan)
     {
@@ -33,7 +33,7 @@ class TagihanBaruCreated extends Notification
             'jumlah' => $this->tagihan->jumlah_tagihan,
             'message' => "Tagihan baru '{$this->tagihan->jenis_tampilan}' sejumlah Rp ".number_format($this->tagihan->jumlah_tagihan, 0, ',', '.').' telah dibuat.',
             'link' => rtrim(config('app.public_url'), '/')
-                .route('mahasiswa.pembayaran.show', $this->tagihan->tagihan_id, false),
+                .route('mahasiswa.pembayaran.pilih-metode', $this->tagihan->tagihan_id, false),
         ];
     }
 }

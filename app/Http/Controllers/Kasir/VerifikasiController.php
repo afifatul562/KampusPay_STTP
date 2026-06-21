@@ -19,11 +19,46 @@ class VerifikasiController extends Controller
     public function index()
     {
         $pendingVerifications = KonfirmasiPembayaran::with('tagihan.mahasiswa.user', 'tagihan.tarif')
-            ->where('status_verifikasi', 'Menunggu Verifikasi')
-            ->latest() // Tampilkan yang terbaru di atas
+            ->whereIn('status_verifikasi', ['Menunggu Verifikasi', 'Ditinjau'])
+            ->whereHas('tagihan', function ($q) {
+                $q->where('status', 'Menunggu Verifikasi Transfer');
+            })
+            ->latest()
             ->paginate(10);
 
         return view('kasir.verifikasi', compact('pendingVerifications'));
+    }
+
+    /**
+     * Tandai konfirmasi sedang ditinjau (kasir cek mutasi rekening).
+     */
+    public function pending(KonfirmasiPembayaran $konfirmasi)
+    {
+        Log::info('Kasir menandai konfirmasi ditinjau', [
+            'konfirmasi_id' => $konfirmasi->konfirmasi_id,
+            'tagihan_id' => $konfirmasi->tagihan_id,
+            'kasir_id' => Auth::id(),
+            'status_sekarang' => $konfirmasi->status_verifikasi,
+        ]);
+
+        if (! in_array($konfirmasi->status_verifikasi, ['Menunggu Verifikasi', 'Ditinjau'], true)) {
+            return response()->json(['success' => false, 'message' => 'Status pembayaran ini sudah diubah.'], 409);
+        }
+
+        if ($konfirmasi->status_verifikasi === 'Ditinjau') {
+            return response()->json(['success' => true, 'message' => 'Konfirmasi sudah dalam status ditinjau.']);
+        }
+
+        try {
+            $konfirmasi->fill(['status_verifikasi' => 'Ditinjau']);
+            $konfirmasi->save();
+
+            return response()->json(['success' => true, 'message' => 'Konfirmasi ditandai sedang ditinjau.']);
+        } catch (\Exception $e) {
+            Log::error('Gagal menandai pending verifikasi: '.$e->getMessage());
+
+            return response()->json(['success' => false, 'message' => 'Gagal menyimpan status.'], 500);
+        }
     }
 
     /**
@@ -37,38 +72,61 @@ class VerifikasiController extends Controller
             'kasir_id' => Auth::id(),
             'status_sekarang' => $konfirmasi->status_verifikasi,
         ]);
-        if ($konfirmasi->status_verifikasi !== 'Menunggu Verifikasi') {
+        if (! in_array($konfirmasi->status_verifikasi, ['Menunggu Verifikasi', 'Ditinjau'], true)) {
             return response()->json(['success' => false, 'message' => 'Status pembayaran ini sudah diubah.'], 409);
         }
 
         $tagihan = $konfirmasi->tagihan;
-        $isCicilan = $request->has('is_cicilan') && $request->input('is_cicilan') == '1';
+        $isCicilan = ($request->has('is_cicilan') && $request->input('is_cicilan') == '1')
+            || (bool) $konfirmasi->is_cicilan;
         $jumlahBayar = $request->input('jumlah_bayar') ?? $konfirmasi->jumlah_bayar;
 
-        // Jika cicilan, validasi jumlah_bayar
-        if ($isCicilan) {
-            $sisaPokok = $tagihan->sisa_pokok ?? $tagihan->jumlah_tagihan;
-            $minBayar = min(50000, $sisaPokok); // Minimal 50k, kecuali sisa < 50k
-            $request->validate([
-                'jumlah_bayar' => 'required|numeric|min:'.$minBayar,
-            ]);
-
-            if ($jumlahBayar > $sisaPokok) {
-                return response()->json(['success' => false, 'message' => 'Jumlah pembayaran melebihi sisa pokok.'], 400);
-            }
-            if ($jumlahBayar < $minBayar && $sisaPokok >= 50000) {
-                return response()->json(['success' => false, 'message' => 'Minimal pembayaran cicilan adalah Rp 50.000.'], 400);
-            }
-        } else {
-            // Jika bukan cicilan, jumlah_bayar = jumlah_tagihan (lunas)
-            $jumlahBayar = $tagihan->jumlah_tagihan;
-        }
+        // Validasi nominal berdasarkan sisa aktual (source of truth).
+        // Catatan: penguncian dan perhitungan ulang dilakukan di dalam transaksi.
 
         try {
-            DB::transaction(function () use ($konfirmasi, $tagihan, $isCicilan, $jumlahBayar) {
-                // 1. Buat data pembayaran resmi
+            DB::transaction(function () use ($konfirmasi, $tagihan, $isCicilan, $jumlahBayar, $request) {
+                $tagihanLocked = \App\Models\Tagihan::query()
+                    ->where('tagihan_id', $tagihan->tagihan_id)
+                    ->lockForUpdate()
+                    ->first();
+                if (!$tagihanLocked) {
+                    throw new \RuntimeException('Tagihan tidak ditemukan saat verifikasi.');
+                }
+
+                $totalTerverifikasi = (float) \App\Models\Pembayaran::query()
+                    ->where('tagihan_id', $tagihanLocked->tagihan_id)
+                    ->where(function ($q) {
+                        $q->whereNull('status_dibatalkan')->orWhere('status_dibatalkan', false);
+                    })
+                    ->sum('jumlah_bayar');
+                $sisaPokok = max(0.0, (float) $tagihanLocked->jumlah_tagihan - $totalTerverifikasi);
+
+                if ($sisaPokok <= 0.00001 || $tagihanLocked->status === 'Lunas') {
+                    throw new \RuntimeException('Tagihan sudah lunas / tidak memiliki sisa pembayaran.');
+                }
+
+                if ($isCicilan) {
+                    $tagihanLocked->loadMissing('tarif');
+                    if ($tagihanLocked->isWajibLunas()) {
+                        throw new \RuntimeException('Tagihan ini wajib lunas dan tidak dapat dicicil.');
+                    }
+
+                    $request->validate([
+                        'jumlah_bayar' => 'required|numeric|min:1',
+                    ]);
+
+                    $jumlahBayar = (float) $jumlahBayar;
+                    if (!$tagihanLocked->cicilanAmountValid($jumlahBayar)) {
+                        throw new \RuntimeException('Jumlah pembayaran tidak valid.');
+                    }
+                } else {
+                    // Lunas: paksa sesuai sisa agar tidak bisa overpay/double submit.
+                    $jumlahBayar = $sisaPokok;
+                }
+
                 $pembayaran = Pembayaran::create([
-                    'tagihan_id'        => $tagihan->tagihan_id,
+                    'tagihan_id'        => $tagihanLocked->tagihan_id,
                     'konfirmasi_id'     => $konfirmasi->konfirmasi_id,
                     'diverifikasi_oleh' => Auth::id(),
                     'tanggal_bayar'     => now(),
@@ -77,11 +135,9 @@ class VerifikasiController extends Controller
                     'is_cicilan'        => $isCicilan,
                 ]);
 
-                // 2. Update total_angsuran dan sisa_pokok
-                $tagihan->updateAngsuran();
-
-                // 3. Update status konfirmasi menjadi 'Disetujui'
-                $konfirmasi->update(['status_verifikasi' => 'Disetujui']);
+                $tagihanLocked->updateAngsuran();
+                $konfirmasi->fill(['status_verifikasi' => 'Disetujui']);
+                $konfirmasi->save();
             });
         } catch (\Exception $e) {
             Log::error('Gagal menyetujui pembayaran: ' . $e->getMessage());
@@ -107,15 +163,16 @@ class VerifikasiController extends Controller
             'alasan_ditolak' => 'required|string|min:10|max:500',
         ]);
 
-        if ($konfirmasi->status_verifikasi !== 'Menunggu Verifikasi') {
+        if (! in_array($konfirmasi->status_verifikasi, ['Menunggu Verifikasi', 'Ditinjau'], true)) {
             return response()->json(['success' => false, 'message' => 'Status pembayaran ini sudah diubah.'], 409);
         }
 
         try {
-            $konfirmasi->update([
+            $konfirmasi->fill([
                 'status_verifikasi' => 'Ditolak',
                 'alasan_ditolak' => $validated['alasan_ditolak'],
             ]);
+            $konfirmasi->save();
 
             $konfirmasi->tagihan()->update(['status' => 'Ditolak']);
 

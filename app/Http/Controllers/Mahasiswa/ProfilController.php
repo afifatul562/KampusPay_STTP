@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\AktivasiStatus;
 use App\Models\Tagihan;
 use App\Models\Setting;
+use App\Support\TagihanPayability;
 
 class ProfilController extends Controller
 {
@@ -39,12 +40,7 @@ class ProfilController extends Controller
 
         $today = now()->toDateString();
         $allTagihan = $user->mahasiswaDetail->tagihan
-            ->filter(static function (Tagihan $t) use ($aktivasi, $today) {
-                if ($aktivasi && $aktivasi->status === 'bss') {
-                    return (bool) $t->is_bss && (!$t->available_from || (string) $t->available_from->toDateString() <= $today);
-                }
-                return !$t->is_bss && (!$t->available_from || (string) $t->available_from->toDateString() <= $today);
-            });
+            ->filter(static fn (Tagihan $t) => TagihanPayability::isVisibleForMahasiswa($t, $aktivasi, $today));
 
         $totalTerbayar = $allTagihan->sum(function ($tagihan) {
             $payments = $tagihan->relationLoaded('pembayaranAll') ? $tagihan->pembayaranAll : collect();
@@ -53,29 +49,9 @@ class ProfilController extends Controller
             return $dibayarByPayment > 0 ? $dibayarByPayment : $fallbackAngsuran;
         });
 
-        $totalTunggakan = $allTagihan->sum(function ($tagihan) {
-            $payments = $tagihan->relationLoaded('pembayaranAll') ? $tagihan->pembayaranAll : collect();
-            $dibayarByPayment = $payments->sum('jumlah_bayar');
-            $fallbackAngsuran = $tagihan->total_angsuran ?? 0;
-            $dibayar = $dibayarByPayment > 0 ? $dibayarByPayment : $fallbackAngsuran;
+        $totalTunggakan = (float) $allTagihan->sum(static fn ($tagihan) => $tagihan->nominalTunggakan());
 
-            $sisa = $tagihan->sisa_pokok;
-            if ($sisa === null) {
-                $sisa = ($tagihan->jumlah_tagihan ?? 0) - $dibayar;
-            }
-
-            return max($sisa, 0);
-        });
-
-        $jumlahTunggakan = $allTagihan->filter(function ($tagihan) {
-            $payments = $tagihan->relationLoaded('pembayaranAll') ? $tagihan->pembayaranAll : collect();
-            $dibayar = $payments->sum('jumlah_bayar');
-            if ($dibayar <= 0) {
-                $dibayar = $tagihan->total_angsuran ?? 0;
-            }
-            $sisa = $tagihan->sisa_pokok ?? (($tagihan->jumlah_tagihan ?? 0) - $dibayar);
-            return $sisa > 0;
-        })->count();
+        $jumlahTunggakan = $allTagihan->filter(static fn ($tagihan) => $tagihan->masihTunggakan())->count();
 
         $pembayaranSelesai = $allTagihan->sum(function ($tagihan) {
             $payments = $tagihan->relationLoaded('pembayaranAll') ? $tagihan->pembayaranAll : collect();

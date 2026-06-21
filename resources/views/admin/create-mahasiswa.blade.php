@@ -69,40 +69,6 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="program_type" class="block text-sm font-medium text-gray-700">Program</label>
-                        <select id="program_type" name="program_type" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                            <option value="reguler" {{ old('program_type', 'reguler') === 'reguler' ? 'selected' : '' }}>Reguler</option>
-                            <option value="eksklusif" {{ old('program_type') === 'eksklusif' ? 'selected' : '' }}>Eksklusif</option>
-                            <option value="kip" {{ old('program_type') === 'kip' ? 'selected' : '' }}>KIP</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="kip_scheme" class="block text-sm font-medium text-gray-700">Skema KIP</label>
-                        <select id="kip_scheme" name="kip_scheme" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                            <option value="" {{ old('kip_scheme') ? '' : 'selected' }}>-</option>
-                            <option value="1" {{ old('kip_scheme') == 1 ? 'selected' : '' }}>Skema 1 (Full)</option>
-                            <option value="2" {{ old('kip_scheme') == 2 ? 'selected' : '' }}>Skema 2</option>
-                        </select>
-                        <p class="mt-1 text-xs text-gray-500">Diisi hanya jika Program = KIP.</p>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="flex items-center gap-2">
-                        <input id="is_transfer" name="is_transfer" type="checkbox" value="1" {{ old('is_transfer') ? 'checked' : '' }}>
-                        <label for="is_transfer" class="text-sm font-medium text-gray-700">Mahasiswa transfer</label>
-                    </div>
-                    <div>
-                        <label for="start_semester" class="block text-sm font-medium text-gray-700">Mulai semester (transfer)</label>
-                        <input type="number" id="start_semester" name="start_semester" min="1" max="14"
-                               value="{{ old('start_semester') }}"
-                               class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                               placeholder="Mis. 3">
-                        <p class="mt-1 text-xs text-gray-500">Jika transfer, tagihan semester di bawah ini tidak akan dibuat.</p>
-                    </div>
-                </div>
                 <div class="pt-2 flex justify-end gap-3">
                     <a href="{{ route('admin.mahasiswa') }}" class="px-4 py-2 bg-gray-200 border border-transparent rounded-md text-sm font-medium text-gray-700 hover:bg-gray-300">
                         Batal

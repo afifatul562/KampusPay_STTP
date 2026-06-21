@@ -5,82 +5,55 @@ namespace App\Services;
 use App\Models\AktivasiStatus;
 use App\Models\AcademicCalendar;
 use App\Models\MahasiswaDetail;
-use App\Models\MahasiswaProgram;
 use App\Models\Tagihan;
 use App\Models\TarifMaster;
+use App\Notifications\TagihanBaruCreated;
+use App\Support\SemesterPerkuliahan;
+use App\Support\TagihanDedup;
+use App\Support\TarifBillingRules;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 class TagihanGenerator
 {
     /**
-     * Generate tagihan non-BSS untuk mahasiswa pada semester tertentu (dipakai tes / skrip).
-     * Pemilihan status "Aktif" pada aktivasi mahasiswa tidak lagi memanggil method ini;
-     * tagihan dibuat manual oleh admin/kasir. Status BSS tetap membuat tagihan BSS lewat controller aktivasi.
-     *
-     * Catatan:
-     * - Tagihan dibuat dengan `available_from` agar bisa "muncul belakangan" tanpa scheduler.
-     * - Jika ada `rule_json` di database (data lama), generator tetap membacanya; form admin tidak lagi mengubahnya.
+     * Generate tagihan non-BSS saat mahasiswa memilih status Aktif.
+     * Uang Wisuda di-skip (muncul lewat form daftar wisuda — Fase 2).
      */
     public function generateForAktif(AktivasiStatus $aktivasi): Collection
     {
         $semesterLabel = (string) $aktivasi->semester_label;
-        $mahasiswa = MahasiswaDetail::query()->with('program')->find($aktivasi->mahasiswa_id);
+        $mahasiswa = MahasiswaDetail::query()->with('user')->find($aktivasi->mahasiswa_id);
         if (!$mahasiswa) {
             return collect();
         }
 
-        $program = $mahasiswa->program ?: new MahasiswaProgram([
-            'program_type' => 'reguler',
-            'kip_scheme' => null,
-            'is_transfer' => false,
-            'start_semester' => 1,
-        ]);
-
-        // Transfer: jangan menagih semester di bawah start_semester
-        if ((int) $mahasiswa->semester_aktif < (int) ($program->start_semester ?? 1)) {
-            return collect();
-        }
-
-        $tarifBssName = config('academic.bss_tarif_name', 'Administrasi BSS');
-
-        $tarifs = TarifMaster::query()
-            ->where('angkatan', (string) $mahasiswa->angkatan)
-            ->where('program_studi', (string) $mahasiswa->program_studi)
-            ->where('nama_pembayaran', '!=', $tarifBssName)
-            ->orderBy('nama_pembayaran')
-            ->get();
-
+        $tarifs = $this->resolveTarifsForMahasiswa($mahasiswa);
         $created = collect();
+
         foreach ($tarifs as $tarif) {
-            if (!$this->tarifAppliesToSemester($tarif, $mahasiswa, $semesterLabel)) {
+            if (TarifBillingRules::skipOnAktivasi($tarif)) {
+                continue;
+            }
+
+            if (!TarifBillingRules::appliesToMahasiswa($tarif, $mahasiswa, $semesterLabel)) {
                 continue;
             }
 
             $amount = (float) ($tarif->nominal ?? 0);
-            $override = $this->resolveProgramOverride($tarif, $program);
-            if ($override['action'] === 'skip') {
-                continue;
-            }
-            if ($override['action'] === 'amount') {
-                $amount = (float) $override['amount'];
-            }
             if ($amount <= 0) {
                 continue;
             }
 
             $dates = $this->resolveDatesForTarif($tarif, $semesterLabel);
 
-            $exists = Tagihan::query()
-                ->where('mahasiswa_id', $aktivasi->mahasiswa_id)
-                ->where('tarif_id', $tarif->tarif_id)
-                ->where('semester_label', $semesterLabel)
-                ->where(function ($q) {
-                    $q->whereNull('is_bss')->orWhere('is_bss', false);
-                })
-                ->exists();
-
-            if ($exists) {
+            if (TagihanDedup::alreadyExistsForAktivasi(
+                $aktivasi->mahasiswa_id,
+                $tarif,
+                $mahasiswa,
+                $semesterLabel,
+            )) {
                 continue;
             }
 
@@ -94,86 +67,94 @@ class TagihanGenerator
                 'tanggal_jatuh_tempo' => $dates['due_date'],
                 'available_from' => $dates['available_from'],
                 'semester_label' => $semesterLabel,
+                'semester_perkuliahan' => SemesterPerkuliahan::fromMahasiswa($mahasiswa),
                 'is_bss' => false,
                 'status' => 'Belum Lunas',
             ]);
 
+            $this->notifyMahasiswaTagihanBaru($tagihan, $mahasiswa);
             $created->push($tagihan);
+        }
+
+        if ($created->isEmpty()) {
+            Log::info('TagihanGenerator: tidak ada tagihan baru dibuat.', [
+                'mahasiswa_id' => $aktivasi->mahasiswa_id,
+                'semester_label' => $semesterLabel,
+            ]);
+        } else {
+            Log::info('TagihanGenerator: tagihan aktif dibuat.', [
+                'mahasiswa_id' => $aktivasi->mahasiswa_id,
+                'semester_label' => $semesterLabel,
+                'count' => $created->count(),
+            ]);
         }
 
         return $created;
     }
 
-    protected function tarifAppliesToSemester(TarifMaster $tarif, MahasiswaDetail $mahasiswa, string $semesterLabel): bool
+    /**
+     * Ambil tarif yang cocok untuk mahasiswa; per nama pembayaran ambil yang paling spesifik.
+     */
+    protected function resolveTarifsForMahasiswa(MahasiswaDetail $mahasiswa): Collection
     {
-        $rule = is_array($tarif->rule_json) ? $tarif->rule_json : [];
+        $angkatan = (string) $mahasiswa->angkatan;
+        $prodi = (string) $mahasiswa->program_studi;
+        $tarifBssName = config('academic.bss_tarif_name', 'Administrasi BSS');
 
-        // hanya semester genap (berdasarkan label, mis ".... Genap")
-        if (!empty($rule['only_even_semester'])) {
-            return str_contains(mb_strtolower($semesterLabel), 'genap');
-        }
-        if (!empty($rule['only_odd_semester'])) {
-            return str_contains(mb_strtolower($semesterLabel), 'ganjil');
-        }
+        $candidates = TarifMaster::query()
+            ->where('nama_pembayaran', '!=', $tarifBssName)
+            ->where(function ($q) use ($angkatan) {
+                $q->whereNull('angkatan')
+                    ->orWhere('angkatan', '')
+                    ->orWhere('angkatan', $angkatan);
+            })
+            ->where(function ($q) use ($prodi) {
+                $q->whereNull('program_studi')
+                    ->orWhere('program_studi', '')
+                    ->orWhere('program_studi', $prodi);
+            })
+            ->orderBy('nama_pembayaran', 'asc')
+            ->get();
 
-        // hanya semester tertentu (angka semester_aktif mahasiswa)
-        if (!empty($rule['only_semester_in']) && is_array($rule['only_semester_in'])) {
-            return in_array((int) $mahasiswa->semester_aktif, array_map('intval', $rule['only_semester_in']), true);
-        }
-        if (!empty($rule['only_semester_range']) && is_array($rule['only_semester_range'])) {
-            $min = isset($rule['only_semester_range'][0]) ? (int) $rule['only_semester_range'][0] : null;
-            $max = isset($rule['only_semester_range'][1]) ? (int) $rule['only_semester_range'][1] : null;
-            $sem = (int) $mahasiswa->semester_aktif;
-            if ($min !== null && $sem < $min) return false;
-            if ($max !== null && $sem > $max) return false;
-        }
+        return $candidates
+            ->groupBy('nama_pembayaran')
+            ->map(function (Collection $group) use ($angkatan, $prodi) {
+                return $group->sortByDesc(function (TarifMaster $t) use ($angkatan, $prodi) {
+                    $score = 0;
+                    if ((string) $t->angkatan === $angkatan) {
+                        $score += 2;
+                    }
+                    if ((string) $t->program_studi === $prodi) {
+                        $score += 2;
+                    }
 
-        return true;
+                    return $score;
+                })->first();
+            })
+            ->filter()
+            ->values();
     }
 
-    /**
-     * Override per program (KIP/reguler/eksklusif).
-     * Bentuk rule_json yang didukung:
-     *   program_overrides: {
-     *     kip: { "1": { action: "skip" }, "2": { action: "amount", amount: 0 } }
-     *   }
-     */
-    protected function resolveProgramOverride(TarifMaster $tarif, MahasiswaProgram $program): array
+    protected function notifyMahasiswaTagihanBaru(Tagihan $tagihan, MahasiswaDetail $mahasiswa): void
     {
-        $rule = is_array($tarif->rule_json) ? $tarif->rule_json : [];
-        $overrides = is_array($rule['program_overrides'] ?? null) ? $rule['program_overrides'] : [];
-
-        $type = (string) ($program->program_type ?? 'reguler');
-        $typeOverrides = is_array($overrides[$type] ?? null) ? $overrides[$type] : [];
-
-        if ($type !== 'kip') {
-            return ['action' => 'none'];
+        $user = $mahasiswa->user;
+        if (!$user) {
+            return;
         }
 
-        $scheme = (string) ((int) ($program->kip_scheme ?? 0));
-        $schemeOverride = is_array($typeOverrides[$scheme] ?? null) ? $typeOverrides[$scheme] : [];
-
-        $action = (string) ($schemeOverride['action'] ?? 'none');
-        if ($action === 'skip') {
-            return ['action' => 'skip'];
+        try {
+            $tagihan->loadMissing('tarif', 'mahasiswa');
+            $user->notify(new TagihanBaruCreated($tagihan));
+        } catch (\Throwable $e) {
+            Log::warning('Notifikasi tagihan baru gagal: '.$e->getMessage(), [
+                'tagihan_id' => $tagihan->tagihan_id,
+            ]);
         }
-        if ($action === 'amount') {
-            return ['action' => 'amount', 'amount' => (float) ($schemeOverride['amount'] ?? 0)];
-        }
-
-        return ['action' => 'none'];
     }
 
-    /**
-     * Resolve available_from dan due_date.
-     * Default pakai offset sederhana dari sekarang (non-breaking),
-     * tapi bisa diatur di rule_json:
-     * - available_from_offset_days
-     * - due_in_days
-     */
     protected function resolveDatesForTarif(TarifMaster $tarif, string $semesterLabel): array
     {
-        $rule = is_array($tarif->rule_json) ? $tarif->rule_json : [];
+        $rule = TarifBillingRules::effectiveRule($tarif);
 
         $now = Carbon::now();
         $calendar = AcademicCalendar::query()->where('semester_label', $semesterLabel)->first();
@@ -182,7 +163,9 @@ class TagihanGenerator
             $rule['available_trigger'] ?? null,
             (int) ($rule['available_offset_days'] ?? ($rule['available_from_offset_days'] ?? 0)),
             $now,
-            $calendar
+            $calendar,
+            $semesterLabel,
+            'available'
         )->toDateString();
 
         $dueTriggerRaw = $rule['due_trigger'] ?? null;
@@ -210,7 +193,9 @@ class TagihanGenerator
             $usesCalendarDue ? ($rule['due_trigger'] ?? null) : null,
             $dueOffset,
             $now,
-            $calendar
+            $calendar,
+            $semesterLabel,
+            'due'
         )->toDateString();
 
         return [
@@ -225,28 +210,45 @@ class TagihanGenerator
      * - "semester_start_plus_days": base=calendar.semester_start_at, +offsetDays
      * - "uts_minus_days": base=calendar.uts_start_at, -offsetDays
      * - "uas_minus_days": base=calendar.uas_start_at, -offsetDays
-     * - "fixed_date": base=rule.fixed_date (Y-m-d), offset diabaikan
      */
-    protected function resolveTriggerDate(?string $trigger, int $offsetDays, Carbon $now, ?AcademicCalendar $calendar): Carbon
-    {
+    protected function resolveTriggerDate(
+        ?string $trigger,
+        int $offsetDays,
+        Carbon $now,
+        ?AcademicCalendar $calendar,
+        string $semesterLabel,
+        string $context,
+    ): Carbon {
         $t = $trigger ? mb_strtolower((string) $trigger) : null;
+        $fallbackDays = (int) config('academic.default_due_in_days', 30);
 
-        if ($t === 'semester_start_plus_days' && $calendar?->semester_start_at) {
-            return Carbon::parse($calendar->semester_start_at)->addDays($offsetDays);
-        }
-        if ($t === 'uts_minus_days' && $calendar?->uts_start_at) {
-            return Carbon::parse($calendar->uts_start_at)->subDays($offsetDays);
-        }
-        if ($t === 'uas_minus_days' && $calendar?->uas_start_at) {
-            return Carbon::parse($calendar->uas_start_at)->subDays($offsetDays);
-        }
-        if ($t === 'fixed_date') {
-            // dipakai kalau rule punya fixed_date
-            return $now;
+        if ($t === 'semester_start_plus_days') {
+            if ($calendar?->semester_start_at) {
+                return Carbon::parse($calendar->semester_start_at)->addDays($offsetDays);
+            }
+            Log::warning("Kalender akademik belum punya mulai semester ({$semesterLabel}) untuk {$context}.");
+
+            return $now->copy()->addDays($fallbackDays);
         }
 
-        // default: now + offsetDays
+        if ($t === 'uts_minus_days') {
+            if ($calendar?->uts_start_at) {
+                return Carbon::parse($calendar->uts_start_at)->subDays($offsetDays);
+            }
+            Log::warning("Kalender akademik belum punya tanggal UTS ({$semesterLabel}) untuk {$context}.");
+
+            return $now->copy()->addDays($fallbackDays);
+        }
+
+        if ($t === 'uas_minus_days') {
+            if ($calendar?->uas_start_at) {
+                return Carbon::parse($calendar->uas_start_at)->subDays($offsetDays);
+            }
+            Log::warning("Kalender akademik belum punya tanggal UAS ({$semesterLabel}) untuk {$context}.");
+
+            return $now->copy()->addDays($fallbackDays);
+        }
+
         return $now->copy()->addDays($offsetDays);
     }
 }
-

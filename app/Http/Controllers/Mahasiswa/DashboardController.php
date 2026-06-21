@@ -9,6 +9,7 @@ use App\Models\Tagihan;
 use App\Models\User;
 use App\Models\AktivasiStatus;
 use App\Models\Setting;
+use App\Support\TagihanPayability;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
@@ -41,14 +42,8 @@ class DashboardController extends Controller
 
         $today = now()->toDateString();
         $allTagihan = $user->mahasiswaDetail->tagihan
-            ->filter(static function (Tagihan $t) use ($aktivasi, $today) {
-                if ($aktivasi && $aktivasi->status === 'bss') {
-                    return (bool) $t->is_bss && (!$t->available_from || (string) $t->available_from->toDateString() <= $today);
-                }
-                return !$t->is_bss && (!$t->available_from || (string) $t->available_from->toDateString() <= $today);
-            });
+            ->filter(static fn (Tagihan $t) => TagihanPayability::isVisibleForMahasiswa($t, $aktivasi, $today));
 
-        // 1. Kartu statistik: tunggakan = sisa belum dibayar; terbayar = jumlah terverifikasi kasir (semua cicilan)
         $totalTerbayar = (float) $allTagihan->sum(static function ($t) {
             return $t->pembayaranAll->sum('jumlah_bayar');
         });
@@ -56,22 +51,32 @@ class DashboardController extends Controller
         $totalTunggakan = 0.0;
         $jumlahTunggakan = 0;
         foreach ($allTagihan as $tagihan) {
-            $sisa = self::sisaBelumBayar($tagihan);
+            $sisa = $tagihan->nominalTunggakan();
             if ($sisa > 0) {
                 $totalTunggakan += $sisa;
                 $jumlahTunggakan++;
             }
         }
 
-        // 2. Notifikasi jatuh tempo: tagihan yang masih ada sisa dan lewat jatuh tempo
         $tagihanJatuhTempo = $allTagihan->filter(static function ($t) {
-            return self::sisaBelumBayar($t) > 0
+            return $t->masihTunggakan()
                 && Carbon::parse($t->tanggal_jatuh_tempo)->isPast();
         })->count();
 
-        // 3. Tagihan yang masih ada sisa (selaras dengan kartu & jumlah tunggakan), urut jatuh tempo
+        $batasMendekati = now()->addDays(7)->endOfDay();
+        $tagihanMendekati = $allTagihan->filter(static function ($t) use ($batasMendekati) {
+            if (!$t->masihTunggakan()) {
+                return false;
+            }
+            $due = Carbon::parse($t->tanggal_jatuh_tempo);
+
+            return !$due->isPast() && $due->lessThanOrEqualTo($batasMendekati);
+        })->sortBy('tanggal_jatuh_tempo')->values();
+
+        $totalMendekati = (float) $tagihanMendekati->sum(static fn ($t) => $t->nominalTunggakan());
+
         $tagihanAktif = $allTagihan->filter(static function ($t) {
-            return self::sisaBelumBayar($t) > 0;
+            return $t->masihTunggakan();
         })->sortBy('tanggal_jatuh_tempo');
 
         return view('mahasiswa.dashboard', [
@@ -80,27 +85,10 @@ class DashboardController extends Controller
             'jumlahTunggakan' => $jumlahTunggakan,
             'totalTerbayar' => $totalTerbayar,
             'tagihanJatuhTempo' => $tagihanJatuhTempo,
+            'tagihanMendekati' => $tagihanMendekati,
+            'jumlahMendekati' => $tagihanMendekati->count(),
+            'totalMendekati' => $totalMendekati,
             'tagihanAktif' => $tagihanAktif,
         ]);
-    }
-
-    /**
-     * Sisa tagihan setelah pembayaran terverifikasi (non-dibatalkan). Lunas = 0.
-     */
-    private static function sisaBelumBayar(Tagihan $tagihan): float
-    {
-        if ($tagihan->status === 'Lunas') {
-            return 0.0;
-        }
-
-        $terverifikasi = $tagihan->relationLoaded('pembayaranAll')
-            ? (float) $tagihan->pembayaranAll->sum('jumlah_bayar')
-            : (float) ($tagihan->total_angsuran ?? 0);
-
-        if ($tagihan->sisa_pokok !== null) {
-            return max(0.0, (float) $tagihan->sisa_pokok);
-        }
-
-        return max(0.0, (float) $tagihan->jumlah_tagihan - $terverifikasi);
     }
 }

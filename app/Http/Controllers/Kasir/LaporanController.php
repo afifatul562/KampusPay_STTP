@@ -63,11 +63,9 @@ class LaporanController extends Controller
 
         $this->applyMahasiswaFiltersToPembayaranQuery($query, $request);
 
-        // 1. Data untuk Kartu Statistik
         $totalPenerimaan = $query->clone()->get()->sum('jumlah_bayar') ?? 0;
         $jumlahTransaksi = $query->clone()->count();
 
-        // 2. Data untuk Tabel Rangkuman & Grafik
         $laporanPerJenis = $query->clone()
             ->join('tagihan', 'pembayaran.tagihan_id', '=', 'tagihan.tagihan_id', 'inner', false)
             ->join('mahasiswa_detail', 'tagihan.mahasiswa_id', '=', 'mahasiswa_detail.mahasiswa_id', 'inner', false)
@@ -91,7 +89,6 @@ class LaporanController extends Controller
             ->orderBy('total_nominal', 'desc')
             ->get();
 
-        // 3. Siapkan data khusus untuk Chart.js
         $chartLabels = $laporanPerJenis->pluck('nama_pembayaran');
         $chartData = $laporanPerJenis->pluck('total_nominal');
 
@@ -286,7 +283,7 @@ class LaporanController extends Controller
                     if ($prodi !== '') $mq->where('program_studi', $prodi);
                 });
             })
-            ->whereIn('status', ['Belum Lunas', 'Belum Dibayarkan'])
+            ->whereIn('status', Tagihan::statusesBelumLunasStorage(), 'and', false)
             ->orderBy('created_at')
             ->get();
 
@@ -433,7 +430,6 @@ class LaporanController extends Controller
                 return response()->json(['success' => false, 'message' => 'Tidak ada data pembayaran untuk tahun yang dipilih.'], 404);
             }
 
-            // Pastikan total_angsuran dan sisa_pokok selalu ter-update
             foreach ($data as $tagihan) {
                 $tagihan->updateAngsuran();
             }
@@ -546,7 +542,7 @@ class LaporanController extends Controller
                     if ($prodi !== '') $mq->where('program_studi', $prodi);
                 });
             })
-            ->whereIn('status', ['Belum Lunas', 'Belum Dibayarkan'])
+            ->whereIn('status', Tagihan::statusesBelumLunasStorage(), 'and', false)
             ->orderBy('created_at')
             ->get();
 

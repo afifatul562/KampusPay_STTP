@@ -22,6 +22,11 @@ use App\Http\Controllers\Mahasiswa\RiwayatController as MahasiswaRiwayatControll
 use App\Http\Controllers\Mahasiswa\KwitansiController;
 use App\Http\Controllers\Mahasiswa\ProfilController as MahasiswaProfilController;
 use App\Http\Controllers\Mahasiswa\LaporanController as MahasiswaLaporanController;
+use App\Http\Controllers\Mahasiswa\NotificationController as MahasiswaNotificationController;
+use App\Http\Controllers\Mahasiswa\WisudaController as MahasiswaWisudaController;
+use App\Http\Controllers\BuktiPembayaranController;
+use App\Http\Controllers\Yayasan\DashboardController as YayasanDashboardController;
+use App\Http\Controllers\Yayasan\LaporanController as YayasanLaporanController;
 use App\Models\User;
 
 /*
@@ -44,6 +49,7 @@ Route::middleware('auth')->group(function () {
         if ($user->isAdmin()) return redirect()->route('admin.dashboard');
         if ($user->isKasir()) return redirect()->route('kasir.dashboard');
         if ($user->isMahasiswa()) return redirect()->route('mahasiswa.dashboard');
+        if ($user->isYayasan()) return redirect()->route('yayasan.dashboard');
 
         Auth::logout();
         return redirect('/login')->withErrors('Role tidak dikenali.');
@@ -53,6 +59,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::get('/bukti-pembayaran/{konfirmasi}', [BuktiPembayaranController::class, 'show'])
+        ->name('bukti-pembayaran.show');
 
     // --- RUTE ADMIN ---
     Route::middleware(\App\Http\Middleware\CheckRole::class . ':admin')->prefix('admin')->name('admin.')->group(function () {
@@ -107,6 +116,15 @@ Route::middleware('auth')->group(function () {
         Route::put('/pengaturan', [KasirPengaturanController::class, 'updatePassword'])->name('pengaturan.updatePassword');
     });
 
+    // --- RUTE YAYASAN (read-only) ---
+    Route::middleware(\App\Http\Middleware\CheckRole::class . ':yayasan')->prefix('yayasan')->name('yayasan.')->group(function () {
+        Route::get('/dashboard', [YayasanDashboardController::class, 'index'])->name('dashboard');
+        Route::match(['get', 'post'], '/laporan', [YayasanLaporanController::class, 'index'])->name('laporan.index');
+        Route::get('/laporan/pdf', [YayasanLaporanController::class, 'downloadPdf'])
+            ->middleware('throttle:30,1')
+            ->name('laporan.pdf');
+    });
+
     // --- RUTE MAHASISWA ---
     Route::middleware(\App\Http\Middleware\CheckRole::class . ':mahasiswa')->prefix('mahasiswa')->name('mahasiswa.')->group(function () {
         Route::get('/dashboard', [MahasiswaDashboardController::class, 'index'])->name('dashboard');
@@ -126,6 +144,12 @@ Route::middleware('auth')->group(function () {
 
         // Aktivasi per semester
         Route::get('/aktivasi', [MahasiswaAktivasiController::class, 'show'])->name('aktivasi');
+
+        Route::get('/wisuda', [MahasiswaWisudaController::class, 'show'])->name('wisuda');
+        Route::post('/wisuda', [MahasiswaWisudaController::class, 'store'])->name('wisuda.store');
+
+        Route::get('/notifications', [MahasiswaNotificationController::class, 'index'])->name('notifications.index');
+        Route::post('/notifications/{id}/read', [MahasiswaNotificationController::class, 'markAsRead'])->name('notifications.read');
 
         // Rute Profil & Ubah Password
         Route::get('/profil', [MahasiswaProfilController::class, 'index'])->name('profil');

@@ -3,20 +3,24 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\ReportDataService;
 use Illuminate\Http\Request;
 use App\Models\Report;
-use App\Models\MahasiswaDetail;
-use App\Models\Tagihan;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class ReportController extends Controller
 {
     use AuthorizesRequests;
+
+    public function __construct(private ReportDataService $reportData) {}
+
     /**
      * Menampilkan riwayat laporan.
      */
@@ -24,91 +28,57 @@ class ReportController extends Controller
     {
         try {
             $reports = Report::latest('created_at')->get(['*']);
-            // Konsisten dengan format { data: [...] }
+
             return response()->json(['data' => $reports]);
         } catch (\Exception $e) {
             Log::error('Gagal ambil riwayat laporan: ' . $e->getMessage());
+
             return response()->json(['message' => 'Gagal mengambil riwayat laporan.'], 500);
         }
     }
 
     /**
-     * Mengambil data laporan berdasarkan jenis dan tahun.
-     *
-     * @param string $jenis 'mahasiswa' atau 'pembayaran'
-     * @param int $tahun Tahun (YYYY)
-     * @param string|null $semester Semester (Ganjil/Genap) - hanya untuk pembayaran
-     * @return \Illuminate\Support\Collection|null
+     * Mengambil data laporan berdasarkan jenis dan periode.
      */
-    private function getReportData($jenis, int $tahun, $semester = null, array $filters = [])
+    protected function getReportData(array $validated): ?Collection
     {
-        $data = null;
-        $tahunAkademik = isset($filters['tahun_akademik']) ? trim((string) $filters['tahun_akademik']) : '';
-        $angkatan = isset($filters['angkatan']) ? trim((string) $filters['angkatan']) : '';
-        $programStudi = isset($filters['program_studi']) ? trim((string) $filters['program_studi']) : '';
+        $jenis = $validated['jenis_laporan'];
+        $mode = $validated['periode_mode'] ?? 'akademik';
+        $tahun = (int) $validated['tahun'];
+        $semester = $validated['semester'] ?? null;
+        $filters = [
+            'tahun_akademik' => $validated['tahun_akademik'] ?? null,
+            'angkatan' => $validated['angkatan'] ?? null,
+            'program_studi' => $validated['program_studi'] ?? null,
+        ];
 
         if ($jenis === 'mahasiswa') {
-            // Filter mahasiswa berdasarkan angkatan (tahun yang dipilih / filter angkatan)
-            $angkatanDipakai = $angkatan !== '' ? $angkatan : $tahun;
-            $mahasiswaList = MahasiswaDetail::with('user')
-                            ->where('angkatan', $angkatanDipakai)
-                            ->when($programStudi !== '', fn($q) => $q->where('program_studi', $programStudi))
-                            ->orderBy('npm', 'asc')
-                            ->get();
-            // Kembalikan sebagai array biasa (tidak perlu grouping berdasarkan semester)
-            $data = $mahasiswaList;
-            Log::info('Mengambil data laporan mahasiswa angkatan ' . $angkatanDipakai . ($programStudi ? " prodi {$programStudi}" : '') . ': ' . $mahasiswaList->count() . ' record.');
+            $data = $this->reportData->fetch('mahasiswa', $tahun, null, $filters);
 
-        } elseif ($jenis === 'pembayaran') {
-            $query = Tagihan::with([
-                    'mahasiswa.user',
-                    'tarif',
-                    'pembayaran.userKasir' => fn($q)=>$q->select('id','nama_lengkap'),
-                    'pembayaranAll' => function($q) {
-                        $q->where('status_dibatalkan', false);
-                    }
-                ]); // Eager load kasir dan semua pembayaran
-
-            // Jika tahun akademik tersedia, jangan kunci ke created_at year (karena tagihan TA 2025/2026 bisa dibuat di 2026).
-            // Jika tidak ada tahun akademik, fallback ke filter tahun kalender created_at.
-            if ($tahunAkademik === '') {
-                $query->whereYear('created_at', $tahun);
-            } else {
-                $query->where('semester_label', 'LIKE', $tahunAkademik . '%');
-            }
-
-            if ($angkatan !== '' || $programStudi !== '') {
-                $query->whereHas('mahasiswa', function($mq) use ($angkatan, $programStudi) {
-                    if ($angkatan !== '') {
-                        $mq->where('angkatan', $angkatan);
-                    }
-                    if ($programStudi !== '') {
-                        $mq->where('program_studi', $programStudi);
-                    }
-                });
-            }
-            
-            if ($semester) {
-                // semester_label contoh: "2025/2026 Ganjil"
-                if ($tahunAkademik !== '') {
-                    $query->where('semester_label', 'LIKE', "{$tahunAkademik} {$semester}%");
-                } else {
-                    // fallback lama jika hanya punya tahun kalender
-                    $tahunNext = $tahun + 1;
-                    $tahunPrev = $tahun - 1;
-                    $query->where(function($q) use ($semester, $tahun, $tahunNext, $tahunPrev) {
-                        $q->where('semester_label', 'LIKE', "{$tahunPrev}/{$tahun} {$semester}")
-                          ->orWhere('semester_label', 'LIKE', "{$tahun}/{$tahunNext} {$semester}")
-                          ->orWhere('semester_label', 'LIKE', "% {$semester}");
-                    });
-                }
-            }
-
-            $data = $query->orderBy('created_at')
-                        ->get();
-            Log::info('Mengambil data laporan pembayaran tahun ' . $tahun . ($semester ? " semester {$semester}" : '') . ': ' . $data->count() . ' record.');
+            return $data instanceof Collection ? $data : collect($data ?? []);
         }
-        return $data;
+
+        if ($mode === 'kalender') {
+            if ($jenis === 'pembayaran') {
+                return $this->reportData->fetchPembayaranKalender($tahun, $filters);
+            }
+
+            if ($jenis === 'tunggakan') {
+                return $this->reportData->fetchTunggakanKalender($tahun, $filters);
+            }
+        }
+
+        if ($jenis === 'pembayaran') {
+            $data = $this->reportData->fetch('pembayaran', $tahun, $semester, $filters);
+
+            return $data instanceof Collection ? $data : collect($data ?? []);
+        }
+
+        if ($jenis === 'tunggakan') {
+            return $this->reportData->fetchTunggakanAkademik($tahun, $filters, $semester);
+        }
+
+        return null;
     }
 
     /**
@@ -117,42 +87,34 @@ class ReportController extends Controller
     public function preview(Request $request)
     {
         Log::info('Memproses permintaan preview laporan.', $request->all());
-        $validated = $request->validate([
-            'jenis_laporan' => 'required|string|in:mahasiswa,pembayaran',
-            'tahun' => 'required|digits:4',
-            'semester' => 'nullable|string|in:Ganjil,Genap',
-            'tahun_akademik' => 'nullable|string|max:20',
-            'angkatan' => 'nullable|string|max:10',
-            'program_studi' => 'nullable|string|max:100',
-        ]);
-        $jenis = $validated['jenis_laporan'];
-        $tahun = (int) $validated['tahun'];
-        $semester = $validated['semester'] ?? null;
-        $filters = [
-            'tahun_akademik' => $validated['tahun_akademik'] ?? null,
-            'angkatan' => $validated['angkatan'] ?? null,
-            'program_studi' => $validated['program_studi'] ?? null,
-        ];
-        Log::info("Preview Jenis: {$jenis}, Tahun: {$tahun}, Semester: " . ($semester ?? 'Semua'));
 
         try {
-            // Panggil method refactor dengan parameter semester
-            $data = $this->getReportData($jenis, $tahun, $semester, $filters);
+            $validated = $this->validateReportFilters($request);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Validasi gagal.', 'errors' => $e->errors()], 422);
+        }
 
-            if ($data === null || ($data instanceof \Illuminate\Support\Collection && $data->isEmpty()) || (is_array($data) && empty($data))) {
-                Log::warning("Tidak ada data preview untuk {$jenis} tahun {$tahun}.");
-                 // Kembalikan data kosong agar frontend tahu tidak ada data
-                 return response()->json(['data' => []]);
+        Log::info('Preview Jenis: ' . $validated['jenis_laporan'] . ', Mode: ' . ($validated['periode_mode'] ?? 'akademik'));
+
+        try {
+            $data = $this->getReportData($validated);
+
+            if ($data === null || $data->isEmpty()) {
+                Log::warning('Tidak ada data preview untuk laporan.');
+
+                return response()->json(['data' => [], 'meta' => $this->buildMeta($validated, collect())]);
             }
 
-            return response()->json(['data' => $data]);
-
+            return response()->json([
+                'data' => $data,
+                'meta' => $this->buildMeta($validated, $data),
+            ]);
         } catch (\Exception $e) {
-            Log::error("Error saat mengambil data preview: " . $e->getMessage());
+            Log::error('Error saat mengambil data preview: ' . $e->getMessage());
+
             return response()->json(['message' => 'Gagal mengambil data preview: ' . $e->getMessage()], 500);
         }
     }
-
 
     /**
      * Membuat file laporan PDF dan menyimpan riwayat.
@@ -160,76 +122,88 @@ class ReportController extends Controller
     public function store(Request $request)
     {
         Log::info('Memproses permintaan generate laporan PDF.', $request->all());
-        $validated = $request->validate([
-            'jenis_laporan' => 'required|string|in:mahasiswa,pembayaran',
-            'tahun' => 'required|digits:4',
-            'semester' => 'nullable|string|in:Ganjil,Genap',
-            'tahun_akademik' => 'nullable|string|max:20',
-            'angkatan' => 'nullable|string|max:10',
-            'program_studi' => 'nullable|string|max:100',
-        ]);
-        $jenis = $validated['jenis_laporan'];
-        $tahun = (int) $validated['tahun'];
-        $semester = $validated['semester'] ?? null;
-        $filters = [
-            'tahun_akademik' => $validated['tahun_akademik'] ?? null,
-            'angkatan' => $validated['angkatan'] ?? null,
-            'program_studi' => $validated['program_studi'] ?? null,
-        ];
-        $periodeFormatted = (string) $tahun . ($semester ? " {$semester}" : '');
-        $fileName = "laporan_{$jenis}_{$tahun}" . ($semester ? "_{$semester}" : '') . "_" . time() . ".pdf";
-        $data = null;
 
-        // 1. Ambil Data (gunakan method refactor dengan parameter semester)
         try {
-            $data = $this->getReportData($jenis, $tahun, $semester, $filters);
-            if ($data === null || ($data instanceof \Illuminate\Support\Collection && $data->isEmpty()) || (is_array($data) && empty($data))) {
-                Log::warning("Tidak ada data untuk generate PDF {$jenis} tahun {$tahun}.");
-                // Kembalikan error agar user tahu tidak ada data
-                return response()->json(['success' => false, 'message' => 'Tidak ada data untuk periode yang dipilih.'], 404); // 404 Not Found or 400 Bad Request
+            $validated = $this->validateReportFilters($request);
+        } catch (ValidationException $e) {
+            return response()->json(['success' => false, 'message' => 'Validasi gagal.', 'errors' => $e->errors()], 422);
+        }
+
+        $jenis = $validated['jenis_laporan'];
+        $mode = $validated['periode_mode'] ?? 'akademik';
+        $periodeFormatted = $this->formatPeriode($validated);
+        $fileName = sprintf(
+            'laporan_%s_%s_%s.pdf',
+            $jenis,
+            preg_replace('/[^a-zA-Z0-9_-]+/', '-', $periodeFormatted),
+            time()
+        );
+
+        try {
+            $data = $this->getReportData($validated);
+            if ($data === null || $data->isEmpty()) {
+                Log::warning("Tidak ada data untuk generate PDF {$jenis}.");
+
+                return response()->json(['success' => false, 'message' => 'Tidak ada data untuk periode yang dipilih.'], 404);
             }
         } catch (\Exception $e) {
-            Log::error("Error ambil data untuk PDF: " . $e->getMessage());
+            Log::error('Error ambil data untuk PDF: ' . $e->getMessage());
+
             return response()->json(['success' => false, 'message' => 'Gagal mengambil data laporan.'], 500);
         }
 
-        // 2. Generate PDF & Simpan File + Riwayat (Dalam Transaksi)
         $filePath = null;
         DB::beginTransaction();
         try {
             $pdf = app('dompdf.wrapper');
-            // Load view PDF template (pastikan view ini ada: resources/views/pdf/laporan_template.blade.php)
-            $pdf->loadView('pdf.laporan_template', compact('data', 'jenis', 'periodeFormatted'));
 
-            $directory = 'public/reports'; // Simpan di storage/app/public/reports
-            if (!Storage::exists($directory)) {
-                Storage::makeDirectory($directory); // Buat direktori jika belum ada
+            if ($jenis === 'tunggakan') {
+                $pdf->loadView('yayasan.pdf.laporan_tunggakan', [
+                    'data' => $data,
+                    'periodeFormatted' => $periodeFormatted,
+                    'summaryTunggakan' => $this->reportData->summarizeTunggakan($data),
+                ]);
+            } elseif ($mode === 'kalender' && $jenis === 'pembayaran') {
+                $pdf->loadView('pdf.laporan_pembayaran_kalender', [
+                    'data' => $data,
+                    'periodeFormatted' => $periodeFormatted,
+                    'summaryPembayaran' => $this->reportData->summarizePembayaranKalender($data),
+                    'contextLabel' => 'Admin',
+                ])->setPaper('a4', 'landscape');
+            } else {
+                $pdf->loadView('pdf.laporan_template', [
+                    'data' => $data,
+                    'jenis' => $jenis,
+                    'periodeFormatted' => $periodeFormatted,
+                ]);
+            }
+
+            $directory = 'public/reports';
+            if (! Storage::exists($directory)) {
+                Storage::makeDirectory($directory);
             }
             $filePath = $directory . '/' . $fileName;
 
-            // Simpan file PDF ke storage
             $saveSuccess = Storage::put($filePath, $pdf->output());
-            if (!$saveSuccess) {
-                throw new \Exception("Gagal menyimpan file PDF ke storage.");
+            if (! $saveSuccess) {
+                throw new \Exception('Gagal menyimpan file PDF ke storage.');
             }
             Log::info("Laporan PDF disimpan di: storage/app/{$filePath}");
 
-            // Simpan riwayat ke database
             Report::create([
-                'jenis_laporan' => $jenis,
+                'jenis_laporan' => $jenis . ($mode === 'kalender' ? '-kalender' : ''),
                 'periode' => $periodeFormatted,
                 'file_name' => $fileName,
             ]);
-            Log::info("Riwayat laporan disimpan ke database.");
+            Log::info('Riwayat laporan disimpan ke database.');
 
             DB::commit();
 
             return response()->json(['success' => true, 'message' => 'Laporan PDF berhasil dibuat dan riwayat disimpan.']);
-
         } catch (\Exception $e) {
             DB::rollBack();
 
-            Log::error("Error saat store laporan PDF: " . $e->getMessage());
+            Log::error('Error saat store laporan PDF: ' . $e->getMessage());
 
             if ($filePath && Storage::exists($filePath)) {
                 Storage::delete($filePath);
@@ -241,7 +215,6 @@ class ReportController extends Controller
         }
     }
 
-
     /**
      * Mendownload file laporan atau menampilkannya inline.
      */
@@ -249,48 +222,41 @@ class ReportController extends Controller
     {
         Log::info("Mencoba akses laporan ID: {$reportId}");
         try {
-            // Gunakan Route Model Binding jika memungkinkan (jika parameter di route adalah {report})
-            // Jika tidak, pakai findOrFail
             $report = Report::findOrFail($reportId);
             $this->authorize('view', $report);
             $fileName = $report->file_name;
-            // Path relatif di dalam disk 'public' (storage/app/public/reports/)
             $relativePath = 'reports/' . $fileName;
-            // Path relatif untuk Storage facade (storage/app/public/reports)
             $storagePath = 'public/' . $relativePath;
 
             Log::info("Mencari file di storage path: storage/app/{$storagePath}");
 
-            if (!Storage::exists($storagePath)) {
+            if (! Storage::exists($storagePath)) {
                 Log::error("File laporan tidak ditemukan. Path: {$storagePath}. Report ID: {$reportId}");
                 abort(404, 'File laporan tidak ditemukan di storage.');
             }
 
-            // Dapatkan path absolut ke file di storage
             $absolutePath = Storage::path($storagePath);
 
-            // Cek apakah request minta view inline
             if ($request->has('view') && $request->input('view') == '1') {
-                // Tampilkan Inline (View)
                 Log::info("Menampilkan file inline: {$fileName}");
-                // response()->file() lebih cocok untuk menampilkan file
+
                 return response()->file($absolutePath, [
                     'Content-Type' => 'application/pdf',
-                    'Content-Disposition' => 'inline; filename="' . $fileName . '"'
-                ]);
-            } else {
-                // Paksa Download
-                Log::info("Memulai download file: {$fileName}");
-                // Streaming download agar hemat memori
-                $stream = Storage::readStream($storagePath);
-                return response()->streamDownload(function () use ($stream) {
-                    fpassthru($stream);
-                    if (is_resource($stream)) { fclose($stream); }
-                }, $fileName, [
-                    'Content-Type' => 'application/pdf'
+                    'Content-Disposition' => 'inline; filename="' . $fileName . '"',
                 ]);
             }
 
+            Log::info("Memulai download file: {$fileName}");
+            $stream = Storage::readStream($storagePath);
+
+            return response()->streamDownload(function () use ($stream) {
+                fpassthru($stream);
+                if (is_resource($stream)) {
+                    fclose($stream);
+                }
+            }, $fileName, [
+                'Content-Type' => 'application/pdf',
+            ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             Log::error("Riwayat laporan ID {$reportId} tidak ditemukan di database.");
             abort(404, 'Riwayat laporan tidak ditemukan.');
@@ -301,17 +267,16 @@ class ReportController extends Controller
     }
 
     /**
-     * Menghapus riwayat laporan dan file PDF terkait (sudah bagus).
+     * Menghapus riwayat laporan dan file PDF terkait.
      */
-    public function destroy(Report $report) // Menggunakan Route Model Binding
+    public function destroy(Report $report)
     {
         Log::info("Mencoba hapus laporan ID: {$report->id}, File: {$report->file_name}");
         $this->authorize('delete', $report);
-        $filePath = 'public/reports/' . $report->file_name; // Path di dalam storage/app
+        $filePath = 'public/reports/' . $report->file_name;
 
         DB::beginTransaction();
         try {
-            // Hapus file dari storage jika ada
             if (Storage::exists($filePath)) {
                 Storage::delete($filePath);
                 Log::info("File laporan {$report->file_name} berhasil dihapus dari storage.");
@@ -319,17 +284,110 @@ class ReportController extends Controller
                 Log::warning("File laporan {$report->file_name} tidak ditemukan di storage saat mencoba menghapus.");
             }
 
-            // Hapus record dari database
             Report::destroy($report->getKey());
             Log::info("Riwayat laporan ID {$report->id} berhasil dihapus dari database.");
 
             DB::commit();
-            return response()->noContent(204); // Standar response untuk DELETE sukses
 
+            return response()->noContent(204);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error("Error saat hapus laporan ID {$report->id}: " . $e->getMessage());
+
             return response()->json(['message' => 'Gagal menghapus laporan: ' . $e->getMessage()], 500);
         }
+    }
+
+    private function validateReportFilters(Request $request): array
+    {
+        if ($request->filled('jenis_laporan') && $request->input('jenis_laporan') !== 'mahasiswa' && ! $request->filled('periode_mode')) {
+            $request->merge(['periode_mode' => 'akademik']);
+        }
+
+        $validated = $request->validate([
+            'jenis_laporan' => 'required|string|in:mahasiswa,pembayaran,tunggakan',
+            'periode_mode' => 'nullable|string|in:akademik,kalender',
+            'tahun' => 'nullable|digits:4',
+            'tahun_akademik' => 'nullable|string|max:20',
+            'tahun_kalender' => 'nullable|digits:4',
+            'semester' => 'nullable|string|in:Ganjil,Genap',
+            'angkatan' => 'nullable|string|max:10',
+            'program_studi' => 'nullable|string|max:100',
+        ]);
+
+        $jenis = $validated['jenis_laporan'];
+
+        if ($jenis === 'mahasiswa') {
+            $validated['periode_mode'] = 'akademik';
+            $tahun = (int) ($validated['tahun'] ?? 0);
+            if ($tahun < 2000) {
+                throw ValidationException::withMessages([
+                    'tahun' => 'Tahun angkatan tidak valid.',
+                ]);
+            }
+            $validated['tahun'] = $tahun;
+
+            return $validated;
+        }
+
+        $mode = $validated['periode_mode'] ?? 'akademik';
+        $validated['periode_mode'] = $mode;
+
+        if ($mode === 'kalender') {
+            $year = (int) ($validated['tahun_kalender'] ?? $validated['tahun'] ?? now()->year);
+            $validated['tahun_kalender'] = (string) $year;
+            $validated['tahun'] = $year;
+            $validated['tahun_akademik'] = null;
+            $validated['semester'] = null;
+        } else {
+            $ay = trim((string) ($validated['tahun_akademik'] ?? ''));
+            if ($ay === '' || ! preg_match('/^(\d{4})\/\d{4}$/', $ay, $m)) {
+                throw ValidationException::withMessages([
+                    'tahun_akademik' => 'Format tahun akademik tidak valid (contoh: 2025/2026).',
+                ]);
+            }
+            $validated['tahun_akademik'] = $ay;
+            $validated['tahun'] = (int) $m[1];
+        }
+
+        return $validated;
+    }
+
+    private function formatPeriode(array $validated): string
+    {
+        if ($validated['jenis_laporan'] === 'mahasiswa') {
+            return 'Angkatan ' . $validated['tahun'];
+        }
+
+        if (($validated['periode_mode'] ?? 'akademik') === 'kalender') {
+            return ReportDataService::calendarYearLabel((int) $validated['tahun']);
+        }
+
+        $semester = $validated['semester'] ?? null;
+        $tahunAkademik = trim((string) ($validated['tahun_akademik'] ?? ''));
+
+        return ($tahunAkademik !== '' ? $tahunAkademik : (string) $validated['tahun']) . ($semester ? " {$semester}" : '');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildMeta(array $validated, Collection $data): array
+    {
+        $meta = [
+            'periode_mode' => $validated['periode_mode'] ?? 'akademik',
+            'jenis_laporan' => $validated['jenis_laporan'],
+            'periode_formatted' => $this->formatPeriode($validated),
+        ];
+
+        if ($validated['jenis_laporan'] === 'tunggakan') {
+            $meta['summary_tunggakan'] = $this->reportData->summarizeTunggakan($data);
+        }
+
+        if (($validated['periode_mode'] ?? '') === 'kalender' && $validated['jenis_laporan'] === 'pembayaran') {
+            $meta['summary_pembayaran'] = $this->reportData->summarizePembayaranKalender($data);
+        }
+
+        return $meta;
     }
 }

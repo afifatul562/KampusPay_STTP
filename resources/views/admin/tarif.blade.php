@@ -90,10 +90,12 @@
                             <select id="nama_pembayaran" name="nama_pembayaran" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm sm:text-sm focus:ring-blue-500 focus:border-blue-500">
                                 <option value="" disabled selected>Pilih Jenis Pembayaran</option>
                                 <option value="Uang Semester">Uang Semester</option>
-                                <option value="Uang Ujian Akhir">Uang Ujian Akhir</option>
-                                <option value="Ujian Akhir Semester">Ujian Akhir Semester</option>
-                                <option value="Uang Pembangunan">Uang Pembangunan</option>
                                 <option value="Uang Kemahasiswaan">Uang Kemahasiswaan</option>
+                                <option value="Uang Ujian Akhir Semester">Uang Ujian Akhir Semester</option>
+                                <option value="Uang Pembangunan">Uang Pembangunan</option>
+                                <option value="Uang PPMB, Almamater dan CB">Uang PPMB, Almamater dan CB</option>
+                                <option value="Uang PKL">Uang PKL</option>
+                                <option value="Uang Tugas Akhir">Uang Tugas Akhir</option>
                                 <option value="Uang KP">Uang KP</option>
                                 <option value="Uang Skripsi">Uang Skripsi</option>
                                 <option value="Uang Wisuda">Uang Wisuda</option>
@@ -139,20 +141,16 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-        // --- Bagian Umum ---
         const apiToken = document.querySelector('meta[name="api-token"]')?.getAttribute('content');
-        // Find tbody by finding the table with aria-label and then its tbody
         const tarifTable = document.querySelector('table[aria-label="Tabel master tarif"]');
         const tarifTableBody = tarifTable ? tarifTable.querySelector('tbody') : null;
 
-        // --- Bagian Filter Tabel ---
         const filterNamaSelect = document.getElementById('filterNama');
         const filterProdiSelect = document.getElementById('filterProdi');
         const filterAngkatanSelect = document.getElementById('filterAngkatan');
         let allTarifs = [];
         let currentFilters = { nama: '', prodi: '', angkatan: '' };
 
-        // --- Bagian Modal Tambah/Edit ---
         const tarifModal = document.getElementById('tarifModal');
         const modalTitle = document.getElementById('modalTitle');
         const tarifForm = document.getElementById('tarifForm');
@@ -177,9 +175,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // -------------------------------------
-        // FUNGSI FORMAT NOMINAL (Tetap Sama)
-        // -------------------------------------
         const formatter = new Intl.NumberFormat('id-ID');
         function formatNumberInput(inputElement) {
             let value = inputElement.value.replace(/[^,\d]/g, '').toString();
@@ -251,32 +246,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-gray-50';
 
-                // 1. Sel Nama Pembayaran (Aman)
                 const cellNama = document.createElement('td');
                 cellNama.className = 'px-6 py-4 whitespace-nowrap font-medium text-gray-900';
-                cellNama.textContent = tarif.nama_pembayaran; // AMAN
+                cellNama.textContent = tarif.nama_pembayaran;
                 tr.appendChild(cellNama);
 
-                // 2. Sel Nominal (Aman)
                 const cellNominal = document.createElement('td');
                 cellNominal.className = 'px-6 py-4 whitespace-nowrap text-right text-gray-700';
-                cellNominal.textContent = rupiahFormat.format(tarif.nominal); // AMAN
+                cellNominal.textContent = rupiahFormat.format(tarif.nominal);
                 tr.appendChild(cellNominal);
 
-                // 3. Sel Program Studi (Aman)
                 const cellProdi = document.createElement('td');
                 cellProdi.className = 'px-6 py-4 whitespace-nowrap text-gray-500';
-                // Logika ini sudah benar, mengandalkan controller mengirim NULL
-                cellProdi.textContent = tarif.program_studi || 'Semua Jurusan'; // AMAN
+                cellProdi.textContent = tarif.program_studi || 'Semua Jurusan';
                 tr.appendChild(cellProdi);
 
-                // 4. Sel Angkatan (Aman)
                 const cellAngkatan = document.createElement('td');
                 cellAngkatan.className = 'px-6 py-4 whitespace-nowrap text-center text-gray-500';
-                cellAngkatan.textContent = tarif.angkatan || 'Semua Angkatan'; // AMAN
+                cellAngkatan.textContent = tarif.angkatan || 'Semua Angkatan';
                 tr.appendChild(cellAngkatan);
 
-                // 5. Sel Aksi (Aman, karena ID bukan input teks bebas)
                 const cellAksi = document.createElement('td');
                 cellAksi.className = 'px-6 py-4 whitespace-nowrap text-right font-medium';
                 cellAksi.innerHTML = `
@@ -325,7 +314,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const uniqueNama = new Set(); const uniqueProdi = new Set(); const uniqueAngkatan = new Set();
             allTarifs.forEach(tarif => {
                 uniqueNama.add(tarif.nama_pembayaran);
-                // Logika ini sudah benar, hanya menambah prodi/angkatan yg 'tidak null'
                 if(tarif.program_studi) { uniqueProdi.add(tarif.program_studi); }
                 if(tarif.angkatan) { uniqueAngkatan.add(tarif.angkatan); }
             });
@@ -334,10 +322,7 @@ document.addEventListener('DOMContentLoaded', function() {
             filterAngkatanSelect.innerHTML = '<option value="">Semua Angkatan</option>'; Array.from(uniqueAngkatan).sort((a,b)=>b.localeCompare(a,undefined,{numeric:true})).forEach(angkatan => { const option = document.createElement('option'); option.value = angkatan; option.textContent = angkatan; filterAngkatanSelect.appendChild(option); });
         }
 
-        // -------------------------------------
-        // FUNGSI WARNING MODAL (Tetap Sama)
-        // -------------------------------------
-        const lateStagePayments = { "Uang KP": 2, "Uang Skripsi": 3, "Uang Wisuda": 3 };
+        const lateStagePayments = { "Uang PKL": 2, "Uang Tugas Akhir": 2, "Uang KP": 3, "Uang Skripsi": 3, "Uang Wisuda": 3 };
         function checkAngkatanLogic() {
             if (!modalNamaPembayaranSelect || !modalAngkatanSelect || !modalAngkatanWarning) { return; }
             const selectedPayment = modalNamaPembayaranSelect.value; const selectedAngkatan = modalAngkatanSelect.value; const currentYear = new Date().getFullYear();
@@ -351,9 +336,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // -------------------------------------
-        // FUNGSI MODAL (Dengan SweetAlert)
-        // -------------------------------------
         function openModal(mode = 'add', tarifData = null) {
             tarifForm.reset(); tarifIdInput.value = ''; modalAngkatanWarning.classList.add('hidden');
             if (mode === 'add') {
@@ -364,7 +346,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 tarifIdInput.value = tarifData.tarif_id;
                 modalNamaPembayaranSelect.value = tarifData.nama_pembayaran;
                 if(tarifData.nominal !== null && tarifData.nominal !== undefined) { modalNominalInput.value = formatter.format(tarifData.nominal); } else { modalNominalInput.value = ''; }
-                // Logika ini sudah benar, mengubah NULL dari DB menjadi 'Semua Jurusan' di form
                 tarifModal.querySelector('#program_studi').value = tarifData.program_studi || "Semua Jurusan";
                 modalAngkatanSelect.value = tarifData.angkatan || "Semua Angkatan";
                 setTimeout(checkAngkatanLogic, 50);
@@ -376,10 +357,6 @@ document.addEventListener('DOMContentLoaded', function() {
             tarifModal.classList.add('hidden'); tarifModal.classList.remove('flex');
         }
 
-        // -------------------------------------
-        // EVENT LISTENERS (Dengan SweetAlert)
-        // -------------------------------------
-        // Add null checks before adding event listeners
         if (!tarifTableBody) {
             console.error('tarifTableBody not found');
             return;
@@ -547,9 +524,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // -------------------------------------
-        // MUAT DATA AWAL (Dengan SweetAlert Error)
-        // -------------------------------------
         function loadTarifs() {
             if (!tarifTableBody) {
                 console.error('tarifTableBody not found in loadTarifs');

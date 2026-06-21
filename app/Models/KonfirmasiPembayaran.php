@@ -29,4 +29,13 @@ class KonfirmasiPembayaran extends Model
     {
         return $this->hasMany(Pembayaran::class, 'konfirmasi_id');
     }
+
+    public function buktiViewUrl(): ?string
+    {
+        if (empty($this->file_bukti_pembayaran)) {
+            return null;
+        }
+
+        return route('bukti-pembayaran.show', $this);
+    }
 }

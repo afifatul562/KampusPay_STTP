@@ -26,7 +26,22 @@
                     <option value="" disabled selected>Pilih Jenis Laporan</option>
                     <option value="mahasiswa">Data Mahasiswa</option>
                     <option value="pembayaran">Laporan Pembayaran</option>
+                    <option value="tunggakan">Laporan Tunggakan</option>
                 </select>
+            </div>
+            <div id="periode_mode_wrap" class="hidden">
+                <span class="block text-fluid-sm font-medium text-gray-700 mb-2">Mode Periode</span>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="periode_mode" value="akademik" class="text-primary-600 focus:ring-primary-500" checked>
+                        <span class="text-fluid-sm text-gray-700">Tahun Akademik</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="periode_mode" value="kalender" class="text-primary-600 focus:ring-primary-500">
+                        <span class="text-fluid-sm text-gray-700">Tahun Kalender (Jan–Des)</span>
+                    </label>
+                </div>
+                <p id="periode_mode_hint" class="text-fluid-xs text-gray-500 mt-1.5"></p>
             </div>
             {{-- Tahun dihitung otomatis dari Tahun Akademik --}}
             <input type="hidden" id="tahun" name="tahun" value="">
@@ -38,9 +53,17 @@
                     <option value="Genap">Genap</option>
                 </select>
             </div>
-            <div>
+            <div id="wrap_tahun_akademik">
                 <label for="tahun_akademik" class="block text-fluid-sm font-medium text-gray-700">Tahun Akademik</label>
                 <select id="tahun_akademik" name="tahun_akademik" required class="mt-1 block w-full min-h-touch border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500 text-base sm:text-sm"></select>
+            </div>
+            <div id="wrap_tahun_kalender" class="hidden">
+                <label for="tahun_kalender" class="block text-fluid-sm font-medium text-gray-700">Tahun Kalender</label>
+                <select id="tahun_kalender" name="tahun_kalender" class="mt-1 block w-full min-h-touch border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500 text-base sm:text-sm"></select>
+            </div>
+            <div id="wrap_angkatan_mhs" class="hidden">
+                <label for="tahun_angkatan" class="block text-fluid-sm font-medium text-gray-700">Angkatan Mahasiswa</label>
+                <select id="tahun_angkatan" name="tahun_angkatan" class="mt-1 block w-full min-h-touch border-gray-300 rounded-lg shadow-sm focus:border-primary-500 focus:ring-primary-500 text-base sm:text-sm"></select>
             </div>
             <div>
                 <label for="angkatan" class="block text-fluid-sm font-medium text-gray-700">Angkatan <span class="text-gray-500 font-normal">(opsional)</span></label>
@@ -99,42 +122,103 @@ document.addEventListener('DOMContentLoaded', function() {
         const tahunSelect = document.getElementById('tahun');
         const jenisLaporanSelect = document.getElementById('jenis_laporan');
         const semesterPembayaranWrap = document.getElementById('semester_pembayaran_wrap');
+        const periodeModeWrap = document.getElementById('periode_mode_wrap');
+        const periodeModeHint = document.getElementById('periode_mode_hint');
+        const wrapTahunAkademik = document.getElementById('wrap_tahun_akademik');
+        const wrapTahunKalender = document.getElementById('wrap_tahun_kalender');
+        const wrapAngkatanMhs = document.getElementById('wrap_angkatan_mhs');
+        const tahunKalenderSelect = document.getElementById('tahun_kalender');
+        const tahunAngkatanSelect = document.getElementById('tahun_angkatan');
         const tahunAkademikSelect = document.getElementById('tahun_akademik');
         const angkatanSelect = document.getElementById('angkatan');
         const prodiSelect = document.getElementById('program_studi');
+        const periodeModeInputs = document.querySelectorAll('input[name="periode_mode"]');
 
         let currentPreviewData = null;
         let currentReportParams = null;
+        let currentPreviewMeta = null;
 
         const previewUrl = "{{ route('admin.reports.preview') }}";
         const generateUrl = "{{ route('admin.reports.store') }}";
         const historyUrl = "{{ route('admin.reports.index') }}";
         const deleteReportUrlTpl = "{{ route('admin.reports.destroy', ['report' => ':id']) }}";
 
-        // Tahun tidak dipilih manual; diset dari Tahun Akademik (2026/2027 -> 2026)
+        function isKalenderMode() {
+            const checked = document.querySelector('input[name="periode_mode"]:checked');
+            return checked && checked.value === 'kalender';
+        }
 
-        function syncSemesterFieldVisibility() {
-            if (!semesterPembayaranWrap || !jenisLaporanSelect) return;
-            semesterPembayaranWrap.classList.toggle('hidden', jenisLaporanSelect.value !== 'pembayaran');
+        function syncFormFields() {
+            const jenis = jenisLaporanSelect ? jenisLaporanSelect.value : '';
+            const isMhs = jenis === 'mahasiswa';
+            const isKeuangan = jenis === 'pembayaran' || jenis === 'tunggakan';
+            const kalender = isKalenderMode();
+
+            periodeModeWrap?.classList.toggle('hidden', !isKeuangan);
+            semesterPembayaranWrap?.classList.toggle('hidden', !isKeuangan || kalender || jenis === 'tunggakan');
+            wrapTahunAkademik?.classList.toggle('hidden', isMhs || kalender);
+            wrapTahunKalender?.classList.toggle('hidden', !isKeuangan || !kalender);
+            wrapAngkatanMhs?.classList.toggle('hidden', !isMhs);
+
+            if (tahunAkademikSelect) tahunAkademikSelect.required = isKeuangan && !kalender;
+            if (tahunKalenderSelect) tahunKalenderSelect.required = isKeuangan && kalender;
+            if (tahunAngkatanSelect) tahunAngkatanSelect.required = isMhs;
+
+            if (periodeModeHint && isKeuangan) {
+                if (kalender && jenis === 'pembayaran') {
+                    periodeModeHint.textContent = 'Transaksi uang masuk berdasarkan tanggal bayar Jan–Des.';
+                } else if (kalender && jenis === 'tunggakan') {
+                    periodeModeHint.textContent = 'Tagihan diterbitkan di tahun kalender yang masih menunggak.';
+                } else if (jenis === 'tunggakan') {
+                    periodeModeHint.textContent = 'Tagihan belum lunas per tahun akademik.';
+                } else {
+                    periodeModeHint.textContent = 'Tagihan per semester/tahun akademik (lunas + belum lunas).';
+                }
+            }
         }
+
         if (jenisLaporanSelect) {
-            jenisLaporanSelect.addEventListener('change', syncSemesterFieldVisibility);
-            syncSemesterFieldVisibility();
+            jenisLaporanSelect.addEventListener('change', syncFormFields);
+            syncFormFields();
         }
+        periodeModeInputs.forEach(el => el.addEventListener('change', syncFormFields));
 
         function buildReportPayload(form) {
             const jenis = form.elements.jenis_laporan.value;
-            const ay = tahunAkademikSelect && tahunAkademikSelect.value ? String(tahunAkademikSelect.value).trim() : '';
-            const matchAy = /^(\d{4})\/(\d{4})$/.exec(ay);
-            const tahun = matchAy ? matchAy[1] : '';
-            if (tahunSelect) tahunSelect.value = tahun;
 
-            const payload = { jenis_laporan: jenis, tahun: tahun, tahun_akademik: ay };
-            if (jenis === 'pembayaran') {
-                const semEl = document.getElementById('semester_pembayaran');
-                const s = semEl && semEl.value ? String(semEl.value).trim() : '';
-                if (s) payload.semester = s;
+            if (jenis === 'mahasiswa') {
+                const angkatanVal = tahunAngkatanSelect && tahunAngkatanSelect.value ? String(tahunAngkatanSelect.value).trim() : '';
+                if (tahunSelect) tahunSelect.value = angkatanVal;
+                const payload = { jenis_laporan: jenis, tahun: angkatanVal, periode_mode: 'akademik' };
+                const prodi = prodiSelect && prodiSelect.value ? String(prodiSelect.value).trim() : '';
+                if (prodi) payload.program_studi = prodi;
+                return payload;
             }
+
+            const kalender = isKalenderMode();
+            const payload = {
+                jenis_laporan: jenis,
+                periode_mode: kalender ? 'kalender' : 'akademik',
+            };
+
+            if (kalender) {
+                const y = tahunKalenderSelect && tahunKalenderSelect.value ? String(tahunKalenderSelect.value).trim() : String(new Date().getFullYear());
+                payload.tahun_kalender = y;
+                payload.tahun = y;
+            } else {
+                const ay = tahunAkademikSelect && tahunAkademikSelect.value ? String(tahunAkademikSelect.value).trim() : '';
+                const matchAy = /^(\d{4})\/(\d{4})$/.exec(ay);
+                const tahun = matchAy ? matchAy[1] : '';
+                if (tahunSelect) tahunSelect.value = tahun;
+                payload.tahun = tahun;
+                payload.tahun_akademik = ay;
+                if (jenis === 'pembayaran') {
+                    const semEl = document.getElementById('semester_pembayaran');
+                    const s = semEl && semEl.value ? String(semEl.value).trim() : '';
+                    if (s) payload.semester = s;
+                }
+            }
+
             const ang = angkatanSelect && angkatanSelect.value ? String(angkatanSelect.value).trim() : '';
             const prodi = prodiSelect && prodiSelect.value ? String(prodiSelect.value).trim() : '';
             if (ang) payload.angkatan = ang;
@@ -146,6 +230,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!apiRequest) {
             console.error('apiRequest util tidak tersedia');
             return;
+        }
+
+        function currentAcademicYearValue() {
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = now.getMonth() + 1;
+            const start = m >= 10 ? y : y - 1;
+            return `${start}/${start + 1}`;
         }
 
         (function populateAcademicYears() {
@@ -160,8 +252,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 opt.textContent = ay;
                 tahunAkademikSelect.appendChild(opt);
             }
-            // Default: tahun akademik berjalan
-            tahunAkademikSelect.value = `${nowYear}/${nowYear + 1}`;
+            tahunAkademikSelect.value = currentAcademicYearValue();
+        })();
+
+        (function populateCalendarYears() {
+            if (!tahunKalenderSelect) return;
+            const nowYear = new Date().getFullYear();
+            const startYear = nowYear - 4;
+            tahunKalenderSelect.innerHTML = '';
+            for (let y = nowYear; y >= startYear; y--) {
+                const opt = document.createElement('option');
+                opt.value = String(y);
+                opt.textContent = String(y);
+                tahunKalenderSelect.appendChild(opt);
+            }
         })();
 
         (async function populateAngkatanProdi() {
@@ -185,6 +289,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     opt.textContent = a;
                     angkatanSelect.appendChild(opt);
                 });
+                if (tahunAngkatanSelect) {
+                    tahunAngkatanSelect.innerHTML = '<option value="" disabled selected>Pilih angkatan</option>';
+                    angkatan.forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = a;
+                        opt.textContent = a;
+                        tahunAngkatanSelect.appendChild(opt);
+                    });
+                }
                 prodiSelect.innerHTML = '<option value="" selected>Semua program studi</option>';
                 prodi.forEach(p => {
                     const opt = document.createElement('option');
@@ -253,7 +366,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        function displayReportPreview(data, type) {
+        function displayReportPreview(data, type, meta) {
             reportPreviewContent.innerHTML = '';
             if (!data || (Array.isArray(data) && data.length === 0) || (typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length === 0) ) {
                 renderEmptyState(reportPreviewContent, {
@@ -266,6 +379,36 @@ document.addEventListener('DOMContentLoaded', function() {
                     `
                 });
                 return;
+            }
+
+            const rupiahFormat = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
+            const isKalenderPembayaran = type === 'pembayaran' && meta && meta.periode_mode === 'kalender';
+
+            if (meta && meta.summary_pembayaran) {
+                const summary = document.createElement('div');
+                summary.className = 'mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3';
+                summary.innerHTML = `
+                    <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                        <div class="text-xs text-gray-500">Jumlah Transaksi</div>
+                        <div class="text-lg font-bold text-gray-900">${Number(meta.summary_pembayaran.jumlah_transaksi || 0).toLocaleString('id-ID')}</div>
+                    </div>
+                    <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                        <div class="text-xs text-gray-500">Total Uang Masuk</div>
+                        <div class="text-lg font-bold text-green-700">${rupiahFormat.format(meta.summary_pembayaran.total_uang_masuk || 0)}</div>
+                    </div>`;
+                reportPreviewContent.appendChild(summary);
+            }
+
+            if (meta && meta.summary_tunggakan) {
+                const s = meta.summary_tunggakan;
+                const summary = document.createElement('div');
+                summary.className = 'mb-4 grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm';
+                summary.innerHTML = `
+                    <div class="rounded-lg border p-3"><div class="text-xs text-gray-500">Tagihan Tunggak</div><div class="font-bold">${Number(s.jumlah_tagihan || 0).toLocaleString('id-ID')}</div></div>
+                    <div class="rounded-lg border p-3"><div class="text-xs text-gray-500">Total Sisa</div><div class="font-bold text-red-700">${rupiahFormat.format(s.total_sisa || 0)}</div></div>
+                    <div class="rounded-lg border p-3"><div class="text-xs text-gray-500">Belum Dibayar</div><div class="font-bold">${Number(s.belum_dibayar || 0).toLocaleString('id-ID')}</div></div>
+                    <div class="rounded-lg border p-3"><div class="text-xs text-gray-500">Belum Lunas</div><div class="font-bold">${Number(s.belum_lunas || 0).toLocaleString('id-ID')}</div></div>`;
+                reportPreviewContent.appendChild(summary);
             }
 
             const table = document.createElement('table');
@@ -325,6 +468,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 headerRow.appendChild(createHeaderCell('Program Studi'));
                 headerRow.appendChild(createHeaderCell('Angkatan'));
                 headerRow.appendChild(createHeaderCell('Status'));
+            } else if (type === 'pembayaran' && isKalenderPembayaran) {
+                headers = ['Tgl Bayar', 'Mahasiswa', 'Jenis Tagihan', 'Semester', 'Jumlah Bayar', 'Metode'];
+                headerRow.appendChild(createHeaderCell('Tgl Bayar'));
+                headerRow.appendChild(createHeaderCell('Mahasiswa'));
+                headerRow.appendChild(createHeaderCell('Jenis Tagihan'));
+                headerRow.appendChild(createHeaderCell('Semester'));
+                headerRow.appendChild(createHeaderCell('Jumlah Bayar', true));
+                headerRow.appendChild(createHeaderCell('Metode'));
             } else if (type === 'pembayaran') {
                 headers = ['Kode Pembayaran', 'Mahasiswa', 'Jenis Tagihan', 'Jumlah', 'Status', 'Tgl Bayar'];
                 headerRow.appendChild(createHeaderCell('Kode Pembayaran'));
@@ -333,10 +484,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 headerRow.appendChild(createHeaderCell('Jumlah', true));
                 headerRow.appendChild(createHeaderCell('Status'));
                 headerRow.appendChild(createHeaderCell('Tgl Bayar'));
+            } else if (type === 'tunggakan') {
+                headers = ['Mahasiswa', 'Jenis Tagihan', 'Sisa', 'Status'];
+                headerRow.appendChild(createHeaderCell('Mahasiswa'));
+                headerRow.appendChild(createHeaderCell('Jenis Tagihan'));
+                headerRow.appendChild(createHeaderCell('Sisa', true));
+                headerRow.appendChild(createHeaderCell('Status'));
             }
             thead.appendChild(headerRow);
-
-            const rupiahFormat = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
 
             if (type === 'mahasiswa' && Array.isArray(data)) {
                 // Data mahasiswa: array datar
@@ -375,8 +530,23 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (Array.isArray(data)) {
                 data.forEach(item => {
                     const dataRow = document.createElement('tr');
-                    if (type === 'pembayaran') {
-                        let statusText = item.status === 'Belum Lunas' ? 'Belum Dibayarkan' : item.status;
+                    if (type === 'pembayaran' && isKalenderPembayaran) {
+                        const tagihan = item.tagihan || {};
+                        const mhs = tagihan.mahasiswa || {};
+                        const tglBayar = item.tanggal_bayar ? new Date(item.tanggal_bayar).toLocaleDateString('id-ID') : '-';
+                        dataRow.appendChild(createDataCell(tglBayar));
+                        dataRow.appendChild(createMahasiswaCell(mhs.user?.nama_lengkap, mhs.npm));
+                        dataRow.appendChild(createDataCell(tagihan.jenis_tampilan || tagihan.tarif?.nama_pembayaran));
+                        dataRow.appendChild(createDataCell(tagihan.semester_label || '-', false, ['text-xs', 'text-gray-500']));
+                        dataRow.appendChild(createDataCell(rupiahFormat.format(item.jumlah_bayar || 0), true));
+                        dataRow.appendChild(createDataCell(item.metode_pembayaran || '-'));
+                    } else if (type === 'pembayaran') {
+                        const pembayaranAll = item.pembayaran_all || item.pembayaranAll || [];
+                        const sudahAdaPembayaran = pembayaranAll.length > 0
+                            || (item.pembayaran && !item.pembayaran.status_dibatalkan);
+                        let statusText = item.status === 'Belum Lunas'
+                            ? (sudahAdaPembayaran ? 'Belum Lunas' : 'Belum Dibayarkan')
+                            : item.status;
                         const isLunas = item.status === 'Lunas';
                         const tglBayar = item.pembayaran ? new Date(item.pembayaran.tanggal_bayar).toLocaleDateString('id-ID') : '-';
 
@@ -386,6 +556,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         dataRow.appendChild(createDataCell(rupiahFormat.format(item.jumlah_tagihan || 0), true));
                         dataRow.appendChild(createStatusCell(statusText, isLunas));
                         dataRow.appendChild(createDataCell(tglBayar));
+                    } else if (type === 'tunggakan') {
+                        const paid = Number(item.total_angsuran || 0);
+                        const sisa = Math.max(0, Number(item.sisa_pokok ?? item.jumlah_tagihan ?? 0));
+                        const statusText = paid > 0 ? 'Belum Lunas' : 'Belum Dibayarkan';
+                        dataRow.appendChild(createMahasiswaCell(item.mahasiswa?.user?.nama_lengkap, item.mahasiswa?.npm));
+                        dataRow.appendChild(createDataCell(item.jenis_tampilan || item.tarif?.nama_pembayaran));
+                        dataRow.appendChild(createDataCell(rupiahFormat.format(sisa), true, ['text-red-700', 'font-medium']));
+                        dataRow.appendChild(createStatusCell(statusText, false));
                     }
                     tbody.appendChild(dataRow);
                 });
@@ -438,9 +616,23 @@ document.addEventListener('DOMContentLoaded', function() {
             reportForm.addEventListener('submit', function(event) {
                 event.preventDefault();
                 const formData = buildReportPayload(this);
-                if (!formData.jenis_laporan || !formData.tahun_akademik || !formData.tahun) {
-                    Swal.fire({ icon: 'warning', title: 'Input Tidak Lengkap', text: 'Harap pilih jenis laporan dan Tahun Akademik.' });
+                if (!formData.jenis_laporan) {
+                    Swal.fire({ icon: 'warning', title: 'Input Tidak Lengkap', text: 'Harap pilih jenis laporan.' });
                     return;
+                }
+                if (formData.jenis_laporan === 'mahasiswa' && !formData.tahun) {
+                    Swal.fire({ icon: 'warning', title: 'Input Tidak Lengkap', text: 'Harap pilih angkatan mahasiswa.' });
+                    return;
+                }
+                if (formData.jenis_laporan !== 'mahasiswa') {
+                    if (formData.periode_mode === 'kalender' && !formData.tahun_kalender) {
+                        Swal.fire({ icon: 'warning', title: 'Input Tidak Lengkap', text: 'Harap pilih tahun kalender.' });
+                        return;
+                    }
+                    if (formData.periode_mode !== 'kalender' && !formData.tahun_akademik) {
+                        Swal.fire({ icon: 'warning', title: 'Input Tidak Lengkap', text: 'Harap pilih tahun akademik.' });
+                        return;
+                    }
                 }
                 currentReportParams = formData;
                 const submitButton = viewReportBtn;
@@ -453,12 +645,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 apiRequest(previewUrl, 'POST', formData)
                     .then(response => {
                         currentPreviewData = response.data || response;
+                        currentPreviewMeta = response.meta || null;
                         const hasData = currentPreviewData && (
                             (Array.isArray(currentPreviewData) && currentPreviewData.length > 0) ||
                             (typeof currentPreviewData === 'object' && !Array.isArray(currentPreviewData) && Object.keys(currentPreviewData).length > 0)
                         );
                         if (hasData) {
-                            displayReportPreview(currentPreviewData, formData.jenis_laporan);
+                            displayReportPreview(currentPreviewData, formData.jenis_laporan, currentPreviewMeta);
                             reportPreviewArea.classList.remove('hidden');
                             generatePdfBtn.classList.remove('hidden');
                             generatePdfBtn.classList.add('flex', 'justify-center', 'items-center');

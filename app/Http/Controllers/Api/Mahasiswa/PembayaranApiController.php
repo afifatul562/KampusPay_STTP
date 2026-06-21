@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api\Mahasiswa;
 
 use App\Http\Controllers\Controller;
 use App\Models\KonfirmasiPembayaran;
-use App\Models\Setting;
 use App\Models\Tagihan;
+use App\Services\KasirTransferNotificationService;
+use App\Support\TagihanPayability;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -14,6 +16,10 @@ class PembayaranApiController extends Controller
     public function pilihMetode(Request $request, Tagihan $tagihan)
     {
         $this->authorize('view', $tagihan);
+
+        if ($response = $this->guardPayable($tagihan)) {
+            return $response;
+        }
 
         $metode = $request->input('metode');
 
@@ -39,7 +45,15 @@ class PembayaranApiController extends Controller
         }
 
         if ($metode === 'tunai') {
-            $tagihan->update(['status' => 'Menunggu Pembayaran Tunai']);
+            $sisa = max(0.0, (float) ($tagihan->sisa_pokok ?? $tagihan->jumlah_tagihan) - (float) ($tagihan->total_angsuran ?? 0));
+            if ($sisa <= 0) {
+                $sisa = (float) $tagihan->jumlah_tagihan;
+            }
+            $tagihan->fill([
+                'status' => 'Menunggu Pembayaran Tunai',
+                'sisa_pokok' => $sisa,
+            ]);
+            $tagihan->save();
 
             return response()->json([
                 'success' => true,
@@ -61,6 +75,10 @@ class PembayaranApiController extends Controller
     {
         $this->authorize('view', $tagihan);
 
+        if ($response = $this->guardPayable($tagihan)) {
+            return $response;
+        }
+
         $request->validate([
             'bukti_pembayaran' => 'required|file|max:2048',
         ]);
@@ -84,7 +102,7 @@ class PembayaranApiController extends Controller
         $folder = 'bukti_pembayaran';
         $path = $file->store($folder, 'public');
 
-        KonfirmasiPembayaran::create([
+        $konfirmasi = KonfirmasiPembayaran::create([
             'tagihan_id' => $tagihan->tagihan_id,
             'file_bukti_pembayaran' => $path,
             'status_verifikasi' => 'Menunggu Verifikasi',
@@ -92,7 +110,10 @@ class PembayaranApiController extends Controller
             'jumlah_bayar' => null,
         ]);
 
-        $tagihan->update(['status' => 'Menunggu Verifikasi Transfer']);
+        $tagihan->fill(['status' => 'Menunggu Verifikasi Transfer']);
+        $tagihan->save();
+
+        app(KasirTransferNotificationService::class)->notifyForKonfirmasi($konfirmasi);
 
         return response()->json([
             'success' => true,
@@ -105,6 +126,10 @@ class PembayaranApiController extends Controller
     {
         $this->authorize('view', $tagihan);
 
+        if ($response = $this->guardPayable($tagihan)) {
+            return $response;
+        }
+
         if ($tagihan->isWajibLunas()) {
             return response()->json([
                 'success' => false,
@@ -113,11 +138,10 @@ class PembayaranApiController extends Controller
         }
 
         $sisaPokok = $tagihan->sisa_pokok ?? $tagihan->jumlah_tagihan;
-        $minBayar = min(50000, $sisaPokok);
 
         $request->validate([
             'bukti_pembayaran' => 'required|file|max:2048',
-            'jumlah_bayar' => 'required|numeric|min:' . $minBayar . '|max:' . $sisaPokok,
+            'jumlah_bayar' => 'required|numeric|min:1|max:' . $sisaPokok,
         ]);
 
         $file = $request->file('bukti_pembayaran');
@@ -137,23 +161,17 @@ class PembayaranApiController extends Controller
         }
 
         $jumlahBayar = (float) $request->input('jumlah_bayar');
-        if ($jumlahBayar <= 0 || $jumlahBayar > $sisaPokok) {
+        if (!$tagihan->cicilanAmountValid($jumlahBayar)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Jumlah pembayaran tidak valid.',
-            ], 422);
-        }
-        if ($jumlahBayar < $minBayar && $sisaPokok >= 50000) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Minimal pembayaran cicilan adalah Rp 50.000.',
             ], 422);
         }
 
         $folder = 'bukti_pembayaran';
         $path = $file->store($folder, 'public');
 
-        KonfirmasiPembayaran::create([
+        $konfirmasi = KonfirmasiPembayaran::create([
             'tagihan_id' => $tagihan->tagihan_id,
             'file_bukti_pembayaran' => $path,
             'status_verifikasi' => 'Menunggu Verifikasi',
@@ -161,13 +179,29 @@ class PembayaranApiController extends Controller
             'jumlah_bayar' => $jumlahBayar,
         ]);
 
-        $tagihan->update(['status' => 'Menunggu Verifikasi Transfer']);
+        $tagihan->fill(['status' => 'Menunggu Verifikasi Transfer']);
+        $tagihan->save();
+
+        app(KasirTransferNotificationService::class)->notifyForKonfirmasi($konfirmasi);
 
         return response()->json([
             'success' => true,
             'message' => 'Bukti pembayaran cicilan berhasil di-upload dan sedang menunggu verifikasi.',
             'status_tagihan' => $tagihan->status,
         ]);
+    }
+
+    protected function guardPayable(Tagihan $tagihan): ?JsonResponse
+    {
+        $message = TagihanPayability::violationMessage($tagihan, (int) $tagihan->mahasiswa_id);
+        if ($message) {
+            return response()->json([
+                'success' => false,
+                'message' => $message,
+            ], 403);
+        }
+
+        return null;
     }
 }
 

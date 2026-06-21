@@ -23,18 +23,17 @@ class PengaturanController extends Controller
      */
     public function updatePassword(Request $request)
     {
-        // 1. Validasi input dari form
         $validated = $request->validate([
             'current_password' => ['required', 'current_password'],
             'password' => ['required', Password::defaults(), 'confirmed'],
         ]);
 
-        // 2. Update password user yang sedang login
-        $request->user()->update([
+        $user = $request->user();
+        $user->fill([
             'password' => Hash::make($validated['password']),
         ]);
+        $user->save();
 
-        // 3. Arahkan kembali dengan pesan sukses
         return back()->with('status', 'password-updated');
     }
 }

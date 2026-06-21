@@ -87,6 +87,11 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    function cicilanAmountValid(jumlahTagihan, sisaPokok, amount) {
+        const half = Math.ceil(Number(jumlahTagihan) / 2);
+        const min = sisaPokok <= half ? sisaPokok : half;
+        return amount > 0 && amount <= sisaPokok && amount >= min;
+    }
     const searchBtn = document.getElementById('search-btn');
     const npmInput = document.getElementById('npm-search-input');
     const mahasiswaInfoDiv = document.getElementById('mahasiswa-info');
@@ -295,8 +300,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const totalAngsuran = item.total_angsuran ?? 0;
             const wajibLunas = isWajibLunas(item);
             const allowCicil = !wajibLunas && sisaPokok > 0;
-            const minBayar = Math.min(50000, sisaPokok); // minimal 50k kecuali sisa < 50k
-
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.className = 'h-5 w-5 sm:h-4 sm:w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 shrink-0';
@@ -366,10 +369,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 inputWrap.className = 'mt-2';
                 const labelInput = document.createElement('label');
                 labelInput.className = 'block text-xs text-gray-500 mb-1';
-                labelInput.textContent = `Nominal bayar (min ${currencyFormatter.format(minBayar)}, max ${currencyFormatter.format(sisaPokok)})`;
+                labelInput.textContent = `Nominal bayar (maks. ${currencyFormatter.format(sisaPokok)})`;
                 const input = document.createElement('input');
                 input.type = 'number';
-                input.min = minBayar;
+                input.min = 1;
                 input.max = sisaPokok;
                 input.step = 1000;
                 input.value = sisaPokok;

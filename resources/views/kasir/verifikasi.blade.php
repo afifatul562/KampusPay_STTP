@@ -22,11 +22,11 @@
 
     @if($pendingVerifications->count() > 0)
         <x-data-table
-            :headers="['Waktu Upload', 'Mahasiswa', 'Jenis Tagihan', 'Jumlah', 'Bukti', 'Aksi']"
+            :headers="['Waktu Upload', 'Mahasiswa', 'Jenis Tagihan', 'Jumlah', 'Status', 'Bukti', 'Aksi']"
             id="verifikasi-table"
             aria-label="Tabel verifikasi pembayaran transfer">
             @foreach ($pendingVerifications as $item)
-                <tr id="row-{{ $item->konfirmasi_id }}" class="hover:bg-gray-50 transition-colors">
+                <tr id="row-{{ $item->konfirmasi_id }}" class="hover:bg-gray-50 transition-colors {{ $item->status_verifikasi === 'Ditinjau' ? 'bg-amber-50' : '' }}">
                     <td class="px-6 py-4 whitespace-nowrap text-gray-700">
                         {{ \Carbon\Carbon::parse($item->created_at)->isoFormat('D MMM YYYY, HH:mm') }}
                     </td>
@@ -63,7 +63,14 @@
                         </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-center">
-                        <a href="{{ Storage::url($item->file_bukti_pembayaran) }}" target="_blank"
+                        @if($item->status_verifikasi === 'Ditinjau')
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">Ditinjau</span>
+                        @else
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Baru</span>
+                        @endif
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        <a href="{{ $item->buktiViewUrl() }}" target="_blank"
                            class="inline-flex items-center text-primary-600 hover:text-primary-800 font-semibold">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                             Lihat
@@ -80,6 +87,12 @@
                                     data-konfirmasi-amount="{{ $item->jumlah_bayar ?? '' }}">
                                 <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                                 Setujui
+                            </button>
+                            <button class="action-btn-pending inline-flex items-center px-3 py-1.5 text-xs rounded-md bg-gradient-to-r from-amber-100 to-amber-200 text-amber-900 hover:from-amber-200 hover:to-amber-300 font-bold shadow-sm hover:shadow-md transition-all duration-200 {{ $item->status_verifikasi === 'Ditinjau' ? 'opacity-60 cursor-default' : '' }}"
+                                    data-id="{{ $item->konfirmasi_id }}"
+                                    @if($item->status_verifikasi === 'Ditinjau') disabled @endif>
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                Pending
                             </button>
                             <button class="action-btn-reject inline-flex items-center px-3 py-1.5 text-xs rounded-md bg-gradient-to-r from-danger-100 to-danger-200 text-danger-800 hover:from-danger-200 hover:to-danger-300 font-bold shadow-sm hover:shadow-md transition-all duration-200" data-id="{{ $item->konfirmasi_id }}">
                                 <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -122,14 +135,26 @@
                 const konfirmasiId = button.dataset.id;
                 if (button.classList.contains('action-btn-approve')) {
                     handleAction('approve', konfirmasiId, button);
+                } else if (button.classList.contains('action-btn-pending')) {
+                    handleAction('pending', konfirmasiId, button);
                 } else if (button.classList.contains('action-btn-reject')) {
                     handleAction('reject', konfirmasiId, button);
                 }
             });
         }
 
+        const highlightId = new URLSearchParams(window.location.search).get('konfirmasi');
+        if (highlightId) {
+            const row = document.getElementById(`row-${highlightId}`);
+            if (row) {
+                row.classList.add('ring-2', 'ring-primary-500', 'ring-offset-2');
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
         async function handleAction(action, id, button) {
             const isApprove = action === 'approve';
+            const isPending = action === 'pending';
             const originalButtonHTML = button.innerHTML;
 
             const showLoading = () => {
@@ -137,11 +162,25 @@
                 button.disabled = true;
             };
 
-            const handleApiResponse = (response, konfirmasiId) => {
+            const handleApiResponse = (response, konfirmasiId, keepRow = false) => {
                 if (response.success) {
                     Swal.fire('Berhasil!', response.message || 'Aksi berhasil dilakukan.', 'success');
                     const row = document.getElementById(`row-${konfirmasiId}`);
-                    if(row) {
+                    if (keepRow && row) {
+                        row.classList.add('bg-amber-50');
+                        const statusCell = row.querySelector('td:nth-child(5) span');
+                        if (statusCell) {
+                            statusCell.className = 'inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800';
+                            statusCell.textContent = 'Ditinjau';
+                        }
+                        const pendingBtn = row.querySelector('.action-btn-pending');
+                        if (pendingBtn) {
+                            pendingBtn.disabled = true;
+                            pendingBtn.classList.add('opacity-60', 'cursor-default');
+                        }
+                        button.innerHTML = originalButtonHTML;
+                        button.disabled = false;
+                    } else if (row) {
                         row.style.transition = 'opacity 0.5s ease';
                         row.style.opacity = '0';
                         setTimeout(() => row.remove(), 500);
@@ -167,7 +206,29 @@
                 button.disabled = false;
             };
 
-            if (isApprove) {
+            if (isPending) {
+                Swal.fire({
+                    title: 'Tandai Pending?',
+                    text: 'Konfirmasi akan ditandai sedang ditinjau. Gunakan ini saat kasir sedang mengecek mutasi rekening.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d97706',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: 'Ya, tandai pending',
+                    cancelButtonText: 'Batal'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        showLoading();
+                        try {
+                            const url = `{{ url('/api/kasir/verifikasi') }}/pending/${id}`;
+                            const response = await apiRequest(url, 'POST', {});
+                            handleApiResponse(response, id, true);
+                        } catch (error) {
+                            handleApiError(error);
+                        }
+                    }
+                });
+            } else if (isApprove) {
                 const tagihanId = button.dataset.tagihanId;
                 const jumlahTagihan = parseInt(button.dataset.jumlahTagihan) || 0;
                 const sisaPokok = parseInt(button.dataset.sisaPokok) || jumlahTagihan;
@@ -186,7 +247,6 @@
                 };
 
                 if (bisaCicil) {
-                    const minBayar = Math.min(50000, sisaPokok);
                     swalConfig = {
                         title: 'Setujui Pembayaran',
                         html: `
@@ -196,11 +256,11 @@
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Jumlah Pembayaran (Rp)</label>
                                     <input type="number" id="swal-jumlah-bayar"
                                            class="swal2-input"
-                                           min="${minBayar}"
+                                           min="1"
                                            max="${sisaPokok}"
                                            value="${konfirmasiAmount}"
                                            placeholder="Masukkan jumlah pembayaran">
-                                    <p class="text-xs text-gray-500 mt-1">Minimal: Rp ${minBayar.toLocaleString('id-ID')} (kecuali sisa < 50.000). Sisa pokok: Rp ${sisaPokok.toLocaleString('id-ID')}</p>
+                                    <p class="text-xs text-gray-500 mt-1">Sisa pokok: Rp ${sisaPokok.toLocaleString('id-ID')}</p>
                                 </div>
                                 <div class="mt-3">
                                     <label class="flex items-center">
@@ -228,8 +288,10 @@
                                 Swal.showValidationMessage('Jumlah pembayaran tidak boleh melebihi sisa pokok');
                                 return false;
                             }
-                            if (jumlahBayar < minBayar && sisaPokok >= 50000) {
-                                Swal.showValidationMessage('Minimal pembayaran cicilan adalah Rp 50.000.');
+                            const half = Math.ceil(jumlahTagihan / 2);
+                            const minBayar = sisaPokok <= half ? sisaPokok : half;
+                            if (jumlahBayar < minBayar) {
+                                Swal.showValidationMessage('Jumlah pembayaran tidak valid.');
                                 return false;
                             }
 

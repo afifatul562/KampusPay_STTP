@@ -83,21 +83,9 @@
                         $statusForBorder = 'Dibatalkan';
                     }
 
-                    $borderColorClass = '';
-                    switch ($statusForBorder) {
-                        case 'Lunas':
-                            $borderColorClass = 'border-l-4 border-green-500'; break;
-                        case 'Menunggu Verifikasi Transfer':
-                            $borderColorClass = 'border-l-4 border-yellow-500'; break;
-                        case 'Menunggu Pembayaran Tunai':
-                            $borderColorClass = 'border-l-4 border-blue-500'; break;
-                        case 'Ditolak':
-                            $borderColorClass = 'border-l-4 border-orange-500'; break;
-                        case 'Dibatalkan':
-                            $borderColorClass = 'border-l-4 border-red-500'; break;
-                        default: // 'Belum Lunas'
-                            $borderColorClass = 'border-l-4 border-red-500'; break;
-                    }
+                    $borderColorClass = $isDibatalkan
+                        ? 'border-l-4 border-red-500'
+                        : $item->displayStatusBorderTailwindClasses();
                 @endphp
 
                 {{-- Baris ini (sekitar baris 61) sekarang aman digunakan --}}
@@ -162,26 +150,9 @@
                             $isDibatalkan = $item->pembayaran && $item->pembayaran->status_dibatalkan;
                             $statusDisplay = $isDibatalkan ? 'Dibatalkan' : $item->displayStatusLabel();
 
-                            $statusClass = '';
-                            switch ($item->status) {
-                                case 'Lunas':
-                                    $statusClass = 'bg-green-100 text-green-800'; break;
-                                case 'Menunggu Verifikasi Transfer':
-                                    $statusClass = 'bg-yellow-100 text-yellow-800'; break;
-                                case 'Menunggu Pembayaran Tunai':
-                                    $statusClass = 'bg-blue-100 text-blue-800'; break;
-                                case 'Ditolak':
-                                    $statusClass = 'bg-orange-100 text-orange-800'; break;
-                                default:
-                                    if ($isDibatalkan) {
-                                        $statusClass = 'bg-red-100 text-red-800';
-                                    } elseif ($item->status === 'Belum Lunas' && (float) ($item->total_angsuran ?? 0) > 0) {
-                                        $statusClass = 'bg-amber-100 text-amber-800';
-                                    } else {
-                                        $statusClass = 'bg-red-100 text-red-800';
-                                    }
-                                    break;
-                            }
+                            $statusClass = $isDibatalkan
+                                ? 'bg-red-100 text-red-800'
+                                : $item->displayStatusBadgeTailwindClasses();
                         @endphp
                         <span class="text-xs font-semibold px-2 py-1 rounded-full {{ $statusClass }}">
                             {{ $statusDisplay }}

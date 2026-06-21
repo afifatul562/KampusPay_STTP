@@ -35,7 +35,7 @@ class AuthenticatedSessionController extends Controller
 
         // Buat token API untuk semua role yang membutuhkan panggilan API (admin/kasir/mahasiswa)
         if ($user->isAdmin() || $user->isKasir() || $user->isMahasiswa()) {
-            $user->tokens()->delete();
+            $user->tokens()->where('name', 'api-token')->delete();
             $token = $user->createToken('api-token')->plainTextToken;
             $request->session()->put('api_token', $token);
         }
@@ -47,6 +47,8 @@ class AuthenticatedSessionController extends Controller
             return redirect()->route('kasir.dashboard');
         } elseif ($user->isMahasiswa()) {
             return redirect()->route('mahasiswa.dashboard');
+        } elseif ($user->isYayasan()) {
+            return redirect()->route('yayasan.dashboard');
         }
 
         // Redirect default jika role tidak dikenali
@@ -58,6 +60,11 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        $user = $request->user();
+        if ($user) {
+            $user->tokens()->where('name', 'api-token')->delete();
+        }
+
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();

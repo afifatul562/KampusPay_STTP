@@ -261,6 +261,19 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
+        /** Parse YYYY-MM-DD dari API ke Date lokal (hindari geser timezone). */
+        function parseYmdToLocalDate(ymd) {
+            if (!ymd) return null;
+            const s = String(ymd).trim().substring(0, 10);
+            const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+            if (!m) return null;
+            const year = Number(m[1]);
+            const month = Number(m[2]);
+            const day = Number(m[3]);
+            if (!year || month < 1 || month > 12 || day < 1 || day > 31) return null;
+            return new Date(year, month - 1, day);
+        }
+
         function setCalFieldFromYmd(fieldId, ymd) {
             const fp = calPickers[fieldId];
             if (!fp) {
@@ -268,11 +281,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (el) el.value = '';
                 return;
             }
-            if (!ymd || String(ymd).length < 10) {
+            const date = parseYmdToLocalDate(ymd);
+            if (!date) {
                 fp.clear();
                 return;
             }
-            fp.setDate(String(ymd).substring(0, 10), false);
+            fp.setDate(date, false);
         }
 
         function ymdFromCalField(fieldId) {

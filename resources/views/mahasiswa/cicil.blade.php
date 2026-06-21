@@ -12,9 +12,9 @@
             <div class="bg-white p-4 sm:p-5 md:p-6 rounded-xl shadow-md border border-gray-200">
                 <h3 class="text-lg font-semibold mb-4 border-b pb-3 flex items-center gap-2 text-gray-800">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
-                    1. Pilih Metode Pembayaran
+                    1. Instruksi Pembayaran
                 </h3>
-                <p class="text-sm text-gray-600 mb-4">Anda dapat membayar cicilan sesuai kemampuan. Pilih metode pembayaran di kolom kanan.</p>
+                <p class="text-sm text-gray-600 mb-4">Silakan transfer ke rekening di bawah ini. Tentukan jumlah cicilan di kolom kanan, lalu pastikan nominal transfer sesuai dengan jumlah yang Anda isi.</p>
 
                 @php
                     $settings = \App\Models\Setting::getCachedMap();
@@ -88,12 +88,6 @@
                 2. Form Pembayaran Cicilan
             </h3>
 
-            <div class="mb-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                <p class="text-sm text-purple-800">
-                    <strong>Info:</strong> Anda dapat membayar cicilan sesuai kemampuan. Minimal pembayaran adalah Rp 50.000 (kecuali sisa pokok di bawah Rp 50.000).
-                </p>
-            </div>
-
             <form action="{{ route('mahasiswa.pembayaran.cicil.transfer', $tagihan->tagihan_id) }}" method="POST" enctype="multipart/form-data" aria-label="Form cicilan pembayaran">
                 @csrf
                 @if ($errors->any())
@@ -114,21 +108,17 @@
                     </label>
                     <div class="relative">
                         <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">Rp</span>
-                        @php $minBayar = min(50000, $sisaPokok); @endphp
                         <input type="number"
                                name="jumlah_bayar"
                                id="jumlah_bayar"
                                value="{{ old('jumlah_bayar') }}"
-                               min="{{ $minBayar }}"
+                               min="1"
                                max="{{ $sisaPokok }}"
                                step="1000"
                                required
                                class="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                                placeholder="Masukkan jumlah pembayaran"
                                oninput="formatCurrency(this)">
-                        <div class="mt-2 text-xs text-gray-500">
-                            Minimal: Rp {{ number_format($minBayar, 0, ',', '.') }} | Maksimal: Rp {{ number_format($sisaPokok, 0, ',', '.') }}
-                        </div>
                     </div>
                 </div>
 
@@ -152,13 +142,12 @@
                                     <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                                 </svg>
                             </template>
-                            <div class="flex text-sm text-gray-600">
-                                <label for="bukti_pembayaran" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500">
+                            <div class="flex flex-col items-center gap-1 text-sm text-gray-600">
+                                <label for="bukti_pembayaran" class="inline-flex cursor-pointer rounded-md font-medium text-blue-600 hover:text-blue-500">
                                     <span>Upload file</span>
                                     <input @change="fileChosen" type="file" name="bukti_pembayaran" id="bukti_pembayaran" class="sr-only" required accept="image/jpeg, image/jpg, image/png" aria-describedby="upload-help">
                                 </label>
-                                <p class="pl-1" x-show="!fileName"></p>
-                                <p class="pl-1" x-show="fileName" x-text="fileName"></p>
+                                <p class="text-xs text-gray-500 truncate max-w-full px-2" x-show="fileName" x-text="fileName"></p>
                             </div>
                             <p id="upload-help" class="text-xs text-gray-500" x-show="!fileName">PNG, JPG hingga 2MB</p>
                         </div>

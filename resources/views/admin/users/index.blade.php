@@ -15,7 +15,7 @@
 
     <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6">
         <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h6 class="font-semibold text-fluid-lg text-gray-800">Daftar Staff (Kasir / Admin)</h6>
+            <h6 class="font-semibold text-fluid-lg text-gray-800">Daftar Staff (Admin / Kasir / Yayasan)</h6>
         </div>
         <div class="p-4 sm:p-6">
             <div class="mb-3">
@@ -40,13 +40,11 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ $user->email }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                     @if($user->role == 'admin')
-                                        <span class="px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                                            {{ $user->role }}
-                                        </span>
+                                        <span class="px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Admin</span>
+                                    @elseif($user->role == 'yayasan')
+                                        <span class="px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 text-indigo-800">Yayasan</span>
                                     @else
-                                        <span class="px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                            {{ $user->role }}
-                                        </span>
+                                        <span class="px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Kasir</span>
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">

@@ -413,6 +413,7 @@
                             <div class="mt-4">
                                 <p class="text-sm text-gray-600 mb-2">Baris pertama boleh berisi header. Format kolom:</p>
                                 <code class="text-xs bg-gray-100 p-2 rounded-md block">nama_lengkap, npm</code>
+                                <p class="text-sm text-gray-600 mt-1">Urutan <code class="text-xs bg-gray-100 px-1 rounded">npm, nama_lengkap</code> juga didukung.</p>
                                 <p class="text-sm text-gray-600 mt-2">File lama dengan kolom <code class="text-xs bg-gray-100 px-1 rounded">nama_lengkap, email, npm</code> tetap bisa diunggah — kolom email diabaikan. Program Studi, Angkatan, dan Semester diisi otomatis dari NPM.</p>
                                 <div class="mt-4">
                                     <label for="file_csv" class="block text-sm font-medium text-gray-700">Pilih File CSV</label>

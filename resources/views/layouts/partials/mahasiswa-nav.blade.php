@@ -10,7 +10,7 @@
 <nav class="mt-2 px-2 py-4">
     <a href="{{ route('mahasiswa.dashboard') }}" aria-current="{{ request()->routeIs('mahasiswa.dashboard*') ? 'page' : '' }}" class="flex items-center gap-3 px-4 py-3 mb-1 min-h-touch rounded-lg transition-all duration-200 {{ request()->routeIs('mahasiswa.dashboard*') ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-lg shadow-primary-500/20' : 'text-gray-400 hover:bg-gray-700/50 hover:text-white' }}">
         <svg class="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-        <span class="font-medium text-fluid-sm">Overview</span>
+        <span class="font-medium text-fluid-sm">Dashboard</span>
     </a>
     <a href="{{ route('mahasiswa.pembayaran.index') }}" aria-current="{{ request()->routeIs('mahasiswa.pembayaran.index*') ? 'page' : '' }}" class="flex items-center gap-3 px-4 py-3 mb-1 min-h-touch rounded-lg transition-all duration-200 {{ request()->routeIs('mahasiswa.pembayaran.index*') ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-lg shadow-primary-500/20' : 'text-gray-400 hover:bg-gray-700/50 hover:text-white' }}">
         <svg class="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
@@ -23,6 +23,10 @@
     <a href="{{ route('mahasiswa.laporan.index') }}" aria-current="{{ request()->routeIs('mahasiswa.laporan.index*') ? 'page' : '' }}" class="flex items-center gap-3 px-4 py-3 mb-1 min-h-touch rounded-lg transition-all duration-200 {{ request()->routeIs('mahasiswa.laporan.index*') ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-lg shadow-primary-500/20' : 'text-gray-400 hover:bg-gray-700/50 hover:text-white' }}">
         <svg class="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
         <span class="font-medium text-fluid-sm">Laporan</span>
+    </a>
+    <a href="{{ route('mahasiswa.wisuda') }}" aria-current="{{ request()->routeIs('mahasiswa.wisuda*') ? 'page' : '' }}" class="flex items-center gap-3 px-4 py-3 mb-1 min-h-touch rounded-lg transition-all duration-200 {{ request()->routeIs('mahasiswa.wisuda*') ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-lg shadow-primary-500/20' : 'text-gray-400 hover:bg-gray-700/50 hover:text-white' }}">
+        <svg class="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422A12.083 12.083 0 0112 21.5 12.083 12.083 0 015.84 10.578L12 14z"></path></svg>
+        <span class="font-medium text-fluid-sm">Daftar Wisuda</span>
     </a>
     {{-- <a href="{{ route('mahasiswa.profil') }}" class="flex items-center gap-4 px-6 py-3 transition-colors duration-200 {{ request()->routeIs('mahasiswa.profil*') ? 'bg-gray-700 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white' }}">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>

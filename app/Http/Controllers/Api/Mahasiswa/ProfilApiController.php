@@ -38,29 +38,9 @@ class ProfilApiController extends Controller
             return $dibayarByPayment > 0 ? $dibayarByPayment : $fallbackAngsuran;
         });
 
-        $totalTunggakan = $allTagihan->sum(function ($tagihan) {
-            $payments = $tagihan->relationLoaded('pembayaranAll') ? $tagihan->pembayaranAll : collect();
-            $dibayarByPayment = $payments->sum('jumlah_bayar');
-            $fallbackAngsuran = $tagihan->total_angsuran ?? 0;
-            $dibayar = $dibayarByPayment > 0 ? $dibayarByPayment : $fallbackAngsuran;
+        $totalTunggakan = (float) $allTagihan->sum(static fn ($tagihan) => $tagihan->nominalTunggakan());
 
-            $sisa = $tagihan->sisa_pokok;
-            if ($sisa === null) {
-                $sisa = ($tagihan->jumlah_tagihan ?? 0) - $dibayar;
-            }
-
-            return max($sisa, 0);
-        });
-
-        $jumlahTunggakan = $allTagihan->filter(function ($tagihan) {
-            $payments = $tagihan->relationLoaded('pembayaranAll') ? $tagihan->pembayaranAll : collect();
-            $dibayar = $payments->sum('jumlah_bayar');
-            if ($dibayar <= 0) {
-                $dibayar = $tagihan->total_angsuran ?? 0;
-            }
-            $sisa = $tagihan->sisa_pokok ?? (($tagihan->jumlah_tagihan ?? 0) - $dibayar);
-            return $sisa > 0;
-        })->count();
+        $jumlahTunggakan = $allTagihan->filter(static fn ($tagihan) => $tagihan->masihTunggakan())->count();
 
         $pembayaranSelesai = $allTagihan->sum(function ($tagihan) {
             $payments = $tagihan->relationLoaded('pembayaranAll') ? $tagihan->pembayaranAll : collect();
@@ -110,10 +90,11 @@ class ProfilApiController extends Controller
             ],
         ]);
 
-        $user->update([
+        $user->fill([
             'email' => $validated['email'],
             'email_verified_at' => null,
         ]);
+        $user->save();
 
         return response()->json([
             'success' => true,
@@ -142,9 +123,10 @@ class ProfilApiController extends Controller
             'password' => ['required', Password::defaults(), 'confirmed'],
         ]);
 
-        $user->update([
+        $user->fill([
             'password' => Hash::make($validated['password']),
         ]);
+        $user->save();
 
         return response()->json([
             'success' => true,

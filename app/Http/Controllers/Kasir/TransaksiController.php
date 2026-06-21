@@ -40,20 +40,19 @@ class TransaksiController extends Controller
         $kasirId = Auth::id();
         Log::info('Menampilkan riwayat transaksi kasir ID: ' . $kasirId . ' dengan filter:', $request->query());
 
-        // 1. Ambil semua jenis tarif untuk pilihan filter dropdown
         try {
-            $jenisTarif = TarifMaster::select('nama_pembayaran')->distinct()->orderBy('nama_pembayaran')->get();
+            $jenisTarif = TarifMaster::select('nama_pembayaran')->distinct()->orderBy('nama_pembayaran', 'asc')->get();
         } catch (\Exception $e) {
             Log::error('Gagal mengambil jenis tarif: ' . $e->getMessage());
             $jenisTarif = collect(); // Berikan collection kosong jika gagal
         }
 
         try {
-            $metodePembayaranList = Pembayaran::where('diverifikasi_oleh', $kasirId)
+            $metodePembayaranList = Pembayaran::query()->where('diverifikasi_oleh', '=', $kasirId)
                 ->select('metode_pembayaran')
-                ->whereNotNull('metode_pembayaran')
+                ->whereNotNull('metode_pembayaran', 'and')
                 ->distinct()
-                ->orderBy('metode_pembayaran')
+                ->orderBy('metode_pembayaran', 'asc')
                 ->pluck('metode_pembayaran');
         } catch (\Exception $e) {
             Log::error('Gagal mengambil metode pembayaran: ' . $e->getMessage());
@@ -61,12 +60,9 @@ class TransaksiController extends Controller
         }
 
 
-        // 2. Mulai query pembayaran
-        $query = Pembayaran::with('tagihan.mahasiswa.user', 'tagihan.tarif', 'konfirmasi')
+        $query = Pembayaran::with('tagihan.mahasiswa.user', 'tagihan.tarif', 'tagihan.pembayaranAll', 'konfirmasi')
             ->where('diverifikasi_oleh', $kasirId) // Filter berdasarkan kasir yg login
             ->latest('tanggal_bayar'); // Urutkan terbaru dulu
-
-        // 3. Terapkan filter berdasarkan input request
 
         // Filter 'hari_ini' dari dashboard
         if ($request->input('filter') === 'hari_ini') {
@@ -119,9 +115,7 @@ class TransaksiController extends Controller
         }
 
 
-        // 4. Eksekusi query dengan paginasi
         try {
-            // withQueryString() agar filter tetap aktif saat pindah halaman
             $transaksi = $query->paginate(15)->withQueryString();
              Log::info('Menampilkan ' . $transaksi->count() . ' transaksi dari total ' . $transaksi->total());
         } catch (\Exception $e) {
@@ -131,7 +125,6 @@ class TransaksiController extends Controller
         }
 
 
-        // 5. Kirim data transaksi dan jenis tarif ke view
         return view('kasir.transaksi', [
             'transaksi' => $transaksi,
             'jenisTarif' => $jenisTarif,
@@ -157,11 +150,17 @@ class TransaksiController extends Controller
             return back()->with('error', 'Pembayaran ini sudah dibatalkan sebelumnya.');
         }
 
-        $pembayaran->update([
+        $pembayaran->fill([
             'alasan_pembatalan' => $validated['alasan_pembatalan'],
             'status_dibatalkan' => true,
             'tanggal_pembatalan' => now(),
         ]);
+        $pembayaran->save();
+
+        $tagihan = $pembayaran->tagihan;
+        if ($tagihan) {
+            $tagihan->updateAngsuran();
+        }
 
         return back()->with('success', 'Pembayaran berhasil dibatalkan.');
     }

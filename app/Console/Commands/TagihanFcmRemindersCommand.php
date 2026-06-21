@@ -2,65 +2,24 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Tagihan;
-use App\Services\FcmPushService;
+use App\Services\TagihanReminderService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Cache;
 
 class TagihanFcmRemindersCommand extends Command
 {
     protected $signature = 'tagihan:fcm-reminders';
 
-    protected $description = 'Kirim push FCM untuk tagihan jatuh tempo hari ini & besok (belum lunas)';
+    protected $description = 'Kirim pengingat tagihan H-7/H-3/H-1/H-0 (in-app + FCM push)';
 
-    public function handle(FcmPushService $fcm): int
+    public function handle(TagihanReminderService $reminders): int
     {
-        if (! $fcm->isEnabled()) {
-            $this->warn('FCM dinonaktifkan: set FIREBASE_CREDENTIALS ke path service account JSON.');
+        $offsets = config('academic.reminder_days_before_due', [7, 3, 1, 0]);
+        $this->info('Mengirim pengingat untuk offset: '.implode(', ', array_map(fn ($d) => "H-{$d}", $offsets)));
 
-            return self::SUCCESS;
-        }
+        $sent = $reminders->sendDailyReminders();
 
-        $statuses = [
-            'Belum Lunas',
-            'Belum Dibayarkan',
-            'Menunggu Verifikasi Transfer',
-            'Menunggu Pembayaran Tunai',
-            'Ditolak',
-        ];
-
-        $today = now()->toDateString();
-        $tomorrow = now()->addDay()->toDateString();
-
-        $this->sendForDate($fcm, $statuses, $today, 'today', 'Jatuh tempo hari ini');
-        $this->sendForDate($fcm, $statuses, $tomorrow, 'tomorrow', 'Besok jatuh tempo');
+        $this->info("Selesai. Notifikasi terkirim ke {$sent} mahasiswa (per offset/hari).");
 
         return self::SUCCESS;
-    }
-
-    /**
-     * @param  list<string>  $statuses
-     */
-    private function sendForDate(
-        FcmPushService $fcm,
-        array $statuses,
-        string $date,
-        string $cacheSegment,
-        string $label,
-    ): void {
-        $query = Tagihan::query()
-            ->with('mahasiswa.user')
-            ->whereIn('status', $statuses)
-            ->whereDate('tanggal_jatuh_tempo', $date);
-
-        foreach ($query->cursor() as $tagihan) {
-            $key = "fcm_jt:{$cacheSegment}:{$tagihan->tagihan_id}:{$date}";
-            if (Cache::has($key)) {
-                continue;
-            }
-
-            $fcm->notifyTagihanJatuhTempo($tagihan, $label);
-            Cache::put($key, 1, now()->addDay());
-        }
     }
 }

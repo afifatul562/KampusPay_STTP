@@ -51,6 +51,7 @@
                             <option value="admin" {{ old('role', $user->role) == 'admin' ? 'selected' : '' }}>Admin</option>
                             <option value="mahasiswa" {{ old('role', $user->role) == 'mahasiswa' ? 'selected' : '' }}>Mahasiswa</option>
                             <option value="kasir" {{ old('role', $user->role) == 'kasir' ? 'selected' : '' }}>Kasir</option>
+                            <option value="yayasan" {{ old('role', $user->role) == 'yayasan' ? 'selected' : '' }}>Yayasan (hanya lihat)</option>
                         </select>
                     </div>
                 </div>

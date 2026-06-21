@@ -7,9 +7,9 @@ use App\Models\MahasiswaDetail;
 use App\Models\MahasiswaProgram;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 
 class MahasiswaController extends Controller
@@ -46,22 +46,18 @@ class MahasiswaController extends Controller
             'program_studi' => 'required|string|max:100',
             'angkatan' => 'required|string|max:10',
             'semester_aktif' => 'required|integer|min:1|max:14',
-            'program_type' => 'nullable|string|in:kip,reguler,eksklusif',
-            'kip_scheme' => 'nullable|integer|in:1,2',
-            'is_transfer' => 'nullable|boolean',
-            'start_semester' => 'nullable|integer|min:1|max:14',
         ]);
 
         DB::beginTransaction();
         try {
             // Buat data di tabel 'users'
             // Password default dapat dikonfigurasi via env; fallback ke NPM agar non-breaking
-            $defaultPassword = env('MAHASISWA_DEFAULT_PASSWORD', $validatedData['npm']);
+            $defaultPassword = $this->defaultMahasiswaPassword($validatedData['npm']);
             $user = User::create([
                 'nama_lengkap' => $validatedData['nama_lengkap'],
                 'email' => null,
                 'username' => $validatedData['npm'],
-                'password' => Hash::make($defaultPassword),
+                'password' => $defaultPassword,
                 'role' => 'mahasiswa',
             ]);
 
@@ -74,20 +70,7 @@ class MahasiswaController extends Controller
                 'status' => 'Aktif'
             ]);
 
-            $programType = $validatedData['program_type'] ?? 'reguler';
-            $kipScheme = $programType === 'kip' ? ($validatedData['kip_scheme'] ?? null) : null;
-            $isTransfer = (bool) ($validatedData['is_transfer'] ?? false);
-            $startSemester = $isTransfer ? (int) ($validatedData['start_semester'] ?? $detail->semester_aktif ?? 1) : 1;
-
-            MahasiswaProgram::updateOrCreate(
-                ['mahasiswa_id' => $detail->mahasiswa_id],
-                [
-                    'program_type' => $programType,
-                    'kip_scheme' => $kipScheme,
-                    'is_transfer' => $isTransfer,
-                    'start_semester' => $startSemester,
-                ]
-            );
+            $this->syncDefaultProgram($detail->mahasiswa_id);
 
             DB::commit();
 
@@ -101,12 +84,43 @@ class MahasiswaController extends Controller
         }
     }
 
+    public function import(Request $request)
+    {
+        try {
+            return $this->handleMahasiswaImport($request);
+        } catch (\Throwable $e) {
+            Log::error('Impor CSV fatal: '.$e->getMessage(), [
+                'exception' => $e::class,
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            return redirect()->route('admin.mahasiswa')->with(
+                'error',
+                'Impor gagal di server: '.$e->getMessage().' (cek storage/logs/laravel.log)'
+            );
+        }
+    }
+
     /**
      * Impor mahasiswa dari CSV (web: redirect + flash; logging di channel default).
      */
-    public function import(Request $request)
+    protected function handleMahasiswaImport(Request $request)
     {
+        // Bcrypt per baris ~0,3–0,5 dtk; 100+ mahasiswa butuh waktu > 30 dtk (limit PHP hosting).
+        @set_time_limit(600);
+        @ini_set('max_execution_time', '600');
+
         Log::info('Memulai proses impor CSV mahasiswa.');
+
+        if (! Schema::hasTable('mahasiswa_program')) {
+            Log::error('Impor CSV gagal: tabel mahasiswa_program belum ada (migration belum dijalankan).');
+
+            return redirect()->route('admin.mahasiswa')->with(
+                'error',
+                'Tabel mahasiswa_program belum ada. Jalankan di server: php artisan migrate --force'
+            );
+        }
 
         // Validasi file
         $request->validate([
@@ -134,14 +148,20 @@ class MahasiswaController extends Controller
             return redirect()->route('admin.mahasiswa')->with('error', 'Gagal membuka file CSV.');
         }
 
-        // Lewati baris header (jika ada)
-        $header = fgetcsv($handle);
-        Log::info('Header CSV: ' . implode(', ', $header ?: []));
+        // Baris pertama: header atau data
+        $firstRow = fgetcsv($handle);
+        $pendingRows = [];
+        if (is_array($firstRow) && $this->isMahasiswaCsvHeaderRow($firstRow)) {
+            Log::info('Header CSV: ' . implode(', ', array_map('strval', $firstRow)));
+        } elseif (is_array($firstRow) && ! empty(array_filter($firstRow, 'strlen'))) {
+            $pendingRows[] = $firstRow;
+        }
 
         $berhasil = 0;
         $gagal = 0;
         $errors = [];
-        $lineNumber = 1; // Untuk melacak nomor baris
+        $lineNumber = 1;
+        $npmInFile = [];
 
         $prodiMap = [
             '11' => 'S1 Teknik Sipil',
@@ -154,126 +174,136 @@ class MahasiswaController extends Controller
 
         try {
             // Cache username & NPM yang sudah ada (lookup O(1) per baris CSV).
-            $existingUsernames = array_flip(User::pluck('username')->toArray());
-            $existingNpms = array_flip(MahasiswaDetail::pluck('npm')->toArray());
+            $existingUsernames = array_flip(User::query()->pluck('username')->all());
+            $existingNpms = array_flip(MahasiswaDetail::query()->pluck('npm')->all());
 
             Log::info('Impor CSV: validasi duplikat — total username: ' . count($existingUsernames) . ', total NPM: ' . count($existingNpms));
             $sampleNpms = array_slice(array_keys($existingNpms), 0, 5);
             Log::info('Impor CSV: contoh NPM di DB: ' . implode(', ', $sampleNpms));
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Gagal mengambil data awal untuk validasi impor: ' . $e->getMessage());
             fclose($handle);
+
             return redirect()->route('admin.mahasiswa')->with('error', 'Gagal menyiapkan validasi: ' . $e->getMessage());
         }
 
+        $processRow = function (array $row) use (
+            &$berhasil,
+            &$gagal,
+            &$errors,
+            &$lineNumber,
+            &$existingUsernames,
+            &$existingNpms,
+            &$npmInFile,
+            $prodiMap,
+            $currentYear,
+            $currentMonth,
+        ): void {
+            $lineNumber++;
+
+            if (empty(array_filter($row, 'strlen'))) {
+                Log::warning("Baris {$lineNumber} dilewati karena kosong.");
+
+                return;
+            }
+
+            [$nama_lengkap, $npmRaw] = $this->parseMahasiswaCsvColumns($row);
+            $npm = $this->normalizeNpm($npmRaw);
+            $nama_lengkap = $nama_lengkap !== null ? trim($nama_lengkap) : null;
+
+            $rowDataForLog = implode(', ', array_filter([$nama_lengkap, $npm], fn ($v) => $v !== null && $v !== ''));
+            Log::info("Memproses baris {$lineNumber}: " . $rowDataForLog);
+
+            try {
+                if (empty($npm) || ! $this->looksLikeNpm($npm)) {
+                    throw new \Exception("Format NPM tidak valid ('{$npm}'). NPM harus angka minimal 8 digit.");
+                }
+                if (empty($nama_lengkap)) {
+                    throw new \Exception('Nama lengkap kosong.');
+                }
+
+                if (isset($npmInFile[$npm])) {
+                    throw new \Exception("NPM '{$npm}' duplikat di file CSV (sudah ada di baris {$npmInFile[$npm]}).");
+                }
+                $npmInFile[$npm] = $lineNumber;
+
+                if (isset($existingUsernames[$npm])) {
+                    $existingUser = User::query()->where('username', $npm)->first();
+                    $detailInfo = $existingUser ? " (User ID: {$existingUser->id}, Nama: {$existingUser->nama_lengkap})" : '';
+                    Log::warning("Baris {$lineNumber}: NPM '{$npm}' sudah ada sebagai username di database{$detailInfo}");
+                    throw new \Exception("NPM '{$npm}' sudah terdaftar sebagai username di database{$detailInfo}.");
+                }
+                if (isset($existingNpms[$npm])) {
+                    $existingMhs = MahasiswaDetail::query()->where('npm', $npm)->with('user')->first();
+                    $detailInfo = $existingMhs && $existingMhs->user ? " (Mahasiswa ID: {$existingMhs->mahasiswa_id}, Nama: {$existingMhs->user->nama_lengkap})" : '';
+                    Log::warning("Baris {$lineNumber}: NPM '{$npm}' sudah ada di detail mahasiswa{$detailInfo}");
+                    throw new \Exception("NPM '{$npm}' sudah terdaftar di detail mahasiswa{$detailInfo}.");
+                }
+
+                // Turunan dari NPM (angkatan, prodi, semester)
+                $angkatanCode = substr($npm, 0, 2);
+                $angkatan = '20' . $angkatanCode;
+                $angkatanTahunInt = (int) $angkatan;
+                $prodiCode = substr($npm, 4, 2);
+                $program_studi = $prodiMap[$prodiCode] ?? null;
+                if (! $program_studi) {
+                    throw new \Exception("Kode prodi '{$prodiCode}' (digit 5-6 NPM) tidak dikenali (harus 11, 12, atau 13).");
+                }
+                $selisihTahun = $currentYear - $angkatanTahunInt;
+                $semesterAktif = $selisihTahun * 2;
+                if ($currentMonth >= 10) {
+                    $semesterAktif += 1;
+                }
+                $semesterAktif = max(1, min($semesterAktif, 8));
+
+                $defaultPassword = $this->defaultMahasiswaPassword($npm);
+                $user = User::create([
+                    'nama_lengkap' => $nama_lengkap,
+                    'email' => null,
+                    'username' => $npm,
+                    'password' => $defaultPassword,
+                    'role' => 'mahasiswa',
+                ]);
+
+                $user->mahasiswaDetail()->create([
+                    'npm' => $npm,
+                    'program_studi' => $program_studi,
+                    'angkatan' => $angkatan,
+                    'semester_aktif' => $semesterAktif,
+                    'status' => 'Aktif',
+                ]);
+
+                $mhsDetail = MahasiswaDetail::query()->where('npm', $npm)->first();
+                if ($mhsDetail) {
+                    $this->syncDefaultProgram($mhsDetail->mahasiswa_id);
+                }
+
+                $existingUsernames[$npm] = true;
+                $existingNpms[$npm] = true;
+
+                $berhasil++;
+                Log::info("Baris {$lineNumber} (NPM: {$npm}) berhasil disimpan.");
+            } catch (\Throwable $e) {
+                $gagal++;
+                $errorMessage = "Baris {$lineNumber} (Data: {$rowDataForLog}): " . $e->getMessage();
+                $errors[] = $errorMessage;
+                Log::error($errorMessage);
+            }
+        };
+
         DB::beginTransaction();
         try {
-            while (($row = fgetcsv($handle, 1000, ",")) !== FALSE) {
-                $lineNumber++;
+            foreach ($pendingRows as $row) {
+                $processRow($row);
+            }
 
-                if (empty(array_filter($row, 'strlen'))) {
-                    Log::warning("Baris {$lineNumber} dilewati karena kosong.");
-                    continue;
-                }
-
-                // Format: nama_lengkap, npm — baris lama nama_lengkap, email, npm tetap didukung (email diabaikan).
-                $cols = array_values(array_map(fn ($c) => is_string($c) ? trim($c) : '', $row));
-                if (count($cols) >= 3 && filter_var($cols[1], FILTER_VALIDATE_EMAIL)) {
-                    $nama_lengkap = $cols[0] !== '' ? $cols[0] : null;
-                    $npm = $cols[2] !== '' ? $cols[2] : null;
-                } elseif (count($cols) >= 2) {
-                    $nama_lengkap = $cols[0] !== '' ? $cols[0] : null;
-                    $npm = $cols[1] !== '' ? $cols[1] : null;
-                } else {
-                    $nama_lengkap = null;
-                    $npm = null;
-                }
-
-                $rowDataForLog = implode(', ', array_filter([$nama_lengkap, $npm], fn ($v) => $v !== null && $v !== ''));
-                Log::info("Memproses baris {$lineNumber}: " . $rowDataForLog);
-
-                try {
-                    // Validasi baris
-                    if (empty($npm) || strlen($npm) < 6) { throw new \Exception("Format NPM tidak valid ('{$npm}')."); }
-                    if (empty($nama_lengkap)) { throw new \Exception("Nama lengkap kosong."); }
-
-                    // Turunan dari NPM (angkatan, prodi, semester)
-                    $angkatanCode = substr($npm, 0, 2);
-                    $angkatan = '20' . $angkatanCode;
-                    $angkatanTahunInt = (int)$angkatan;
-                    $prodiCode = substr($npm, 4, 2);
-                    $program_studi = $prodiMap[$prodiCode] ?? null;
-                    if (!$program_studi) { throw new \Exception("Kode prodi '{$prodiCode}' (digit 5-6 NPM) tidak dikenali."); }
-                    $selisihTahun = $currentYear - $angkatanTahunInt;
-                    $semesterAktif = $selisihTahun * 2;
-                    if ($currentMonth >= 10) {
-                        $semesterAktif += 1;
-                    }
-                    $semesterAktif = max(1, min($semesterAktif, 8));
-
-                    if (isset($existingUsernames[$npm])) {
-                        $existingUser = User::where('username', $npm)->first();
-                        $detailInfo = $existingUser ? " (User ID: {$existingUser->id}, Nama: {$existingUser->nama_lengkap})" : "";
-                        Log::warning("Baris {$lineNumber}: NPM '{$npm}' sudah ada sebagai username di database{$detailInfo}");
-                        throw new \Exception("NPM '{$npm}' sudah terdaftar sebagai username di database{$detailInfo}.");
-                    }
-                    if (isset($existingNpms[$npm])) {
-                        $existingMhs = MahasiswaDetail::where('npm', $npm)->with('user')->first();
-                        $detailInfo = $existingMhs && $existingMhs->user ? " (Mahasiswa ID: {$existingMhs->mahasiswa_id}, Nama: {$existingMhs->user->nama_lengkap})" : "";
-                        Log::warning("Baris {$lineNumber}: NPM '{$npm}' sudah ada di detail mahasiswa{$detailInfo}");
-                        throw new \Exception("NPM '{$npm}' sudah terdaftar di detail mahasiswa{$detailInfo}.");
-                    }
-
-                    // Simpan user + detail
-                    $defaultPassword = env('MAHASISWA_DEFAULT_PASSWORD', $npm);
-                    $user = User::create([
-                        'nama_lengkap' => $nama_lengkap,
-                        'email' => null,
-                        'username' => $npm,
-                        'password' => Hash::make($defaultPassword), // Default bisa diubah via env
-                        'role' => 'mahasiswa',
-                    ]);
-
-                    $user->mahasiswaDetail()->create([
-                        'npm' => $npm,
-                        'program_studi' => $program_studi,
-                        'angkatan' => $angkatan,
-                        'semester_aktif' => $semesterAktif,
-                        'status' => 'Aktif'
-                    ]);
-
-                    // Default program untuk import: reguler, non-transfer.
-                    // Untuk mahasiswa transfer/KIP biasanya akan di-set via edit setelah import.
-                    $mhsDetail = MahasiswaDetail::where('npm', $npm)->first();
-                    if ($mhsDetail) {
-                        \App\Models\MahasiswaProgram::updateOrCreate(
-                            ['mahasiswa_id' => $mhsDetail->mahasiswa_id],
-                            [
-                                'program_type' => 'reguler',
-                                'kip_scheme' => null,
-                                'is_transfer' => false,
-                                'start_semester' => 1,
-                            ]
-                        );
-                    }
-
-                    // Perbarui cache agar baris berikutnya dalam file yang sama tidak bentrok.
-                    $existingUsernames[$npm] = true;
-                    $existingNpms[$npm] = true;
-
-                    $berhasil++;
-                    Log::info("Baris {$lineNumber} (NPM: {$npm}) berhasil disimpan.");
-
-                } catch (\Exception $e) {
-                    $gagal++;
-                    $errorMessage = "Baris {$lineNumber} (Data: {$rowDataForLog}): " . $e->getMessage();
-                    $errors[] = $errorMessage;
-                    Log::error($errorMessage);
-                }
+            while (($row = fgetcsv($handle, 1000, ',')) !== false) {
+                $processRow($row);
             }
 
             if ($gagal > 0) {
-                throw new \Exception("Terjadi {$gagal} kesalahan saat memproses baris CSV. Transaksi dibatalkan.");
+                $detail = isset($errors[0]) ? ' '.$errors[0] : '';
+                throw new \Exception("Terjadi {$gagal} kesalahan saat memproses baris CSV. Transaksi dibatalkan.{$detail}");
             }
 
             DB::commit();
@@ -282,17 +312,17 @@ class MahasiswaController extends Controller
             $message = "Impor selesai. Berhasil: {$berhasil} data.";
             return redirect()->route('admin.mahasiswa')->with('success', $message);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('Impor CSV Gagal Total: ' . $e->getMessage());
             Log::info('Impor CSV: jumlah baris error: ' . count($errors ?? []));
 
             $errorMessage = 'Gagal melakukan impor: ' . $e->getMessage();
 
-            if (isset($errors) && !empty($errors) && is_array($errors)) {
+            if (isset($errors) && ! empty($errors) && is_array($errors)) {
                 return redirect()->route('admin.mahasiswa')
                     ->with('error', $errorMessage)
-                    ->with('import_errors', $errors);
+                    ->with('import_errors', array_slice($errors, 0, 30));
             }
 
             return redirect()->route('admin.mahasiswa')->with('error', $errorMessage);
@@ -343,18 +373,18 @@ class MahasiswaController extends Controller
     /**
      * Menampilkan satu data mahasiswa spesifik. (Untuk API)
      */
-    public function show($id)
+    public function show(int|string $id)
     {
-        $mahasiswa = MahasiswaDetail::with('user')->findOrFail($id);
+        $mahasiswa = MahasiswaDetail::query()->with('user')->findOrFail($id);
         return response()->json([
             'success' => true,
             'data' => $mahasiswa
         ]);
     }
 
-    public function edit($id)
+    public function edit(int|string $id)
     {
-        $mahasiswaDetail = MahasiswaDetail::with(['user', 'program'])->find($id);
+        $mahasiswaDetail = MahasiswaDetail::query()->with(['user', 'program'])->find($id);
 
         if (!$mahasiswaDetail) {
             return redirect()->route('admin.mahasiswa')->with('error', 'Data mahasiswa tidak ditemukan.');
@@ -368,9 +398,9 @@ class MahasiswaController extends Controller
     /**
      * Memperbarui data mahasiswa (web: redirect + flash).
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, int|string $id)
     {
-        $mahasiswaDetail = MahasiswaDetail::find($id);
+        $mahasiswaDetail = MahasiswaDetail::query()->find($id);
 
         if (!$mahasiswaDetail) {
             return redirect()->route('admin.mahasiswa')->with('error', 'Data mahasiswa tidak ditemukan.');
@@ -394,10 +424,6 @@ class MahasiswaController extends Controller
                 Rule::unique('users', 'username')->ignore($user->id),
                 Rule::unique('mahasiswa_detail', 'npm')->ignore($mahasiswaDetail->mahasiswa_id, 'mahasiswa_id'),
             ],
-            'program_type' => 'nullable|string|in:kip,reguler,eksklusif',
-            'kip_scheme' => 'nullable|integer|in:1,2',
-            'is_transfer' => 'nullable|boolean',
-            'start_semester' => 'nullable|integer|min:1|max:14',
         ]);
 
         DB::beginTransaction();
@@ -436,22 +462,7 @@ class MahasiswaController extends Controller
                 'semester_aktif' => $semesterAktif,
             ]);
 
-            $programType = $validatedData['program_type'] ?? ($mahasiswaDetail->program?->program_type ?? 'reguler');
-            $kipScheme = $programType === 'kip' ? ($validatedData['kip_scheme'] ?? ($mahasiswaDetail->program?->kip_scheme)) : null;
-            $isTransfer = (bool) ($validatedData['is_transfer'] ?? ($mahasiswaDetail->program?->is_transfer ?? false));
-            $startSemester = $isTransfer
-                ? (int) ($validatedData['start_semester'] ?? ($mahasiswaDetail->program?->start_semester ?? $semesterAktif))
-                : 1;
-
-            MahasiswaProgram::updateOrCreate(
-                ['mahasiswa_id' => $mahasiswaDetail->mahasiswa_id],
-                [
-                    'program_type' => $programType,
-                    'kip_scheme' => $kipScheme,
-                    'is_transfer' => $isTransfer,
-                    'start_semester' => $startSemester,
-                ]
-            );
+            $this->syncDefaultProgram($mahasiswaDetail->mahasiswa_id);
 
             DB::commit();
 
@@ -467,9 +478,9 @@ class MahasiswaController extends Controller
     /**
      * Menghapus data mahasiswa. (Untuk API)
      */
-    public function destroy($id)
+    public function destroy(int|string $id)
     {
-        $mahasiswaDetail = MahasiswaDetail::find($id);
+        $mahasiswaDetail = MahasiswaDetail::query()->find($id);
 
         if (!$mahasiswaDetail) {
             return response()->json(['message' => 'Data mahasiswa tidak ditemukan.'], 404);
@@ -478,12 +489,12 @@ class MahasiswaController extends Controller
         DB::beginTransaction();
         try {
             $userId = $mahasiswaDetail->user_id;
+            $mahasiswaId = $mahasiswaDetail->mahasiswa_id;
 
-            $mahasiswaDetail->delete();
+            MahasiswaDetail::query()->whereKey($mahasiswaId)->delete();
 
-            $user = User::find($userId);
-            if ($user) {
-                $user->delete();
+            if ($userId) {
+                User::query()->whereKey($userId)->delete();
             }
 
             DB::commit();
@@ -495,5 +506,101 @@ class MahasiswaController extends Controller
             Log::error('Error Hapus Mahasiswa: ' . $e->getMessage());
             return response()->json(['message' => 'Gagal menghapus data. Terjadi kesalahan server.'], 500);
         }
+    }
+
+    /**
+     * Semua mahasiswa memakai skema pembayaran yang sama (reguler, non-transfer).
+     */
+    private function defaultMahasiswaPassword(string $npm): string
+    {
+        $configured = config('accounts.mahasiswa_default_password');
+
+        return ($configured !== null && $configured !== '') ? (string) $configured : $npm;
+    }
+
+    private function syncDefaultProgram(int $mahasiswaId): void
+    {
+        MahasiswaProgram::updateOrCreate(
+            ['mahasiswa_id' => $mahasiswaId],
+            [
+                'program_type' => 'reguler',
+                'kip_scheme' => null,
+                'is_transfer' => false,
+                'start_semester' => 1,
+            ]
+        );
+    }
+
+    /**
+     * @param  list<string|null>  $row
+     */
+    private function isMahasiswaCsvHeaderRow(array $row): bool
+    {
+        $first = mb_strtolower(trim((string) ($row[0] ?? '')));
+        $firstNorm = str_replace([' ', '-'], '_', $first);
+        $second = mb_strtolower(trim((string) ($row[1] ?? '')));
+
+        if (in_array($first, ['npm', 'nama', 'name'], true)) {
+            return true;
+        }
+
+        if (in_array($firstNorm, ['nama_lengkap', 'nama_mahasiswa'], true)) {
+            return true;
+        }
+
+        // Excel: kolom "Nama Lengkap" + "NPM"
+        if (str_contains($first, 'nama') && $second === 'npm') {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  list<string|null>  $row
+     * @return array{0: ?string, 1: ?string}
+     */
+    private function parseMahasiswaCsvColumns(array $row): array
+    {
+        $cols = array_values(array_map(fn ($c) => is_string($c) ? trim($c) : trim((string) $c), $row));
+
+        if (count($cols) >= 3 && filter_var($cols[1], FILTER_VALIDATE_EMAIL)) {
+            return [
+                $cols[0] !== '' ? $cols[0] : null,
+                $cols[2] !== '' ? $cols[2] : null,
+            ];
+        }
+
+        if (count($cols) >= 2) {
+            if ($this->looksLikeNpm($cols[0]) && ! $this->looksLikeNpm($cols[1])) {
+                return [
+                    $cols[1] !== '' ? $cols[1] : null,
+                    $cols[0] !== '' ? $cols[0] : null,
+                ];
+            }
+
+            return [
+                $cols[0] !== '' ? $cols[0] : null,
+                $cols[1] !== '' ? $cols[1] : null,
+            ];
+        }
+
+        return [null, null];
+    }
+
+    private function looksLikeNpm(?string $value): bool
+    {
+        $value = $this->normalizeNpm($value);
+
+        return $value !== '' && preg_match('/^\d{8,}$/', $value) === 1;
+    }
+
+    private function normalizeNpm(?string $value): string
+    {
+        $value = trim((string) $value);
+        $value = preg_replace('/^\xEF\xBB\xBF/', '', $value) ?? $value;
+        $value = preg_replace('/\D+/', '', $value) ?? $value;
+
+        return trim($value);
     }
 }

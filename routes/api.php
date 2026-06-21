@@ -9,7 +9,7 @@ use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\AcademicCalendarController;
-use App\Http\Controllers\PaymentController; // <-- Pastikan ini diimport
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Kasir\DashboardController as KasirDashboardController;
 use App\Http\Controllers\Kasir\VerifikasiController as KasirVerifikasiController;
 use App\Http\Controllers\Kasir\AktivasiKasirController;
@@ -23,6 +23,8 @@ use App\Http\Controllers\Api\Mahasiswa\PembayaranApiController;
 use App\Http\Controllers\Api\Mahasiswa\ProfilApiController;
 use App\Http\Controllers\Api\Mahasiswa\RiwayatApiController;
 use App\Http\Controllers\Api\Mahasiswa\TagihanApiController;
+use App\Http\Controllers\Mahasiswa\NotificationController as MahasiswaNotificationController;
+use App\Http\Controllers\Mahasiswa\WisudaController as MahasiswaWisudaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -44,6 +46,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // User & Kasir
         Route::post('users/kasir/register', [UserController::class, 'registerKasir'])->name('users.kasir.register');
+        Route::post('users/yayasan/register', [UserController::class, 'registerYayasan'])->name('users.yayasan.register');
         // Ganti nama route agar tidak bentrok dengan route web 'admin.users.index'
         Route::get('users', [UserController::class, 'index'])->name('users.api.index');
 
@@ -98,9 +101,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/verifikasi/reject/{konfirmasi}', [KasirVerifikasiController::class, 'reject'])
             ->middleware('throttle:15,1')
             ->name('verifikasi.reject');
+        Route::post('/verifikasi/pending/{konfirmasi}', [KasirVerifikasiController::class, 'pending'])
+            ->middleware('throttle:15,1')
+            ->name('verifikasi.pending');
+
+        Route::get('/notifications', [\App\Http\Controllers\Kasir\NotificationController::class, 'index'])->name('notifications.index');
+        Route::post('/notifications/{id}/read', [\App\Http\Controllers\Kasir\NotificationController::class, 'markAsRead'])->name('notifications.read');
 
         // Aktivasi mahasiswa
-        Route::get('/aktivasi/notifications', [AktivasiKasirController::class, 'index'])->name('aktivasi.notifications');
+        Route::get('/aktivasi', [AktivasiKasirController::class, 'index'])->name('aktivasi.index');
         Route::post('/aktivasi/{aktivasi}/override', [AktivasiKasirController::class, 'override'])->name('aktivasi.override');
         Route::post('/aktivasi/mahasiswa/{mahasiswa}', [AktivasiKasirController::class, 'createFromMahasiswa'])->name('aktivasi.createFromMahasiswa');
 
@@ -155,5 +164,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/aktivasi', [MahasiswaAktivasiController::class, 'current'])->name('aktivasi.current');
         Route::post('/aktivasi', [MahasiswaAktivasiController::class, 'store'])->name('aktivasi.store');
+
+        Route::get('/wisuda', [MahasiswaWisudaController::class, 'current'])->name('mobile.wisuda.current');
+        Route::post('/wisuda', [MahasiswaWisudaController::class, 'store'])->name('mobile.wisuda.store');
+
+        Route::get('/notifications', [MahasiswaNotificationController::class, 'index'])->name('mobile.notifications.index');
+        Route::post('/notifications/{id}/read', [MahasiswaNotificationController::class, 'markAsRead'])->name('mobile.notifications.read');
     });
 });

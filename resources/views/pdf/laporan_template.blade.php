@@ -43,7 +43,7 @@
     <header>
         <table class="kop-surat">
             <tr>
-                <td class="logo-cell"><img src="{{ public_path('images/logo_kampus.png') }}" alt="Logo" class="logo"></td>
+                @include('partials.pdf_kampus_logo_cell')
                 <td class="info-cell">
                     <div class="yayasan">YAYASAN PENDIDIKAN TINGGI PAYAKUMBUH</div>
                     <div class="kampus">SEKOLAH TINGGI TEKNOLOGI PAYAKUMBUH</div>
@@ -120,6 +120,7 @@
                     $rowNumber = 1;
                     $totalLunas = 0;
                     $totalBelumLunas = 0;
+                    $sisaTunggakan = fn ($tagihan) => max(0.0, (float) $tagihan->nominalTunggakan());
                 @endphp
 
                 @if(isset($groupedData['Belum Lunas']) && $groupedData['Belum Lunas']->isNotEmpty())
@@ -140,7 +141,7 @@
                             <td colspan="7"><strong>Belum Dibayarkan</strong></td>
                         </tr>
                         @foreach ($belumDibayar as $tagihan)
-                            @php $totalBelumLunas += $tagihan->jumlah_tagihan; @endphp
+                            @php $totalBelumLunas += $sisaTunggakan($tagihan); @endphp
                             <tr>
                                 <td>{{ $rowNumber++ }}</td>
                                 <td>{{ $tagihan->kode_pembayaran ?? '-' }}</td>
@@ -163,11 +164,13 @@
                             <td colspan="7"><strong>Belum Lunas</strong></td>
                         </tr>
                         @foreach ($belumLunas as $tagihan)
-                            @php 
-                                $totalBelumLunas += $tagihan->jumlah_tagihan;
+                            @php
+                                $sisa = $sisaTunggakan($tagihan);
+                                $totalBelumLunas += $sisa;
                                 $pembayaranAll = $tagihan->pembayaranAll ?? collect();
                                 $pembayaranTerakhir = $pembayaranAll->sortByDesc('tanggal_bayar')->first();
                                 $tglBayar = $pembayaranTerakhir ? \Carbon\Carbon::parse($pembayaranTerakhir->tanggal_bayar)->isoFormat('DD MMM YYYY') : '-';
+                                $sudahBayar = (float) ($tagihan->totalTerverifikasi());
                             @endphp
                             <tr>
                                 <td>{{ $rowNumber++ }}</td>
@@ -177,7 +180,13 @@
                                     <small>{{ $tagihan->mahasiswa->npm ?? 'N/A' }}</small>
                                 </td>
                                 <td>{{ $tagihan->jenis_tampilan ?? 'N/A' }}</td>
-                                <td class="text-right">Rp {{ number_format($tagihan->jumlah_tagihan, 0, ',', '.') }}</td>
+                                <td class="text-right">
+                                    <div>Rp {{ number_format($tagihan->jumlah_tagihan, 0, ',', '.') }}</div>
+                                    @if($sudahBayar > 0)
+                                        <small style="color:#666;">Sudah dibayar: Rp {{ number_format($sudahBayar, 0, ',', '.') }}</small><br>
+                                        <strong style="color:#dc2626;">Sisa: Rp {{ number_format($sisa, 0, ',', '.') }}</strong>
+                                    @endif
+                                </td>
                                 <td class="text-center">
                                     <span class="badge badge-belum">Belum Lunas</span>
                                 </td>
@@ -185,6 +194,29 @@
                             </tr>
                         @endforeach
                     @endif
+                @endif
+
+                @if(isset($groupedData['Belum Dibayarkan']) && $groupedData['Belum Dibayarkan']->isNotEmpty())
+                    <tr class="group-header">
+                        <td colspan="7"><strong>Belum Dibayarkan</strong></td>
+                    </tr>
+                    @foreach ($groupedData['Belum Dibayarkan'] as $tagihan)
+                        @php $totalBelumLunas += $sisaTunggakan($tagihan); @endphp
+                        <tr>
+                            <td>{{ $rowNumber++ }}</td>
+                            <td>{{ $tagihan->kode_pembayaran ?? '-' }}</td>
+                            <td>
+                                {{ $tagihan->mahasiswa->user->nama_lengkap ?? 'N/A' }}<br>
+                                <small>{{ $tagihan->mahasiswa->npm ?? 'N/A' }}</small>
+                            </td>
+                            <td>{{ $tagihan->jenis_tampilan ?? 'N/A' }}</td>
+                            <td class="text-right">Rp {{ number_format($tagihan->jumlah_tagihan, 0, ',', '.') }}</td>
+                            <td class="text-center">
+                                <span class="badge badge-belum">Belum Dibayarkan</span>
+                            </td>
+                            <td>-</td>
+                        </tr>
+                    @endforeach
                 @endif
 
                 @if(isset($groupedData['Lunas']) && $groupedData['Lunas']->isNotEmpty())
@@ -214,7 +246,7 @@
                     @endforeach
                 @endif
 
-                 @if(!isset($groupedData['Belum Lunas']) && !isset($groupedData['Lunas']))
+                 @if(!isset($groupedData['Belum Lunas']) && !isset($groupedData['Belum Dibayarkan']) && !isset($groupedData['Lunas']))
                     <tr>
                         <td colspan="7" class="text-center">Tidak ada data pembayaran/tagihan untuk periode ini.</td>
                     </tr>
@@ -222,7 +254,7 @@
 
                 @if($totalLunas > 0 || $totalBelumLunas > 0)
                     <tr class="total-row">
-                        <th colspan="4" class="text-right">Total Belum Dibayarkan:</th>
+                        <th colspan="4" class="text-right">Total Sisa Belum Lunas:</th>
                         <th class="text-right">Rp {{ number_format($totalBelumLunas, 0, ',', '.') }}</th>
                         <th colspan="2"></th>
                     </tr>

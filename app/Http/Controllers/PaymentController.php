@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers; // Pastikan namespace ini benar
+namespace App\Http\Controllers;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use App\Models\Tagihan;
 use App\Models\KonfirmasiPembayaran;
@@ -11,13 +12,14 @@ use App\Models\User;
 use App\Models\TarifMaster;
 use App\Models\MahasiswaDetail;
 use App\Models\Setting;
-use App\Mail\TagihanBaruNotification; // <-- 2. TAMBAHKAN IMPORT INI
+use App\Mail\TagihanBaruNotification;
 use App\Notifications\TagihanBaruCreated;
-use App\Services\PaymentCodeGenerator; // Service class untuk generate kode pembayaran
+use App\Services\PaymentCodeGenerator;
+use App\Support\TagihanDedup;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail; // <-- 3. TAMBAHKAN IMPORT INI
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class PaymentController extends Controller
@@ -49,49 +51,118 @@ class PaymentController extends Controller
     }
 
      /**
-      * BARU: Menampilkan SEMUA data TAGIHAN (untuk tabel utama admin).
+      * Daftar tagihan (admin/kasir) dengan pagination & filter server-side.
       */
      public function indexTagihan(Request $request)
      {
-         Log::info('Mengambil data semua tagihan untuk admin.');
          try {
-             $tahunAkademik = trim((string) $request->query('tahun_akademik', ''));
-             $angkatan = trim((string) $request->query('angkatan', ''));
-             $programStudi = trim((string) $request->query('program_studi', ''));
+             $perPage = max(5, min(50, (int) $request->query('per_page', 15)));
 
-             $tagihan = Tagihan::with([
-                     'mahasiswa.user', // Eager load user melalui mahasiswa
+             $query = Tagihan::with([
+                     'mahasiswa.user',
                      'tarif',
-                     'pembayaran.userKasir' => function ($query) { // Eager load kasir melalui pembayaran
-                         $query->select('id', 'nama_lengkap'); // Hanya ambil kolom yg perlu
-                     },
-                     'pembayaranAll.userKasir' => function ($query) { // Eager load semua pembayaran (termasuk cicilan)
+                     'pembayaran.userKasir' => function ($query) {
                          $query->select('id', 'nama_lengkap');
-                     }
-                 ])
-                 ->when($tahunAkademik !== '', function ($q) use ($tahunAkademik) {
-                     // semester_label contoh: "2025/2026 Ganjil"
-                     $q->where('semester_label', 'LIKE', $tahunAkademik . '%');
-                 })
-                 ->when($angkatan !== '' || $programStudi !== '', function ($q) use ($angkatan, $programStudi) {
-                     $q->whereHas('mahasiswa', function ($mq) use ($angkatan, $programStudi) {
-                         if ($angkatan !== '') {
-                             $mq->where('angkatan', $angkatan);
-                         }
-                         if ($programStudi !== '') {
-                             $mq->where('program_studi', $programStudi);
-                         }
-                     });
-                 })
-                 ->latest('created_at') // Urutkan berdasarkan tagihan terbaru
-                 ->get();
-             Log::info('Berhasil mengambil ' . count($tagihan) . ' tagihan.');
-             // Penting: Kembalikan data dalam format yang konsisten, misal selalu dalam 'data'
-             return response()->json(['data' => $tagihan]); // Kembalikan dalam 'data'
+                     },
+                     'pembayaranAll.userKasir' => function ($query) {
+                         $query->select('id', 'nama_lengkap');
+                     },
+                 ]);
+
+             $this->applyTagihanListFilters($query, $request);
+
+             $tagihan = $query->latest('created_at')->paginate($perPage);
+
+             return response()->json($tagihan);
          } catch (\Exception $e) {
              Log::error('Gagal mengambil data tagihan: ' . $e->getMessage());
+
              return response()->json(['message' => 'Gagal mengambil data tagihan.'], 500);
          }
+     }
+
+     private function applyTagihanListFilters(Builder $query, Request $request): void
+     {
+         $tahunAkademik = trim((string) $request->query('tahun_akademik', ''));
+         $angkatan = trim((string) $request->query('angkatan', ''));
+         $programStudi = trim((string) $request->query('program_studi', ''));
+         $jenis = trim((string) $request->query('jenis', ''));
+         $search = trim((string) $request->query('search', ''));
+         $status = trim((string) $request->query('status', ''));
+
+         if ($tahunAkademik !== '') {
+             $query->where('semester_label', 'LIKE', $tahunAkademik . '%');
+         }
+
+         if ($angkatan !== '' || $programStudi !== '' || $search !== '') {
+             $query->whereHas('mahasiswa', function ($mq) use ($angkatan, $programStudi, $search) {
+                 if ($angkatan !== '') {
+                     $mq->where('angkatan', $angkatan);
+                 }
+                 if ($programStudi !== '') {
+                     $mq->where('program_studi', $programStudi);
+                 }
+                 if ($search !== '') {
+                     $mq->where(function ($sq) use ($search) {
+                         $sq->where('npm', 'like', '%' . $search . '%')
+                             ->orWhereHas('user', function ($uq) use ($search) {
+                                 $uq->where('nama_lengkap', 'like', '%' . $search . '%');
+                             });
+                     });
+                 }
+             });
+         }
+
+         if ($jenis !== '') {
+             $query->whereHas('tarif', function ($tq) use ($jenis) {
+                 $tq->where('nama_pembayaran', $jenis);
+             });
+         }
+
+         if ($status === '') {
+             return;
+         }
+
+         if ($status === 'BUKAN_LUNAS') {
+             $query->where('status', '!=', 'Lunas');
+
+             return;
+         }
+
+         if ($status === 'Dibatalkan') {
+             $query->whereHas('pembayaran', function ($pq) {
+                 $pq->where('status_dibatalkan', true);
+             });
+
+             return;
+         }
+
+         if ($status === 'Belum Dibayarkan') {
+             $query->where('status', 'Belum Lunas')
+                 ->whereDoesntHave('pembayaranAll', function ($pq) {
+                     $pq->where(function ($q) {
+                         $q->whereNull('status_dibatalkan')->orWhere('status_dibatalkan', false);
+                     });
+                 });
+
+             return;
+         }
+
+         if ($status === 'Belum Lunas') {
+             $query->where('status', 'Belum Lunas')
+                 ->whereHas('pembayaranAll', function ($pq) {
+                     $pq->where(function ($q) {
+                         $q->whereNull('status_dibatalkan')->orWhere('status_dibatalkan', false);
+                     });
+                 });
+
+             return;
+         }
+
+         $query->where('status', $status)
+             ->whereDoesntHave('pembayaran', function ($pq) {
+                 $pq->where('status_dibatalkan', true);
+             });
      }
 
 
@@ -137,8 +208,7 @@ class PaymentController extends Controller
 
 
     /**
-     * Membuat tagihan baru.
-     * !! DIMODIFIKASI UNTUK KIRIM EMAIL !!
+     * Membuat tagihan baru dan mengirim notifikasi ke mahasiswa.
      */
     public function createTagihan(Request $request)
     {
@@ -147,7 +217,6 @@ class PaymentController extends Controller
         // Otorisasi pembuatan tagihan (admin only via policy)
         $this->authorize('create', Tagihan::class);
 
-        // 1. Validasi input
         $validatedData = $request->validate([
             'mahasiswa_id' => 'required|exists:mahasiswa_detail,mahasiswa_id',
             'tarif_id' => 'required|exists:tarif_master,tarif_id',
@@ -157,7 +226,6 @@ class PaymentController extends Controller
 
         $currentSemester = Setting::currentSemesterLabel();
 
-        // 1.b: Cek status aktivasi semester
         $aktivasi = AktivasiStatus::where('mahasiswa_id', '=', $validatedData['mahasiswa_id'], 'and')
             ->where('semester_label', '=', $currentSemester, 'and')
             ->latest('created_at')
@@ -180,41 +248,42 @@ class PaymentController extends Controller
             $validatedData['jumlah_tagihan'] = config('academic.bss_amount');
         }
 
-        // 2. Cek duplikat yang tidak dibatalkan (baik yang Lunas maupun belum)
-        //    Admin TIDAK boleh membuat tagihan sejenis lagi jika pernah dibuat,
-        //    kecuali tagihan sebelumnya dibatalkan secara resmi.
-        $existingTagihan = Tagihan::where('mahasiswa_id', '=', $validatedData['mahasiswa_id'], 'and')
-            ->where('tarif_id', '=', $validatedData['tarif_id'], 'and')
-            ->whereDoesntHave('pembayaran', function($q) {
-                $q->where('status_dibatalkan', true);
-            })
-            ->first();
-        if ($existingTagihan) {
-            Log::warning("Gagal buat tagihan: Duplikat tagihan sejenis sudah pernah dibuat dan tidak dibatalkan.");
-            return response()->json(['message' => 'Tagihan sejenis untuk mahasiswa ini sudah pernah dibuat (lunas/menunggu). Tidak dapat membuat ulang.'], 409);
+        $mahasiswaDetail = MahasiswaDetail::query()->find($validatedData['mahasiswa_id']);
+        $tarif = TarifMaster::query()->find($validatedData['tarif_id']);
+
+        if ($isBssTarif) {
+            $existingBss = Tagihan::query()
+                ->where('mahasiswa_id', '=', $validatedData['mahasiswa_id'], 'and')
+                ->where('tarif_id', '=', $validatedData['tarif_id'], 'and')
+                ->where('is_bss', '=', true, 'and')
+                ->exists();
+            if ($existingBss) {
+                return response()->json(['message' => 'Tagihan BSS untuk mahasiswa ini sudah ada.'], 409);
+            }
+        } elseif ($mahasiswaDetail && $tarif && TagihanDedup::alreadyExistsForAktivasi(
+            (int) $validatedData['mahasiswa_id'],
+            $tarif,
+            $mahasiswaDetail,
+            $currentSemester
+        )) {
+            Log::warning('Gagal buat tagihan: duplikat tagihan setara sudah ada.');
+            return response()->json(['message' => 'Tagihan setara untuk mahasiswa ini sudah ada di semester ini.'], 409);
         }
 
-        // 3. GENERATE KODE UNIK menggunakan Service Class
         $validatedData['kode_pembayaran'] = PaymentCodeGenerator::generate($validatedData['tarif_id']);
-
-        // 4. Tambahkan status
         $validatedData['status'] = 'Belum Lunas';
         $validatedData['semester_label'] = $currentSemester;
         $validatedData['is_bss'] = $aktivasi && $aktivasi->status === 'bss' && $isBssTarif;
+        $validatedData['semester_perkuliahan'] = \App\Support\SemesterPerkuliahan::fromMahasiswa($mahasiswaDetail);
 
         try {
-            // 5. Buat tagihan
             $tagihan = Tagihan::create($validatedData);
             $tagihan->updateAngsuran();
             Log::info("Tagihan berhasil dibuat ID: {$tagihan->tagihan_id}");
 
-            // ====================================================
-            // !! 6. PERSIAPAN & KIRIM EMAIL NOTIFIKASI (INI BAGIAN BARU) !!
-            // ====================================================
             $mahasiswa = MahasiswaDetail::with('user')->find($tagihan->mahasiswa_id);
 
             if ($mahasiswa && $mahasiswa->user) {
-                // Notifikasi in-app (database) — harus dijalankan di sini (sebelum return), bukan setelah return.
                 try {
                     $mahasiswa->user->notify(new TagihanBaruCreated($tagihan));
                     Log::info("Notifikasi database tagihan ID {$tagihan->tagihan_id} untuk user ID {$mahasiswa->user->id}.");
@@ -257,7 +326,7 @@ class PaymentController extends Controller
     }
 
      /**
-      * BARU: Memperbarui data TAGIHAN.
+      * Memperbarui data tagihan.
       */
      public function updateTagihan(Request $request, int|string $id)
      {
@@ -274,12 +343,23 @@ class PaymentController extends Controller
          if ($tagihan->status === 'Lunas') { Log::warning("Update ditolak: Tagihan ID {$id} sudah lunas."); return response()->json(['message' => 'Tagihan yang sudah lunas tidak dapat diubah.'], 403); }
 
          $validatedData = $request->validate([
-             'mahasiswa_id' => 'sometimes|required|exists:mahasiswa_detail,mahasiswa_id', // JIKA BOLEH GANTI MAHASISWA
-             'tarif_id' => 'sometimes|required|exists:tarif_master,tarif_id',            // JIKA BOLEH GANTI TARIF
+             'mahasiswa_id' => 'sometimes|required|exists:mahasiswa_detail,mahasiswa_id',
+             'tarif_id' => 'sometimes|required|exists:tarif_master,tarif_id',
              'jumlah_tagihan' => 'sometimes|required|numeric|min:1',
-             'tanggal_jatuh_tempo' => 'sometimes|required|date|after_or_equal:today',
-             'kode_pembayaran' => ['sometimes', 'required', 'string', Rule::unique('tagihan')->ignore($id, 'tagihan_id')], // Jika boleh ganti kode
+             'tanggal_jatuh_tempo' => 'sometimes|required|date',
+             'kode_pembayaran' => ['sometimes', 'nullable', 'string', Rule::unique('tagihan')->ignore($id, 'tagihan_id')],
          ]);
+
+         if (array_key_exists('kode_pembayaran', $validatedData) && blank($validatedData['kode_pembayaran'])) {
+             unset($validatedData['kode_pembayaran']);
+         }
+
+         $existingDueDate = $tagihan->tanggal_jatuh_tempo?->format('Y-m-d');
+         if (isset($validatedData['tanggal_jatuh_tempo'])
+             && $validatedData['tanggal_jatuh_tempo'] !== $existingDueDate
+             && strtotime($validatedData['tanggal_jatuh_tempo']) < strtotime('today')) {
+             return response()->json(['message' => 'Tanggal jatuh tempo baru harus hari ini atau setelahnya.'], 422);
+         }
 
          try {
              // Jika tarif_id diubah, update juga jumlah_tagihan dari tarif baru (jika tidak dikirim manual)
@@ -290,7 +370,9 @@ class PaymentController extends Controller
                  }
              }
 
-             $tagihan->update($validatedData);
+             $tagihan->fill($validatedData);
+             $tagihan->save();
+             $tagihan->updateAngsuran();
              Log::info("Tagihan ID {$id} berhasil diupdate.");
              $tagihan->load('mahasiswa.user', 'tarif', 'pembayaran.userKasir'); // Load relasi terbaru
              return response()->json(['success' => true, 'message' => 'Tagihan berhasil diperbarui', 'data' => $tagihan ]);
@@ -301,7 +383,7 @@ class PaymentController extends Controller
      }
 
      /**
-      * BARU: Menghapus data TAGIHAN.
+      * Menghapus data tagihan.
       */
      public function destroyTagihan(int|string $id)
      {
@@ -379,4 +461,4 @@ class PaymentController extends Controller
             'data' => $pembayaran
         ], 201);
     }
-} // <-- Pastikan kurung kurawal penutup class ada di akhir
+}
