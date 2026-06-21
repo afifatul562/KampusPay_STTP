@@ -1,4 +1,0 @@
-kode_pembayaran,tanggal_bayar,metode_pembayaran,jumlah_bayar,is_cicilan,status_dibatalkan,alasan_pembatalan,kasir_username
-KMP-2024-231013045-UAS-001,2024-12-10,Tunai,4000000,0,0,,kasir01
-KMP-2026-221013001-UKM-001,2026-04-01,Transfer,200000,1,0,,kasir02
-KMP-2026-221013001-UKM-001,2026-04-20,Transfer,300000,1,0,,kasir02
