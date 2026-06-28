@@ -234,9 +234,23 @@
             }
         }
 
-        $dibayar = $pembayaran->jumlah_bayar ?? ($pembayaran->tagihan->jumlah_tagihan ?? 0);
-        $sisaPokok = $pembayaran->tagihan->sisa_pokok ?? 0;
-        $terbilangPembayaran = terbilang_indonesia($dibayar) . ' Rupiah';
+        $tagihan = $pembayaran->tagihan;
+        $kwitansiScope = $scope ?? 'transaksi';
+        $isKwitansiLunas = $kwitansiScope === 'lunas' && $tagihan->status === 'Lunas';
+
+        if ($isKwitansiLunas) {
+            $dibayar = (float) ($tagihan->totalTerverifikasi() ?: $tagihan->jumlah_tagihan);
+            $sisaPokok = 0;
+            $isLunas = true;
+            $labelJumlah = 'Total Pembayaran';
+        } else {
+            $dibayar = $pembayaran->jumlah_bayar ?? ($tagihan->jumlah_tagihan ?? 0);
+            $sisaPokok = $tagihan->sisa_pokok ?? 0;
+            $isLunas = ($sisaPokok <= 0);
+            $labelJumlah = 'Jumlah Dibayar';
+        }
+
+        $terbilangPembayaran = terbilang_indonesia((int) round($dibayar)) . ' Rupiah';
         $metodePembayaran = $pembayaran->metode_pembayaran ?? 'Tunai';
         if (stripos($metodePembayaran, 'tunai') !== false) {
             $metodeLabel = 'Tunai';
@@ -245,7 +259,6 @@
         } else {
             $metodeLabel = ucwords(strtolower($metodePembayaran));
         }
-        $isLunas = ($sisaPokok <= 0);
         $watermarkText = $isLunas ? 'LUNAS' : 'CICILAN';
     @endphp
     <!-- ===== KOP SURAT ===== -->
@@ -298,7 +311,7 @@
                 <td>{{ $pembayaran->tagihan->kode_pembayaran }}</td>
             </tr>
             <tr>
-                <th>Jumlah Dibayar</th>
+                <th>{{ $labelJumlah }}</th>
                 <td class="amount">Rp {{ number_format($dibayar, 0, ',', '.') }}</td>
             </tr>
             <tr>

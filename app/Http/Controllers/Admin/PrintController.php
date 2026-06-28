@@ -9,15 +9,20 @@ use Barryvdh\DomPDF\Facade\Pdf as PDF;
 
 class PrintController extends Controller
 {
-    public function cetakBuktiPembayaran(Pembayaran $pembayaran)
+    public function cetakBuktiPembayaran(Request $request, Pembayaran $pembayaran)
     {
         $this->authorize('view', $pembayaran);
 
         // Lengkapi relasi yang dibutuhkan oleh template
         $pembayaran->load('tagihan.mahasiswa.user', 'tagihan.tarif', 'verifier');
 
+        $scope = $request->query('scope', 'transaksi');
+        if ($scope === 'lunas' && $pembayaran->tagihan->status !== 'Lunas') {
+            $scope = 'transaksi';
+        }
+
         // Generate PDF dari view
-        $pdf = PDF::loadView('mahasiswa.kwitansi_pdf', compact('pembayaran'))
+        $pdf = PDF::loadView('mahasiswa.kwitansi_pdf', compact('pembayaran', 'scope'))
             ->setPaper('a4', 'portrait');
 
         $filename = 'Kwitansi_' . ($pembayaran->tagihan->kode_pembayaran ?? $pembayaran->tagihan->kode ?? 'pembayaran') . '.pdf';

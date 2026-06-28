@@ -170,8 +170,14 @@
                             {{-- Jika pembayaran dibatalkan, tidak tampilkan tombol aksi --}}
                             <span class="text-xs text-gray-400 italic">Tidak tersedia</span>
                         @elseif ($item->status == 'Lunas')
-                            @if ($item->pembayaran && !$item->pembayaran->status_dibatalkan)
-                                <a href="{{ route('mahasiswa.kwitansi.download', ['pembayaran' => $item->pembayaran->pembayaran_id]) }}" class="w-full md:w-auto inline-flex items-center justify-center px-4 py-2 rounded-lg bg-gradient-to-r from-primary-100 to-primary-200 text-primary-700 text-sm font-semibold hover:from-primary-200 hover:to-primary-300 shadow-sm hover:shadow-md transition-all duration-200">
+                            @php
+                                $pembayaranLunas = $item->pembayaranAll
+                                    ->where('status_dibatalkan', false)
+                                    ->sortByDesc('pembayaran_id')
+                                    ->first();
+                            @endphp
+                            @if ($pembayaranLunas)
+                                <a href="{{ route('mahasiswa.kwitansi.download', ['pembayaran' => $pembayaranLunas->pembayaran_id, 'scope' => 'lunas']) }}" class="w-full md:w-auto inline-flex items-center justify-center px-4 py-2 rounded-lg bg-gradient-to-r from-primary-100 to-primary-200 text-primary-700 text-sm font-semibold hover:from-primary-200 hover:to-primary-300 shadow-sm hover:shadow-md transition-all duration-200">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                                     Kwitansi
                                 </a>

@@ -47,7 +47,7 @@ class PembayaranController extends Controller
             ->first();
 
         $tagihanQuery = $user->mahasiswaDetail->tagihan()
-            ->with('tarif', 'konfirmasi', 'pembayaran', 'mahasiswa')
+            ->with('tarif', 'konfirmasi', 'pembayaran', 'pembayaranAll', 'mahasiswa')
             ->orderBy('tanggal_jatuh_tempo', 'asc');
 
         $today = now()->toDateString();

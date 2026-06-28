@@ -14,7 +14,7 @@ class Tagihan extends Model
 
     /**
      * Label jenis tagihan untuk UI/API.
-     * Untuk Uang Semester, kemahasiswaan, atau ujian akhir: pakai nama di tarif_master + angka semester
+     * Untuk Uang Semester, kemahasiswaan, ujian akhir, atau BSS: pakai nama di tarif_master + angka semester
      * perkuliahan tagihan (semester_perkuliahan) atau fallback semester aktif mahasiswa, mis. "Uang Semester (8)".
      * Jenis lain: hanya nama tarif (tanpa semester_label).
      */
@@ -55,7 +55,8 @@ class Tagihan extends Model
 
         $pakaiKurungSemester = str_contains($namaLower, 'uang semester')
             || str_contains($namaLower, 'kemahasiswaan')
-            || str_contains($namaLower, 'ujian akhir');
+            || str_contains($namaLower, 'ujian akhir')
+            || str_contains($namaLower, 'bss');
 
         if ($pakaiKurungSemester && $semNum !== null) {
             return $nama . ' (' . $semNum . ')';
